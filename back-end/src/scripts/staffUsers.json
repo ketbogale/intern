@@ -1,0 +1,8 @@
+[
+  { "username": "cafeteria1", "password": "securepass" },
+  { "username": "cafeteria2", "password": "anotherpass2" },
+  { "username": "cafeteria3", "password": "securepass3" },
+  { "username": "cafeteria4", "password": "anotherpass4" },
+  { "username": "cafeteria5", "password": "login" },
+  { "username": "admin", "password": "ketbogale" }
+]

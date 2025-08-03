@@ -1,0 +1,309 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css');
+
+.attendance-container {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: linear-gradient(135deg, #241654 60%, #6c63ff 100%);
+  margin: 0;
+  min-height: 100vh;
+}
+
+.head-row {
+  background: #0056b3;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  box-sizing: border-box;
+  min-height: 70px;
+  position: sticky;
+  left: 0;
+  right: 0;
+  top: 0;
+  margin-top: 3px;
+  z-index: 100;
+  margin-bottom: 27px;
+  border-bottom: 1px solid gold;
+}
+
+.head-row img {
+  width: 57px;
+  height: 60px;
+  border-radius: 50%;
+  padding: 7px;
+  margin: 4px 9px;
+  border: 1px solid greenyellow;
+}
+
+.head-row h1 {
+  font-size: 23px;
+  color: #fff;
+  font-weight: 500;
+  margin: 0;
+  flex: 1;
+}
+
+.logout-button {
+  background: linear-gradient(90deg, #e74c3c 60%, #c0392b 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.logout-button:hover {
+  background: linear-gradient(90deg, #c0392b 60%, #e74c3c 100%);
+  transform: scale(1.05);
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: calc(100vh - 100px);
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.main-content {
+  display: flex;
+  gap: 40px;
+  width: 100%;
+  max-width: 1200px;
+  align-items: flex-start;
+}
+
+.attendance-section {
+  flex: 1;
+  min-width: 300px;
+}
+
+.attendance-box {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(44,62,80,0.18);
+  padding: 32px;
+  border: 2px solid hsl(208, 87%, 41%);
+  transition: box-shadow 0.2s;
+}
+
+.attendance-box:hover {
+  box-shadow: 0 12px 40px rgba(44,62,80,0.22);
+}
+
+.attendance-box label {
+  font-size: 1.1rem;
+  color: #fff;
+  margin-bottom: 12px;
+  font-weight: 500;
+  display: block;
+}
+
+.attendance-box input {
+  width: 100%;
+  padding: 16px;
+  border-radius: 8px;
+  border: 2px solid #007bff;
+  font-size: 1.1rem;
+  margin-bottom: 16px;
+  outline: none;
+  transition: border 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(44,62,80,0.08);
+  box-sizing: border-box;
+}
+
+.attendance-box input:focus {
+  border: 2px solid #0056b3;
+  box-shadow: 0 4px 16px rgba(44,62,80,0.12);
+}
+
+.attendance-button {
+  background: linear-gradient(90deg, #007bff 60%, #0056b3 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 32px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  font-weight: 500;
+  width: 100%;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 16px rgba(44,62,80,0.15);
+  transition: all 0.2s;
+  transform: translateY(-2px);
+}
+
+.attendance-button:hover:not(:disabled) {
+  background: linear-gradient(90deg, #0056b3 60%, #007bff 100%);
+  box-shadow: 0 6px 20px rgba(44,62,80,0.2);
+  transform: translateY(-3px) scale(1.02);
+}
+
+.attendance-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.attendance-message {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  text-align: center;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.attendance-message.allowed {
+  background: rgba(39, 174, 96, 0.2);
+  border: 2px solid #27ae60;
+  color: #27ae60;
+}
+
+.attendance-message.already_used {
+  background: rgba(231, 76, 60, 0.2);
+  border: 2px solid #e74c3c;
+  color: #e74c3c;
+}
+
+.attendance-message.invalid {
+  background: rgba(231, 76, 60, 0.2);
+  border: 2px solid #e74c3c;
+  color: #e74c3c;
+}
+
+.student-section {
+  flex: 1;
+  min-width: 350px;
+}
+
+.student-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(44,62,80,0.18);
+  padding: 24px;
+  border: 2px solid hsl(208, 87%, 41%);
+  animation: slideIn 0.4s ease-out;
+}
+
+.status-message {
+  font-size: 1.4rem;
+  font-weight: bold;
+  text-align: center;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.status-message.allowed {
+  background: rgba(39, 174, 96, 0.2);
+  border: 2px solid #27ae60;
+  color: #27ae60;
+}
+
+.status-message.already_used {
+  background: rgba(231, 76, 60, 0.2);
+  border: 2px solid #e74c3c;
+  color: #e74c3c;
+}
+
+.status-message.invalid {
+  background: rgba(231, 76, 60, 0.2);
+  border: 2px solid #e74c3c;
+  color: #e74c3c;
+}
+
+.student-info-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.student-details {
+  flex: 1;
+  color: #fff;
+}
+
+.student-details div {
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.student-details strong {
+  color: #ffd700;
+  margin-right: 8px;
+}
+
+.student-photo {
+  flex-shrink: 0;
+}
+
+.student-photo img {
+  width: 250px;
+  height: 250px;
+  border-radius: 15px;
+  object-fit: cover;
+  border: 4px solid #007bff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .main-content {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .attendance-section,
+  .student-section {
+    min-width: 0;
+    width: 100%;
+  }
+  
+  .container {
+    padding: 10px;
+  }
+  
+  .attendance-box,
+  .student-card {
+    padding: 20px;
+  }
+  
+  .student-info-row {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .student-photo img {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .head-row h1 {
+    font-size: 18px;
+  }
+}
