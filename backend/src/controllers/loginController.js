@@ -5,7 +5,7 @@ exports.login = async (req, res) => {
 
   // Basic input validation
   if (typeof username !== "string" || typeof password !== "string") {
-    return res.json({ status: "fail", message: "Invalid input." });
+    return res.status(400).json({ error: "Invalid input." });
   }
 
   try {
@@ -15,13 +15,24 @@ exports.login = async (req, res) => {
       req.session.user = {
         id: staff._id,
         username: staff.username,
+        role: staff.role,
         loginTime: new Date(),
       };
-      res.json({ status: "success" });
+      
+      // Return user data including role for frontend routing
+      res.json({ 
+        success: true,
+        user: {
+          id: staff._id,
+          username: staff.username,
+          role: staff.role
+        }
+      });
     } else {
-      res.json({ status: "fail", message: "Invalid username or password." });
+      res.status(401).json({ error: "Invalid username or password." });
     }
   } catch (err) {
-    res.json({ status: "error", message: "System error." });
+    console.error('Login error:', err);
+    res.status(500).json({ error: "System error." });
   }
 };

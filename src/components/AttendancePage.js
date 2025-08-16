@@ -101,19 +101,24 @@ const AttendancePage = ({ user, onLogout }) => {
 
   return (
     <div className="attendance-container">
-      <div className="head-row">
-        <img src="/images/salale_university_logo.png" alt="Salale University" />
-        <h1>Salale University</h1>
-        <button onClick={handleLogout} className="logout-button">
-          Log Out
+      <div className="attendance-header">
+        <div className="header-left">
+          <div className="logo-section">
+            <img src="/images/salale_university_logo.png" alt="Salale University" />
+            <h1 className="brand-name">Meal Attendance System</h1>
+          </div>
+        </div>
+        <button onClick={handleLogout} className="logout-btn">
+          <i className="fas fa-sign-out-alt"></i>
+          Logout
         </button>
       </div>
 
-      <div className="container">
-        <div className="main-content">
-          {/* Left side: Attendance form */}
-          <div className="attendance-section">
-            <div className="attendance-box">
+      <div className="attendance-content">
+        <div className="attendance-layout">
+          {/* Left side: Input form */}
+          <div className="input-section">
+            <div className="input-card">
               <form onSubmit={handleSubmit}>
                 <label htmlFor="studentId">Student ID (Manual or Scan Barcode):</label>
                 <input
@@ -126,8 +131,8 @@ const AttendancePage = ({ user, onLogout }) => {
                   autoComplete="off"
                   required
                 />
-                <button type="submit" className="attendance-button" disabled={isLoading}>
-                  {isLoading ? 'Checking...' : 'Check'}
+                <button type="submit" className="check-btn" disabled={isLoading}>
+                  {isLoading ? 'Checking...' : 'Check Attendance'}
                 </button>
               </form>
 
@@ -140,7 +145,7 @@ const AttendancePage = ({ user, onLogout }) => {
           </div>
 
           {/* Right side: Student information */}
-          <div className="student-section">
+          <div className="result-section">
             {student && (
               <div className="student-card">
                 <div className={`status-message ${status}`}>
@@ -152,7 +157,7 @@ const AttendancePage = ({ user, onLogout }) => {
                   <div className="student-details">
                     <div><strong>Name:</strong> {student.name}</div>
                     <div><strong>ID Number:</strong> {student.id}</div>
-                    <div><strong>Department:</strong> {student.department}</div>
+                    <div><strong>Program:</strong> {student.department}</div>
                   </div>
                   <div className="student-photo">
                     <img 

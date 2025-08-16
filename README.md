@@ -83,16 +83,16 @@ npm run dev
 
 ## 📁 Project Structure
 
-```
-Intern/
-├── 📂 src/                    # React frontend source
-├── 📂 public/                 # Static assets
-├── 📂 backend/
-│   ├── 📂 src/               # Express backend source
-│   └── 📄 .env.example       # Environment template
-├── 📄 package.json           # Frontend dependencies
-└── 📄 README.md             # You are here!
-```
+         ```
+         Intern/
+         ├── 📂 src/                    # React frontend source
+         ├── 📂 public/                 # Static assets
+         ├── 📂 backend/
+         │   ├── 📂 src/               # Express backend source
+         │   └── 📄 .env.example       # Environment template
+         ├── 📄 package.json           # Frontend dependencies
+         └── 📄 README.md             # You are here!
+         ```
 
 ## 🕐 Automated Features
 

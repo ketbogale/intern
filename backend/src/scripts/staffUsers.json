@@ -1,0 +1,9 @@
+[
+  { "username": "cafeteria1", "password": "securepass", "role": "scanner" },
+  { "username": "cafeteria2", "password": "anotherpass2", "role": "scanner" },
+  { "username": "cafeteria3", "password": "securepass3", "role": "scanner" },
+  { "username": "cafeteria4", "password": "anotherpass4", "role": "scanner" },
+  { "username": "cafeteria5", "password": "login", "role": "scanner" },
+  { "username": "admin", "password": "ketbogale", "role": "admin" },
+  { "username": "scanner", "password": "scanner123", "role": "scanner" }
+]

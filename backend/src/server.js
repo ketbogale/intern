@@ -3,8 +3,9 @@ const path = require("path");
 const session = require("express-session");
 const loginRoutes = require("./routes/login");
 const attendanceRoutes = require("./routes/attendance");
+const dashboardRoutes = require("./routes/dashboard");
 const mongoose = require("mongoose");
-const SchedulerService = require("./services/scheduler");
+// const SchedulerService = require("./services/scheduler");
 // Replace with your MongoDB URI
 const MONGO_URI =
   process.env.MONGO_URI || "mongodb://localhost:27017/meal_attendance";
@@ -70,6 +71,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/login", loginRoutes);
 app.use("/api/attendance", requireAuth, attendanceRoutes);
+app.use("/api/dashboard", requireAuth, dashboardRoutes);
 
 // Logout route
 app.post("/api/logout", (req, res) => {
@@ -86,5 +88,5 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 
   // Start the automatic meal database scheduler for EAT timezone
-  SchedulerService.startScheduler();
+  // SchedulerService.startScheduler();
 });

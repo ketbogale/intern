@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const staffSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  role: { type: String, required: true, enum: ['admin', 'scanner'], default: 'scanner' },
 });
 
 // Hash password before saving
