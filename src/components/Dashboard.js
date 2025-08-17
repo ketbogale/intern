@@ -12,6 +12,9 @@ const Dashboard = ({ user, onLogout }) => {
   const [activeSection, setActiveSection] = useState('overview');
   const [refreshMessage, setRefreshMessage] = useState('');
   const [lastUpdated, setLastUpdated] = useState('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -79,23 +82,76 @@ const Dashboard = ({ user, onLogout }) => {
     }
   };
 
-  // Export function - can be used in reports section if needed
-  // const handleExportData = async () => {
-  //   try {
-  //     const response = await fetch('/api/dashboard/export');
-  //     const blob = await response.blob();
-  //     const url = window.URL.createObjectURL(blob);
-  //     const a = document.createElement('a');
-  //     a.href = url;
-  //     a.download = `attendance_report_${new Date().toISOString().split('T')[0]}.csv`;
-  //     document.body.appendChild(a);
-  //     a.click();
-  //     window.URL.revokeObjectURL(url);
-  //     document.body.removeChild(a);
-  //   } catch (error) {
-  //     console.error('Error exporting data:', error);
-  //   }
-  // };
+  // Fetch current analytics data
+  const fetchAnalyticsData = async () => {
+    try {
+      setAnalyticsLoading(true);
+      const response = await fetch('/api/dashboard/analytics');
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setAnalyticsData(data.analytics);
+      } else {
+        console.error('Analytics error:', data.error);
+      }
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
+
+  // Handle export functionality
+  const handleExport = async () => {
+    try {
+      const response = await fetch('/api/dashboard/export');
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        const filename = `current_attendance_${new Date().toISOString().split('T')[0]}.csv`;
+        
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        setRefreshMessage('CSV export completed successfully!');
+        setTimeout(() => setRefreshMessage(''), 3000);
+      } else {
+        setRefreshMessage('Failed to export CSV file.');
+        setTimeout(() => setRefreshMessage(''), 3000);
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      setRefreshMessage('Error exporting CSV file.');
+      setTimeout(() => setRefreshMessage(''), 3000);
+    }
+  };
+
+  // Load analytics data when reports section is opened
+  React.useEffect(() => {
+    if (activeSection === 'reports' && !analyticsData) {
+      fetchAnalyticsData();
+    }
+  }, [activeSection]);
+
+  // Auto-refresh analytics every 30 seconds when on reports page
+  React.useEffect(() => {
+    let interval;
+    if (activeSection === 'reports') {
+      interval = setInterval(() => {
+        fetchAnalyticsData();
+      }, 30000); // 30 seconds
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [activeSection]);
 
   if (isLoading) {
     return (
@@ -115,11 +171,19 @@ const Dashboard = ({ user, onLogout }) => {
             <span className="brand-name">Dashboard</span>
           </div>
         </div>
+        <button 
+          className="mobile-menu-toggle"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          <span className="material-icons">
+            {isMobileMenuOpen ? 'close' : 'menu'}
+          </span>
+        </button>
       </div>
 
       <div className="dashboard-layout">
         {/* Left Sidebar */}
-        <div className="sidebar">
+        <div className={`sidebar ${isMobileMenuOpen ? 'sidebar-open' : ''}`}>
           <div className="sidebar-header">
             <h2>Dashboard</h2>
             <p className="welcome-text">Welcome, admin</p>
@@ -177,7 +241,7 @@ const Dashboard = ({ user, onLogout }) => {
                 {activeSection === 'overview' && 'Dashboard Overview'}
                 {activeSection === 'attendance' && 'Meal Attendance'}
                 {activeSection === 'students' && 'Students Management'}
-                {activeSection === 'reports' && 'Reports'}
+                {activeSection === 'reports' && 'Meal Reports'}
                 {activeSection === 'settings' && 'Settings'}
               </h1>
             </div>
@@ -297,17 +361,70 @@ const Dashboard = ({ user, onLogout }) => {
             {activeSection === 'reports' && (
               <>
                 <div className="reports-section">
-                  <h2>Reports & Analytics</h2>
-                  <div className="feature-list">
-                    <div className="feature-item">
-                      <i className="fas fa-chart-bar"></i>
-                      <span>Attendance Analytics</span>
+                  <div className="report-header">
+                    <div className="report-title">
+                      <p className="report-subtitle">Current Session Analytics - {new Date().toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}</p>
                     </div>
-                    <div className="feature-item">
-                      <i className="fas fa-download"></i>
-                      <span>Export Reports</span>
+                    <div className="report-actions">
+                      <button onClick={handleExport} className="export-btn csv-btn">
+                        <i className="fas fa-download"></i>
+                        Export Report
+                      </button>
                     </div>
                   </div>
+
+                  {analyticsData && (
+                    <>
+
+                      {/* Attendance Overview Pie Chart */}
+                      <div className="report-section">
+                        <div className="chart-container">
+                            <div className="pie-chart-wrapper">
+                            <div 
+                              className="pie-chart"
+                              style={{
+                                '--percentage': analyticsData.attendanceRate,
+                                '--color': '#667eea'
+                              }}
+                            >
+                              <div className="pie-center">
+                                <div className="pie-percentage">{analyticsData.attendanceRate}%</div>
+                                <div className="pie-label">Used Meals</div>
+                              </div>
+                            </div>
+                            <div className="chart-legend">
+                              <div className="legend-item">
+                                <div className="legend-color" style={{backgroundColor: '#667eea'}}></div>
+                                <span>Meals Used</span>
+                              </div>
+                              <div className="legend-item">
+                                <div className="legend-color" style={{backgroundColor: '#e1e5e9'}}></div>
+                                <span>Remaining Capacity</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+
+                      {/* Report Footer */}
+                      <div className="report-footer">
+                        <div className="footer-info">
+                          <p><strong>Report Generated:</strong> {new Date().toLocaleString()}</p>
+                          <p><strong>Data Source:</strong> Meal Attendance System</p>
+                          <p><strong>Report Type:</strong> Current Session Analytics</p>
+                        </div>
+                        <div className="footer-note">
+                          <p><em>Note: This report reflects real-time data from the current meal session. Data resets after each meal period.</em></p>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </>
             )}
@@ -338,11 +455,6 @@ const Dashboard = ({ user, onLogout }) => {
 
       {/* Bottom Taskbar */}
       <div className="taskbar">
-        <div className="taskbar-left">
-          <div className="taskbar-item active">
-            <i className="fas fa-home"></i>
-          </div>
-        </div>
       </div>
     </div>
   );

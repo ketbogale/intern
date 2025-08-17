@@ -1,1 +1,0 @@
-node src/scripts/populateTestData.js
