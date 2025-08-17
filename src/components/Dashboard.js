@@ -19,6 +19,35 @@ const Dashboard = ({ user, onLogout }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchMessage, setSearchMessage] = useState('');
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+  const [newStudentData, setNewStudentData] = useState({
+    id: '',
+    name: '',
+    department: '',
+    photoUrl: ''
+  });
+  const [addStudentLoading, setAddStudentLoading] = useState(false);
+  const [addStudentMessage, setAddStudentMessage] = useState('');
+  const [showAddStaffModal, setShowAddStaffModal] = useState(false);
+  const [newStaffData, setNewStaffData] = useState({
+    username: '',
+    password: ''
+  });
+  const [addStaffLoading, setAddStaffLoading] = useState(false);
+  const [addStaffMessage, setAddStaffMessage] = useState('');
+  const [showEditStudentModal, setShowEditStudentModal] = useState(false);
+  const [editingStudent, setEditingStudent] = useState(null);
+  const [editStudentData, setEditStudentData] = useState({
+    id: '',
+    name: '',
+    department: '',
+    photoUrl: ''
+  });
+  const [editStudentLoading, setEditStudentLoading] = useState(false);
+  const [editStudentMessage, setEditStudentMessage] = useState('');
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -211,6 +240,206 @@ const Dashboard = ({ user, onLogout }) => {
     };
   }, [activeSection]);
 
+  // Handle adding new student
+  const handleAddStudent = async (e) => {
+    e.preventDefault();
+    
+    if (!newStudentData.id.trim() || !newStudentData.name.trim()) {
+      setAddStudentMessage('Student ID and Name are required fields.');
+      return;
+    }
+
+    try {
+      setAddStudentLoading(true);
+      setAddStudentMessage('');
+      
+      const response = await fetch('/api/students/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newStudentData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setAddStudentMessage('Student registered successfully!');
+        // Reset form data
+        setNewStudentData({
+          id: '',
+          name: '',
+          department: '',
+          photoUrl: ''
+        });
+        // Refresh dashboard stats
+        fetchDashboardData();
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          setShowAddStudentModal(false);
+          setAddStudentMessage('');
+        }, 2000);
+      } else {
+        setAddStudentMessage(data.error || 'Failed to register student.');
+      }
+    } catch (error) {
+      console.error('Error adding student:', error);
+      setAddStudentMessage('Network error. Please check if the backend server is running.');
+    } finally {
+      setAddStudentLoading(false);
+    }
+  };
+
+  // Handle editing student
+  const handleEditStudent = (student) => {
+    setEditingStudent(student);
+    setEditStudentData({
+      id: student.id,
+      name: student.name,
+      department: student.department,
+      photoUrl: student.photoUrl || ''
+    });
+    setShowEditStudentModal(true);
+  };
+
+  // Handle updating student
+  const handleUpdateStudent = async (e) => {
+    e.preventDefault();
+    
+    if (!editStudentData.id.trim() || !editStudentData.name.trim()) {
+      setEditStudentMessage('Student ID and Name are required fields.');
+      return;
+    }
+
+    try {
+      setEditStudentLoading(true);
+      setEditStudentMessage('');
+      
+      const response = await fetch(`/api/students/update/${editingStudent._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editStudentData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setEditStudentMessage('Student updated successfully!');
+        // Refresh search results
+        handleStudentSearch(searchQuery);
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          setShowEditStudentModal(false);
+          setEditStudentMessage('');
+          setEditingStudent(null);
+        }, 2000);
+      } else {
+        setEditStudentMessage(data.error || 'Failed to update student.');
+      }
+    } catch (error) {
+      console.error('Error updating student:', error);
+      setEditStudentMessage('Network error. Please check if the backend server is running.');
+    } finally {
+      setEditStudentLoading(false);
+    }
+  };
+
+  // Handle deleting student
+  const handleDeleteStudent = (studentId) => {
+    setStudentToDelete(studentId);
+    setShowDeleteConfirmModal(true);
+  };
+
+  // Confirm delete student
+  const confirmDeleteStudent = async () => {
+    if (!studentToDelete) return;
+
+    try {
+      setDeleteLoading(true);
+      const response = await fetch(`/api/students/delete/${studentToDelete}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Refresh search results and dashboard stats
+        handleStudentSearch(searchQuery);
+        fetchDashboardData();
+        setRefreshMessage('Student deleted successfully!');
+        setTimeout(() => setRefreshMessage(''), 3000);
+        setShowDeleteConfirmModal(false);
+        setStudentToDelete(null);
+      } else {
+        setRefreshMessage(data.error || 'Failed to delete student.');
+        setTimeout(() => setRefreshMessage(''), 3000);
+      }
+    } catch (error) {
+      console.error('Error deleting student:', error);
+      setRefreshMessage('Network error. Please check if the backend server is running.');
+      setTimeout(() => setRefreshMessage(''), 3000);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Cancel delete student
+  const cancelDeleteStudent = () => {
+    setShowDeleteConfirmModal(false);
+    setStudentToDelete(null);
+  };
+
+  // Handle adding new staff
+  const handleAddStaff = async (e) => {
+    e.preventDefault();
+    
+    if (!newStaffData.username.trim() || !newStaffData.password.trim()) {
+      setAddStaffMessage('Username and Password are required fields.');
+      return;
+    }
+
+    try {
+      setAddStaffLoading(true);
+      setAddStaffMessage('');
+      
+      const response = await fetch('/api/staff/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newStaffData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setAddStaffMessage('Staff registered successfully!');
+        // Reset form data
+        setNewStaffData({
+          username: '',
+          password: ''
+        });
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          setShowAddStaffModal(false);
+          setAddStaffMessage('');
+        }, 2000);
+      } else {
+        setAddStaffMessage(data.error || 'Failed to register staff.');
+      }
+    } catch (error) {
+      console.error('Error adding staff:', error);
+      setAddStaffMessage('Network error. Please check if the backend server is running.');
+    } finally {
+      setAddStaffLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="dashboard-container">
@@ -401,7 +630,6 @@ const Dashboard = ({ user, onLogout }) => {
             {activeSection === 'students' && (
               <>
                 <div className="students-section">
-                  <h2>Student Management</h2>
                   
                   {/* Search Section */}
                   <div className="search-section">
@@ -410,7 +638,7 @@ const Dashboard = ({ user, onLogout }) => {
                         <i className="fas fa-search search-icon"></i>
                         <input
                           type="text"
-                          placeholder="Search by Student ID or Name..."
+                          placeholder="Search Student ID or Name..."
                           value={searchQuery}
                           onChange={handleSearchInputChange}
                           className="search-input"
@@ -426,7 +654,10 @@ const Dashboard = ({ user, onLogout }) => {
 
                     {/* Action Buttons */}
                     <div className="action-buttons">
-                      <button className="action-btn add-btn">
+                      <button 
+                        className="action-btn add-btn"
+                        onClick={() => setShowAddStudentModal(true)}
+                      >
                         <i className="fas fa-user-plus"></i>
                         <span>Add New Students</span>
                       </button>
@@ -466,6 +697,22 @@ const Dashboard = ({ user, onLogout }) => {
                                 <span className="detail-label">Department:</span>
                                 <span className="detail-value">{student.department}</span>
                               </div>
+                            </div>
+                            <div className="student-actions">
+                              <button 
+                                className="btn-edit"
+                                onClick={() => handleEditStudent(student)}
+                              >
+                                <i className="fas fa-edit"></i>
+                                Edit
+                              </button>
+                              <button 
+                                className="btn-delete"
+                                onClick={() => handleDeleteStudent(student.id)}
+                              >
+                                <i className="fas fa-trash"></i>
+                                Delete
+                              </button>
                             </div>
                           </div>
                         ))}
@@ -550,13 +797,15 @@ const Dashboard = ({ user, onLogout }) => {
             {activeSection === 'settings' && (
               <>
                 <div className="settings-section">
-                  <h2>System Settings</h2>
                   <div className="feature-list">
                     <div className="feature-item">
                       <i className="fas fa-cog"></i>
                       <span>General Settings</span>
                     </div>
-                    <div className="feature-item">
+                    <div 
+                      className="feature-item clickable"
+                      onClick={() => setShowAddStaffModal(true)}
+                    >
                       <i className="fas fa-users-cog"></i>
                       <span>Scanner Management</span>
                     </div>
@@ -570,6 +819,328 @@ const Dashboard = ({ user, onLogout }) => {
             )}
         </div>
       </div>
+
+      {/* Add Student Modal */}
+      {showAddStudentModal && (
+        <div className="modal-overlay" onClick={() => setShowAddStudentModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add New Student</h3>
+              <button 
+                className="modal-close-btn"
+                onClick={() => setShowAddStudentModal(false)}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {addStudentMessage && (
+                <div className={`modal-message ${addStudentMessage.includes('successfully') ? 'success' : 'error'}`}>
+                  {addStudentMessage}
+                </div>
+              )}
+              
+              <form onSubmit={handleAddStudent} className="add-student-form">
+                <div className="form-group">
+                  <label htmlFor="studentId">Student ID</label>
+                  <input
+                    type="text"
+                    id="studentId"
+                    value={newStudentData.id}
+                    onChange={(e) => setNewStudentData({...newStudentData, id: e.target.value})}
+                    placeholder="Enter student ID"
+                    required
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="studentName">Name</label>
+                  <input
+                    type="text"
+                    id="studentName"
+                    value={newStudentData.name}
+                    onChange={(e) => setNewStudentData({...newStudentData, name: e.target.value})}
+                    placeholder="Enter student name"
+                    required
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="studentDepartment">Department</label>
+                  <input
+                    type="text"
+                    id="studentDepartment"
+                    value={newStudentData.department}
+                    onChange={(e) => setNewStudentData({...newStudentData, department: e.target.value})}
+                    placeholder="Enter department"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="studentPhotoUrl">Photo Path</label>
+                  <input
+                    type="text"
+                    id="studentPhotoUrl"
+                    value={newStudentData.photoUrl}
+                    onChange={(e) => setNewStudentData({...newStudentData, photoUrl: e.target.value})}
+                    placeholder="e.g., /public/images/student.jpg"
+                  />
+                </div>
+                
+                <div className="form-actions">
+                  <button 
+                    type="button" 
+                    className="btn-cancel"
+                    onClick={() => setShowAddStudentModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn-register"
+                    disabled={addStudentLoading}
+                  >
+                    {addStudentLoading ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin"></i>
+                        Registering...
+                      </>
+                    ) : (
+                      'Register'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Staff Modal */}
+      {showAddStaffModal && (
+        <div className="modal-overlay" onClick={() => setShowAddStaffModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add New Staff</h3>
+              <button 
+                className="modal-close-btn"
+                onClick={() => setShowAddStaffModal(false)}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {addStaffMessage && (
+                <div className={`modal-message ${addStaffMessage.includes('successfully') ? 'success' : 'error'}`}>
+                  {addStaffMessage}
+                </div>
+              )}
+              
+              <form onSubmit={handleAddStaff} className="add-staff-form">
+                <div className="form-group">
+                  <label htmlFor="staffUsername">Username</label>
+                  <input
+                    type="text"
+                    id="staffUsername"
+                    value={newStaffData.username}
+                    onChange={(e) => setNewStaffData({...newStaffData, username: e.target.value})}
+                    placeholder="Enter username"
+                    required
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="staffPassword">Password</label>
+                  <input
+                    type="password"
+                    id="staffPassword"
+                    value={newStaffData.password}
+                    onChange={(e) => setNewStaffData({...newStaffData, password: e.target.value})}
+                    placeholder="Enter password"
+                    required
+                  />
+                </div>
+                
+                <div className="form-actions">
+                  <button 
+                    type="button" 
+                    className="btn-cancel"
+                    onClick={() => setShowAddStaffModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn-register"
+                    disabled={addStaffLoading}
+                  >
+                    {addStaffLoading ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin"></i>
+                        Registering...
+                      </>
+                    ) : (
+                      'Register Staff'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Student Modal */}
+      {showEditStudentModal && (
+        <div className="modal-overlay" onClick={() => setShowEditStudentModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Edit Student Data</h3>
+              <button 
+                className="modal-close-btn"
+                onClick={() => setShowEditStudentModal(false)}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {editStudentMessage && (
+                <div className={`modal-message ${editStudentMessage.includes('successfully') ? 'success' : 'error'}`}>
+                  {editStudentMessage}
+                </div>
+              )}
+              
+              <form onSubmit={handleUpdateStudent} className="edit-student-form">
+                <div className="form-group">
+                  <label htmlFor="editStudentId">Student ID</label>
+                  <input
+                    type="text"
+                    id="editStudentId"
+                    value={editStudentData.id}
+                    onChange={(e) => setEditStudentData({...editStudentData, id: e.target.value})}
+                    placeholder="Enter student ID"
+                    required
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="editStudentName">Name</label>
+                  <input
+                    type="text"
+                    id="editStudentName"
+                    value={editStudentData.name}
+                    onChange={(e) => setEditStudentData({...editStudentData, name: e.target.value})}
+                    placeholder="Enter student name"
+                    required
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="editStudentDepartment">Department</label>
+                  <input
+                    type="text"
+                    id="editStudentDepartment"
+                    value={editStudentData.department}
+                    onChange={(e) => setEditStudentData({...editStudentData, department: e.target.value})}
+                    placeholder="Enter department"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="editStudentPhotoUrl">Photo Path</label>
+                  <input
+                    type="text"
+                    id="editStudentPhotoUrl"
+                    value={editStudentData.photoUrl}
+                    onChange={(e) => setEditStudentData({...editStudentData, photoUrl: e.target.value})}
+                    placeholder="e.g., /public/images/student.jpg"
+                  />
+                </div>
+                
+                <div className="form-actions">
+                  <button 
+                    type="button" 
+                    className="btn-cancel"
+                    onClick={() => setShowEditStudentModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn-register"
+                    disabled={editStudentLoading}
+                  >
+                    {editStudentLoading ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin"></i>
+                        Updating...
+                      </>
+                    ) : (
+                      'Update'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmModal && (
+        <div className="modal-overlay" onClick={cancelDeleteStudent}>
+          <div className="modal-content delete-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header delete-header">
+              <h3>Delete Student</h3>
+              <button 
+                className="modal-close-btn"
+                onClick={cancelDeleteStudent}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="delete-warning">
+                <i className="fas fa-exclamation-triangle warning-icon"></i>
+                <p>Are you sure you want to delete this student?</p>
+                <p className="warning-text">This action cannot be undone.</p>
+              </div>
+              
+              <div className="form-actions">
+                <button 
+                  type="button" 
+                  className="btn-cancel"
+                  onClick={cancelDeleteStudent}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  className="btn-delete-confirm"
+                  onClick={confirmDeleteStudent}
+                  disabled={deleteLoading}
+                >
+                  {deleteLoading ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin"></i>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-trash"></i>
+                      Delete Student
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Taskbar */}
       <div className="taskbar">

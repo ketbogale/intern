@@ -176,4 +176,93 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// Update student by MongoDB _id
+router.put("/update/:id", async (req, res) => {
+  try {
+    const { id, name, department, photoUrl } = req.body;
+
+    // Validate required fields
+    if (!id || !name) {
+      return res.status(400).json({
+        error: "Student ID and name are required",
+      });
+    }
+
+    // Check if another student already has this ID (excluding current student)
+    const existingStudent = await Student.findOne({ 
+      id: id, 
+      _id: { $ne: req.params.id } 
+    });
+    if (existingStudent) {
+      return res.status(409).json({
+        error: "Another student with this ID already exists",
+      });
+    }
+
+    // Update student
+    const updatedStudent = await Student.findByIdAndUpdate(
+      req.params.id,
+      {
+        id,
+        name,
+        department: department || "",
+        photoUrl: photoUrl || "",
+      },
+      { new: true }
+    );
+
+    if (!updatedStudent) {
+      return res.status(404).json({
+        error: "Student not found",
+      });
+    }
+
+    res.json({
+      message: "Student updated successfully",
+      student: {
+        id: updatedStudent.id,
+        name: updatedStudent.name,
+        department: updatedStudent.department,
+        photoUrl: updatedStudent.photoUrl,
+        mealUsed: updatedStudent.mealUsed,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating student:", error);
+    res.status(500).json({
+      error: "Internal server error",
+      details: error.message,
+    });
+  }
+});
+
+// Delete student by student ID
+router.delete("/delete/:studentId", async (req, res) => {
+  try {
+    const deletedStudent = await Student.findOneAndDelete({ 
+      id: req.params.studentId 
+    });
+
+    if (!deletedStudent) {
+      return res.status(404).json({
+        error: "Student not found",
+      });
+    }
+
+    res.json({
+      message: "Student deleted successfully",
+      student: {
+        id: deletedStudent.id,
+        name: deletedStudent.name,
+      },
+    });
+  } catch (error) {
+    console.error("Error deleting student:", error);
+    res.status(500).json({
+      error: "Internal server error",
+      details: error.message,
+    });
+  }
+});
+
 module.exports = router;

@@ -4,6 +4,8 @@ const session = require("express-session");
 const loginRoutes = require("./routes/login");
 const attendanceRoutes = require("./routes/attendance");
 const dashboardRoutes = require("./routes/dashboard");
+const studentsRoutes = require("./routes/students");
+const staffRoutes = require("./routes/staff");
 const mongoose = require("mongoose");
 // const SchedulerService = require("./services/scheduler");
 // Replace with your MongoDB URI
@@ -72,6 +74,8 @@ app.get("/", (req, res) => {
 app.use("/api/login", loginRoutes);
 app.use("/api/attendance", requireAuth, attendanceRoutes);
 app.use("/api/dashboard", requireAuth, dashboardRoutes);
+app.use("/api/students", requireAuth, studentsRoutes);
+app.use("/api/staff", requireAuth, staffRoutes);
 
 // Logout route
 app.post("/api/logout", (req, res) => {
