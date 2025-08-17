@@ -118,6 +118,35 @@ exports.getCurrentAnalytics = async (req, res) => {
   }
 };
 
+// Search students by ID or name
+exports.searchStudents = async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query || query.trim() === '') {
+      return res.status(400).json({ error: "Search query is required" });
+    }
+
+    // Search by ID (exact match) or name (partial match, case insensitive)
+    const students = await Student.find({
+      $or: [
+        { id: { $regex: query, $options: 'i' } },
+        { name: { $regex: query, $options: 'i' } }
+      ]
+    }).limit(10);
+
+    res.json({
+      success: true,
+      students,
+      count: students.length
+    });
+
+  } catch (error) {
+    console.error('Student search error:', error);
+    res.status(500).json({ error: "Failed to search students" });
+  }
+};
+
 // Export current attendance data as CSV
 exports.exportCurrentAttendance = async (req, res) => {
   try {

@@ -8,6 +8,9 @@ router.get('/stats', dashboardController.getDashboardStats);
 // GET /api/dashboard/analytics - Get current session analytics
 router.get('/analytics', dashboardController.getCurrentAnalytics);
 
+// GET /api/dashboard/search - Search students by ID or name
+router.get('/search', dashboardController.searchStudents);
+
 // GET /api/dashboard/export - Export current attendance data as CSV
 router.get('/export', dashboardController.exportCurrentAttendance);
 

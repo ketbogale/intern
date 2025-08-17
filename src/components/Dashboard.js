@@ -15,6 +15,10 @@ const Dashboard = ({ user, onLogout }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchMessage, setSearchMessage] = useState('');
 
   useEffect(() => {
     fetchDashboardData();
@@ -99,6 +103,60 @@ const Dashboard = ({ user, onLogout }) => {
     } finally {
       setAnalyticsLoading(false);
     }
+  };
+
+  // Handle student search
+  const handleStudentSearch = async (query) => {
+    if (!query || query.trim() === '') {
+      setSearchResults([]);
+      setSearchMessage('');
+      return;
+    }
+
+    try {
+      setSearchLoading(true);
+      setSearchMessage('');
+      
+      console.log('Searching for:', query);
+      const response = await fetch(`/api/dashboard/search?query=${encodeURIComponent(query.trim())}`);
+      console.log('Search response status:', response.status);
+      
+      const data = await response.json();
+      console.log('Search response data:', data);
+      
+      if (response.ok && data.success) {
+        setSearchResults(data.students);
+        if (data.students.length === 0) {
+          setSearchMessage('No students found matching your search.');
+        } else {
+          setSearchMessage(`Found ${data.students.length} student(s).`);
+        }
+      } else {
+        setSearchResults([]);
+        setSearchMessage(data.error || 'Error searching students.');
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+      setSearchMessage('Network error. Please check if the backend server is running.');
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Handle search input change with debouncing
+  const handleSearchInputChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    
+    // Debounce search - wait 500ms after user stops typing
+    if (window.searchTimeout) {
+      clearTimeout(window.searchTimeout);
+    }
+    
+    window.searchTimeout = setTimeout(() => {
+      handleStudentSearch(value);
+    }, 500);
   };
 
   // Handle export functionality
@@ -344,15 +402,75 @@ const Dashboard = ({ user, onLogout }) => {
               <>
                 <div className="students-section">
                   <h2>Student Management</h2>
-                  <div className="feature-list">
-                    <div className="feature-item">
-                      <i className="fas fa-user-plus"></i>
-                      <span>Add New Students</span>
+                  
+                  {/* Search Section */}
+                  <div className="search-section">
+                    <div className="search-container">
+                      <div className="search-input-wrapper">
+                        <i className="fas fa-search search-icon"></i>
+                        <input
+                          type="text"
+                          placeholder="Search by Student ID or Name..."
+                          value={searchQuery}
+                          onChange={handleSearchInputChange}
+                          className="search-input"
+                        />
+                        {searchLoading && <i className="fas fa-spinner fa-spin loading-icon"></i>}
+                      </div>
+                      {searchMessage && (
+                        <div className={`search-message ${searchResults.length > 0 ? 'success' : 'info'}`}>
+                          {searchMessage}
+                        </div>
+                      )}
                     </div>
-                    <div className="feature-item">
-                      <i className="fas fa-search"></i>
-                      <span>Search Students</span>
+
+                    {/* Action Buttons */}
+                    <div className="action-buttons">
+                      <button className="action-btn add-btn">
+                        <i className="fas fa-user-plus"></i>
+                        <span>Add New Students</span>
+                      </button>
+                      <button className="action-btn view-btn">
+                        <i className="fas fa-users"></i>
+                        <span>View All Students</span>
+                      </button>
                     </div>
+
+                    {/* Student Information Display - Positioned Absolutely */}
+                    {searchResults.length > 0 && (
+                      <div className="student-info-panel">
+                        <h3>Student Information</h3>
+                        {searchResults.map((student) => (
+                          <div key={student._id} className="student-details-card">
+                            <div className="student-header">
+                              {student.photoUrl && (
+                                <div className="student-avatar">
+                                  <img src={student.photoUrl} alt={student.name} />
+                                </div>
+                              )}
+                              <div className="student-basic-info">
+                                <h4>{student.name}</h4>
+                                <p className="student-id-display">{student.id}</p>
+                              </div>
+                            </div>
+                            <div className="student-details">
+                              <div className="detail-row">
+                                <span className="detail-label">ID:</span>
+                                <span className="detail-value">{student.id}</span>
+                              </div>
+                              <div className="detail-row">
+                                <span className="detail-label">Name:</span>
+                                <span className="detail-value">{student.name}</span>
+                              </div>
+                              <div className="detail-row">
+                                <span className="detail-label">Department:</span>
+                                <span className="detail-value">{student.department}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </>
