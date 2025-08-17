@@ -10,31 +10,33 @@ exports.getDashboardStats = async (req, res) => {
     const totalStudents = await Student.countDocuments();
     console.log('Total students:', totalStudents);
 
-    // Get today's attendance (check both date field and createdAt for compatibility)
+    // Get today's attendance (unique students only)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const todayAttendance = await MealCurrent.countDocuments({
+    const todayUniqueAttendees = await MealCurrent.distinct('studentId', {
       $or: [
         { date: { $gte: today, $lt: tomorrow } },
         { createdAt: { $gte: today, $lt: tomorrow } }
       ]
     });
-    console.log('Today attendance:', todayAttendance);
+    const todayAttendance = todayUniqueAttendees.length;
+    console.log('Today attendance (unique students):', todayAttendance);
 
-    // Get this week's attendance
+    // Get this week's attendance (unique students only)
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - today.getDay());
     
-    const weeklyAttendance = await MealCurrent.countDocuments({
+    const weeklyUniqueAttendees = await MealCurrent.distinct('studentId', {
       $or: [
         { date: { $gte: weekStart, $lt: tomorrow } },
         { createdAt: { $gte: weekStart, $lt: tomorrow } }
       ]
     });
-    console.log('Weekly attendance:', weeklyAttendance);
+    const weeklyAttendance = weeklyUniqueAttendees.length;
+    console.log('Weekly attendance (unique students):', weeklyAttendance);
 
     // Get recent attendance records (last 10) with student details
     const recentAttendance = await MealCurrent.find()
@@ -81,18 +83,32 @@ exports.getDashboardStats = async (req, res) => {
 // Get current session analytics
 exports.getCurrentAnalytics = async (req, res) => {
   try {
-    // Get all current attendance records (since database resets after each meal)
-    const attendanceData = await MealCurrent.find().lean();
+    // Get unique students who attended (avoid counting duplicate meal types)
+    const uniqueAttendees = await MealCurrent.distinct('studentId');
     const totalStudents = await Student.countDocuments();
     
-    // Calculate current session statistics
-    const attendanceRate = 75; // Fixed percentage for pie chart display
+    // Calculate actual attendance rate
+    const attendedStudents = uniqueAttendees.length;
+    let attendanceRate = 0;
     
+    if (totalStudents > 0) {
+      attendanceRate = Math.round((attendedStudents / totalStudents) * 100);
+    }
+    
+    console.log('Analytics calculation:', {
+      totalStudents,
+      attendedStudents,
+      uniqueAttendees,
+      attendanceRate
+    });
 
     res.json({
       success: true,
       analytics: {
-        attendanceRate
+        attendanceRate,
+        totalStudents,
+        attendedStudents,
+        remainingCapacity: totalStudents - attendedStudents
       }
     });
 
