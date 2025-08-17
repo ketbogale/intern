@@ -2,6 +2,7 @@
 node_modules/
 */node_modules/
 backend/src/routes/staff.js
+backend/src/routes/students.js
 # Build outputs
 build/
 dist/
