@@ -6,8 +6,12 @@ const Dashboard = ({ user, onLogout }) => {
   const [stats, setStats] = useState({
     totalStudents: 0,
     todayAttendance: 0,
-    weeklyAttendance: 0
+    weeklyAttendance: 0,
+    attendancePercentage: 0
   });
+  const [lowAttendanceAlert, setLowAttendanceAlert] = useState(null);
+  const [securityNotifications, setSecurityNotifications] = useState([]);
+  const [notificationFilter, setNotificationFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [activeSection, setActiveSection] = useState('overview');
   const [refreshMessage, setRefreshMessage] = useState('');
@@ -48,10 +52,98 @@ const Dashboard = ({ user, onLogout }) => {
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showGeneralSettingsModal, setShowGeneralSettingsModal] = useState(false);
+  const [showAdminCredentialsModal, setShowAdminCredentialsModal] = useState(false);
+  const [adminCredentials, setAdminCredentials] = useState({
+    currentPassword: '',
+    newUsername: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [adminCredentialsLoading, setAdminCredentialsLoading] = useState(false);
+  const [adminCredentialsMessage, setAdminCredentialsMessage] = useState('');
+  
+  // OTP verification states
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpMessage, setOtpMessage] = useState('');
+  const [otpCountdown, setOtpCountdown] = useState(300); // 5 minutes
+  const [canResendOTP, setCanResendOTP] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
+  const [generalSettings, setGeneralSettings] = useState({
+    attendanceWindowBefore: 30,
+    attendanceWindowAfter: 30,
+    mealResetTimes: {
+      breakfast: '06:00',
+      lunch: '12:00',
+      dinner: '18:00',
+      lateNight: '23:00'
+    },
+    lowAttendanceThreshold: 50,
+    loginAttemptLimit: 5,
+    lockoutDurationMinutes: 5
+  });
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsMessage, setSettingsMessage] = useState('');
+  const [showAllStudentsModal, setShowAllStudentsModal] = useState(false);
+  const [allStudents, setAllStudents] = useState([]);
+  const [allStudentsLoading, setAllStudentsLoading] = useState(false);
+  const [headerShrunk, setHeaderShrunk] = useState(false);
+
+  // Fetch security notifications
+  const fetchSecurityNotifications = async () => {
+    try {
+      const response = await fetch('/api/security/notifications');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setSecurityNotifications(data.notifications);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching security notifications:', error);
+    }
+  };
 
   useEffect(() => {
     fetchDashboardData();
+    fetchSecurityNotifications();
   }, []);
+
+  // OTP countdown timer
+  useEffect(() => {
+    let interval;
+    if (showOTPModal && otpCountdown > 0) {
+      interval = setInterval(() => {
+        setOtpCountdown(prev => {
+          if (prev <= 1) {
+            setOtpMessage('Verification code expired. Please request a new one.');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [showOTPModal, otpCountdown]);
+
+  // Resend OTP countdown
+  useEffect(() => {
+    let interval;
+    if (resendCountdown > 0) {
+      interval = setInterval(() => {
+        setResendCountdown(prev => {
+          if (prev <= 1) {
+            setCanResendOTP(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendCountdown]);
 
   const fetchDashboardData = async () => {
     try {
@@ -68,8 +160,10 @@ const Dashboard = ({ user, onLogout }) => {
         setStats({
           totalStudents: data.stats.totalStudents || 0,
           todayAttendance: data.stats.todayAttendance || 0,
-          weeklyAttendance: data.stats.weeklyAttendance || 0
+          weeklyAttendance: data.stats.weeklyAttendance || 0,
+          attendancePercentage: data.stats.attendancePercentage || 0
         });
+        setLowAttendanceAlert(data.lowAttendanceAlert);
         setAttendanceData(data.recentAttendance || []);
         setIsLoading(false);
         
@@ -109,32 +203,9 @@ const Dashboard = ({ user, onLogout }) => {
       setRefreshMessage('Failed to refresh data. Please try again.');
       
       // Clear error message after 3 seconds
-      setTimeout(() => {
-        setRefreshMessage('');
-      }, 3000);
     }
   };
 
-  // Fetch current analytics data
-  const fetchAnalyticsData = async () => {
-    try {
-      setAnalyticsLoading(true);
-      const response = await fetch('/api/dashboard/analytics');
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        setAnalyticsData(data.analytics);
-      } else {
-        console.error('Analytics error:', data.error);
-      }
-    } catch (error) {
-      console.error('Error fetching analytics:', error);
-    } finally {
-      setAnalyticsLoading(false);
-    }
-  };
-
-  // Handle student search
   const handleStudentSearch = async (query) => {
     if (!query || query.trim() === '') {
       setSearchResults([]);
@@ -220,6 +291,25 @@ const Dashboard = ({ user, onLogout }) => {
     }
   };
 
+  // Fetch analytics data
+  const fetchAnalyticsData = async () => {
+    try {
+      setAnalyticsLoading(true);
+      const response = await fetch('/api/dashboard/analytics');
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setAnalyticsData(data.analytics);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching analytics data:', error);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
+
   // Load analytics data when reports section is opened
   React.useEffect(() => {
     if (activeSection === 'reports' && !analyticsData) {
@@ -227,7 +317,7 @@ const Dashboard = ({ user, onLogout }) => {
     }
   }, [activeSection]);
 
-  // Auto-refresh analytics every 30 seconds when on reports page
+  // Auto-refresh analytics data every 30 seconds when on reports page
   React.useEffect(() => {
     let interval;
     if (activeSection === 'reports') {
@@ -274,11 +364,10 @@ const Dashboard = ({ user, onLogout }) => {
         });
         // Refresh dashboard stats
         fetchDashboardData();
-        // Close modal after 2 seconds
+        // Clear success message after 3 seconds but keep modal open
         setTimeout(() => {
-          setShowAddStudentModal(false);
           setAddStudentMessage('');
-        }, 2000);
+        }, 2500);
       } else {
         setAddStudentMessage(data.error || 'Failed to register student.');
       }
@@ -394,6 +483,219 @@ const Dashboard = ({ user, onLogout }) => {
     setStudentToDelete(null);
   };
 
+  // Security notification helper functions
+  const getSecurityIcon = (type) => {
+    switch (type) {
+      case 'failed_login': return 'fa-shield-exclamation';
+      case 'unusual_access': return 'fa-map-marker-alt';
+      case 'password_reset': return 'fa-key';
+      case 'account_locked': return 'fa-lock';
+      default: return 'fa-shield-alt';
+    }
+  };
+
+  const formatTimeAgo = (timestamp) => {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffInMinutes = Math.floor((now - time) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return `${Math.floor(diffInMinutes / 1440)}d ago`;
+  };
+
+  const dismissNotification = async (notificationId) => {
+    try {
+      const response = await fetch(`/api/security/notifications/${notificationId}/dismiss`, {
+        method: 'PATCH'
+      });
+      if (response.ok) {
+        setSecurityNotifications(prev => 
+          prev.filter(notif => notif._id !== notificationId)
+        );
+      }
+    } catch (error) {
+      console.error('Error dismissing notification:', error);
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    try {
+      const response = await fetch('/api/security/notifications/mark-all-read', {
+        method: 'PATCH'
+      });
+      if (response.ok) {
+        setSecurityNotifications(prev => 
+          prev.map(notif => ({ ...notif, isRead: true }))
+        );
+      }
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  };
+
+  // Handle OTP verification
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    
+    if (!otpCode || otpCode.length !== 6) {
+      setOtpMessage('Please enter a valid 6-digit verification code');
+      return;
+    }
+    
+    try {
+      setOtpLoading(true);
+      setOtpMessage('');
+      
+      const response = await fetch('/api/admin/verify-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ otp: otpCode })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setOtpMessage('Login successful! Redirecting...');
+        
+        // Close OTP modal and redirect to dashboard
+        setTimeout(() => {
+          setShowOTPModal(false);
+          setOtpCode('');
+          setOtpMessage('');
+          // Refresh the page to load admin dashboard
+          window.location.reload();
+        }, 1500);
+      } else {
+        setOtpMessage(data.message || 'Invalid verification code');
+      }
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      setOtpMessage('Network error. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  // Handle resend OTP
+  const handleResendOTP = async () => {
+    try {
+      setOtpLoading(true);
+      setOtpMessage('');
+      
+      const response = await fetch('/api/admin/resend-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setOtpMessage('New verification code sent to your email');
+        setOtpCountdown(300); // Reset to 5 minutes
+        setCanResendOTP(false);
+        setResendCountdown(60); // 60 seconds before next resend
+      } else {
+        setOtpMessage(data.message || 'Failed to resend code');
+      }
+    } catch (error) {
+      console.error('Error resending OTP:', error);
+      setOtpMessage('Network error. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  // Format countdown time
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Handle admin credentials update
+  const handleUpdateAdminCredentials = async (e) => {
+    e.preventDefault();
+    
+    try {
+      setAdminCredentialsLoading(true);
+      setAdminCredentialsMessage('');
+      
+      const response = await fetch('/api/admin/credentials', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(adminCredentials)
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setAdminCredentialsMessage('Admin credentials updated successfully!');
+        setAdminCredentials({
+          currentPassword: '',
+          newUsername: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          setShowAdminCredentialsModal(false);
+          setAdminCredentialsMessage('');
+        }, 2000);
+      } else {
+        setAdminCredentialsMessage(data.message || 'Failed to update credentials');
+      }
+    } catch (error) {
+      console.error('Error updating admin credentials:', error);
+      setAdminCredentialsMessage('Network error. Please try again.');
+    } finally {
+      setAdminCredentialsLoading(false);
+    }
+  };
+
+  // Handle saving general settings
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    
+    try {
+      setSettingsLoading(true);
+      setSettingsMessage('');
+      
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(generalSettings),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setSettingsMessage('✅ Settings saved successfully!');
+        setTimeout(() => {
+          setSettingsMessage('');
+        }, 3000);
+      } else {
+        setSettingsMessage('❌ ' + (data.error || 'Failed to save settings.'));
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+      setSettingsMessage('❌ Network error: ' + error.message);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+
   // Handle adding new staff
   const handleAddStaff = async (e) => {
     e.preventDefault();
@@ -437,6 +739,29 @@ const Dashboard = ({ user, onLogout }) => {
       setAddStaffMessage('Network error. Please check if the backend server is running.');
     } finally {
       setAddStaffLoading(false);
+    }
+  };
+
+  // Handle viewing all students
+  const handleViewAllStudents = async () => {
+    try {
+      setAllStudentsLoading(true);
+      setShowAllStudentsModal(true);
+      
+      const response = await fetch('/api/students/all');
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setAllStudents(data.students);
+      } else {
+        console.error('Error fetching all students:', data.error);
+        setAllStudents([]);
+      }
+    } catch (error) {
+      console.error('Error fetching all students:', error);
+      setAllStudents([]);
+    } finally {
+      setAllStudentsLoading(false);
     }
   };
 
@@ -490,6 +815,13 @@ const Dashboard = ({ user, onLogout }) => {
               <i className="fas fa-calendar-check"></i>
               <span>Attendance</span>
             </div>
+            <div 
+              className={`nav-item ${activeSection === 'notifications' ? 'active' : ''}`}
+              onClick={() => setActiveSection('notifications')}
+            >
+              <i className="fas fa-bell"></i>
+              <span>Notifications</span>
+            </div>
             <hr className='nav-divider'/>
             <div 
               className={`nav-item ${activeSection === 'students' ? 'active' : ''}`}
@@ -522,11 +854,12 @@ const Dashboard = ({ user, onLogout }) => {
 
         {/* Main Content */}
         <div className="main-content">
-          <div className="content-header">
+          <div className={`content-header ${headerShrunk ? 'shrunk' : ''}`}>
             <div className="header-left-content">
               <h1>
                 {activeSection === 'overview' && 'Dashboard Overview'}
                 {activeSection === 'attendance' && 'Meal Attendance'}
+                {activeSection === 'notifications' && 'Notifications'}
                 {activeSection === 'students' && 'Students Management'}
                 {activeSection === 'reports' && 'Meal Reports'}
                 {activeSection === 'settings' && 'Settings'}
@@ -560,10 +893,11 @@ const Dashboard = ({ user, onLogout }) => {
                     </div>
                   </div>
 
-                  <div className="stat-card today-attendance">
+                  <div className={`stat-card today-attendance ${lowAttendanceAlert?.isActive ? 'low-attendance' : ''}`}>
                     <div className="stat-content">
                       <h3>TODAY'S ATTENDANCE</h3>
                       <div className="stat-number">{stats.todayAttendance}</div>
+                      <div className="stat-percentage">{stats.attendancePercentage}%</div>
                     </div>
                   </div>
 
@@ -587,6 +921,114 @@ const Dashboard = ({ user, onLogout }) => {
                       <li>Access detailed reports and analytics</li>
                     </ul>
                   </div>
+                </div>
+              </>
+            )}
+
+            {activeSection === 'notifications' && (
+              <>
+                <div className="notifications-section">
+                  <div className="notification-header-controls">
+                    <div className="notification-filters">
+                      <select 
+                        value={notificationFilter} 
+                        onChange={(e) => setNotificationFilter(e.target.value)}
+                        className="filter-select"
+                      >
+                        <option value="all">All Notifications</option>
+                        <option value="security">Security & Access</option>
+                        <option value="attendance">Attendance Alerts</option>
+                        <option value="system">System Status</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  {/* Security Notifications */}
+                  {securityNotifications
+                    .filter(notif => notificationFilter === 'all' || notificationFilter === 'security')
+                    .map(notification => (
+                    <div key={notification._id} className={`notification-item ${notification.severity}`}>
+                      <div className="notification-header">
+                        <div className="notification-title">
+                          <i className={`fas ${getSecurityIcon(notification.type)}`}></i>
+                          {notification.title}
+                          {!notification.isRead && <span className="unread-dot"></span>}
+                        </div>
+                        <div className="notification-actions">
+                          <span className="notification-time">
+                            {formatTimeAgo(notification.createdAt)}
+                          </span>
+                          <button 
+                            className="notification-dismiss"
+                            onClick={() => dismissNotification(notification._id)}
+                          >
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                      </div>
+                      <div className="notification-body">
+                        <p className="notification-message">{notification.message}</p>
+                        <div className="notification-meta">
+                          <span className={`notification-badge ${notification.severity}`}>
+                            {notification.severity.toUpperCase()}
+                          </span>
+                          {notification.metadata?.ipAddress && (
+                            <span className="notification-badge">
+                              IP: {notification.metadata.ipAddress}
+                            </span>
+                          )}
+                          {notification.metadata?.attemptCount && (
+                            <span className="notification-badge">
+                              Attempts: {notification.metadata.attemptCount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Low Attendance Alert */}
+                  {lowAttendanceAlert && lowAttendanceAlert.isActive && 
+                   (notificationFilter === 'all' || notificationFilter === 'attendance') && (
+                    <div className="notification-item high">
+                      <div className="notification-header">
+                        <div className="notification-title">
+                          <i className="fas fa-exclamation-triangle"></i>
+                          Low Attendance Alert
+                        </div>
+                        <div className="notification-actions">
+                          <span className="notification-time">Now</span>
+                          <button 
+                            className="notification-dismiss"
+                            onClick={() => setLowAttendanceAlert(null)}
+                          >
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                      </div>
+                      <div className="notification-body">
+                        <p className="notification-message">{lowAttendanceAlert.message}</p>
+                        <div className="notification-meta">
+                          <span className="notification-badge high">HIGH</span>
+                          <span className="notification-badge">
+                            Threshold: {lowAttendanceAlert.threshold}%
+                          </span>
+                          <span className="notification-badge">
+                            Missing: {lowAttendanceAlert.missingStudents} students
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* No notifications message */}
+                  {(!lowAttendanceAlert || !lowAttendanceAlert.isActive) && 
+                   securityNotifications.length === 0 && (
+                    <div className="no-notifications">
+                      <i className="fas fa-shield-check"></i>
+                      <p>All systems secure. No alerts at this time.</p>
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -659,9 +1101,12 @@ const Dashboard = ({ user, onLogout }) => {
                         onClick={() => setShowAddStudentModal(true)}
                       >
                         <i className="fas fa-user-plus"></i>
-                        <span>Add New Students</span>
+                        <span>Add New Student</span>
                       </button>
-                      <button className="action-btn view-btn">
+                      <button 
+                        className="action-btn view-btn"
+                        onClick={() => handleViewAllStudents()}
+                      >
                         <i className="fas fa-users"></i>
                         <span>View All Students</span>
                       </button>
@@ -670,6 +1115,12 @@ const Dashboard = ({ user, onLogout }) => {
                     {/* Student Information Display - Positioned Absolutely */}
                     {searchResults.length > 0 && (
                       <div className="student-info-panel">
+                        <button 
+                          className="modal-close-btn student-panel-close"
+                          onClick={() => setSearchResults([])}
+                        >
+                          <i className="fas fa-times"></i>
+                        </button>
                         <h3>Student Information</h3>
                         {searchResults.map((student) => (
                           <div key={student._id} className="student-details-card">
@@ -798,10 +1249,18 @@ const Dashboard = ({ user, onLogout }) => {
               <>
                 <div className="settings-section">
                   <div className="feature-list">
-                    <div className="feature-item">
+                    <div className="feature-item clickable" onClick={() => setShowGeneralSettingsModal(true)}>
                       <i className="fas fa-cog"></i>
                       <span>General Settings</span>
                     </div>
+                    
+                    {user.role === 'admin' && (
+                      <div className="feature-item clickable" onClick={() => setShowAdminCredentialsModal(true)}>
+                        <i className="fas fa-user-shield"></i>
+                        <span>Admin Credentials</span>
+                      </div>
+                    )}
+                    
                     <div 
                       className="feature-item clickable"
                       onClick={() => setShowAddStaffModal(true)}
@@ -1137,6 +1596,502 @@ const Dashboard = ({ user, onLogout }) => {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* General Settings Modal */}
+      {showGeneralSettingsModal && (
+        <div className="modal-overlay" onClick={() => setShowGeneralSettingsModal(false)}>
+          <div className="modal-content settings-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>General Settings</h3>
+              <button 
+                className="modal-close-btn"
+                onClick={() => setShowGeneralSettingsModal(false)}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {settingsMessage && (
+                <div className={`modal-message ${settingsMessage.includes('successfully') ? 'success' : 'error'}`}>
+                  {settingsMessage}
+                </div>
+              )}
+              
+              <form onSubmit={handleSaveSettings} className="settings-form">
+                {/* Attendance Window Settings */}
+                <div className="settings-section">
+                  <h4><i className="fas fa-clock"></i> Attendance Window</h4>
+                  <div className="settings-row">
+                    <div className="form-group">
+                      <label>Minutes Before Meal Time</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="120"
+                        value={generalSettings.attendanceWindowBefore}
+                        onChange={(e) => setGeneralSettings({...generalSettings, attendanceWindowBefore: parseInt(e.target.value)})}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Minutes After Meal Time</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="120"
+                        value={generalSettings.attendanceWindowAfter}
+                        onChange={(e) => setGeneralSettings({...generalSettings, attendanceWindowAfter: parseInt(e.target.value)})}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Meal Reset Times */}
+                <div className="settings-section">
+                  <h4><i className="fas fa-calendar-day"></i> Meal Reset Times</h4>
+                  <div className="settings-row">
+                    <div className="form-group">
+                      <label>Breakfast Reset Time</label>
+                      <input
+                        type="time"
+                        value={generalSettings.mealResetTimes.breakfast}
+                        onChange={(e) => setGeneralSettings({
+                          ...generalSettings, 
+                          mealResetTimes: {
+                            ...generalSettings.mealResetTimes,
+                            breakfast: e.target.value
+                          }
+                        })}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Lunch Reset Time</label>
+                      <input
+                        type="time"
+                        value={generalSettings.mealResetTimes.lunch}
+                        onChange={(e) => setGeneralSettings({
+                          ...generalSettings, 
+                          mealResetTimes: {
+                            ...generalSettings.mealResetTimes,
+                            lunch: e.target.value
+                          }
+                        })}
+                      />
+                    </div>
+                  </div>
+                  <div className="settings-row">
+                    <div className="form-group">
+                      <label>Dinner Reset Time</label>
+                      <input
+                        type="time"
+                        value={generalSettings.mealResetTimes.dinner}
+                        onChange={(e) => setGeneralSettings({
+                          ...generalSettings, 
+                          mealResetTimes: {
+                            ...generalSettings.mealResetTimes,
+                            dinner: e.target.value
+                          }
+                        })}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Late Night Reset Time</label>
+                      <input
+                        type="time"
+                        value={generalSettings.mealResetTimes.lateNight}
+                        onChange={(e) => setGeneralSettings({
+                          ...generalSettings, 
+                          mealResetTimes: {
+                            ...generalSettings.mealResetTimes,
+                            lateNight: e.target.value
+                          }
+                        })}
+                      />
+                    </div>
+                  </div>
+                  <div className="settings-note">
+                    <p><i className="fas fa-info-circle"></i> Database will automatically reset at these times to clear meal attendance data for each period.</p>
+                  </div>
+                </div>
+
+                {/* Low Attendance Alerts */}
+                <div className="settings-section">
+                  <h4><i className="fas fa-exclamation-triangle"></i> Low Attendance Alerts</h4>
+                  <div className="form-group">
+                    <label>Alert when attendance drops below (%)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={generalSettings.lowAttendanceThreshold}
+                      onChange={(e) => setGeneralSettings({...generalSettings, lowAttendanceThreshold: parseInt(e.target.value)})}
+                    />
+                  </div>
+                </div>
+
+
+                {/* Login Security */}
+                <div className="settings-section">
+                  <h4><i className="fas fa-shield-alt"></i> Login Security</h4>
+                  <div className="settings-row">
+                    <div className="form-group">
+                      <label>Maximum login attempts before lockout</label>
+                      <input
+                        type="number"
+                        min="3"
+                        max="10"
+                        value={generalSettings.loginAttemptLimit}
+                        onChange={(e) => setGeneralSettings({...generalSettings, loginAttemptLimit: parseInt(e.target.value)})}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Lockout duration (minutes)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="60"
+                        value={generalSettings.lockoutDurationMinutes}
+                        onChange={(e) => setGeneralSettings({...generalSettings, lockoutDurationMinutes: parseInt(e.target.value)})}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+
+                <div className="form-actions">
+                  <button 
+                    type="button" 
+                    className="btn-cancel"
+                    onClick={() => setShowGeneralSettingsModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn-register"
+                    disabled={settingsLoading}
+                  >
+                    {settingsLoading ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin"></i>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-save"></i>
+                        Save Settings
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OTP Verification Modal */}
+      {showOTPModal && (
+        <div className="modal-overlay" onClick={() => setShowOTPModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>
+                <i className="fas fa-shield-alt"></i>
+                Email Verification
+              </h3>
+              <button 
+                className="modal-close-btn" 
+                onClick={() => setShowOTPModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {otpMessage && (
+                <div className={`modal-message ${otpMessage.includes('successful') || otpMessage.includes('sent') ? 'success' : 'error'}`}>
+                  {otpMessage}
+                </div>
+              )}
+              
+              <form onSubmit={handleVerifyOTP} className="settings-form">
+                <div className="settings-section">
+                  <h4>
+                    <i className="fas fa-envelope"></i>
+                    Enter Verification Code
+                  </h4>
+                  <p style={{color: '#666', fontSize: '14px', marginBottom: '20px'}}>
+                    We've sent a 6-digit verification code to <strong>ket***@gmail.com</strong>
+                  </p>
+                  
+                  <div className="form-group">
+                    <label>Verification Code</label>
+                    <input
+                      type="text"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="Enter 6-digit code"
+                      maxLength="6"
+                      style={{
+                        textAlign: 'center',
+                        fontSize: '18px',
+                        letterSpacing: '4px',
+                        fontFamily: 'monospace'
+                      }}
+                      required
+                    />
+                  </div>
+                  
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px'}}>
+                    <div style={{fontSize: '13px', color: '#666'}}>
+                      {otpCountdown > 0 ? (
+                        <>⏰ Code expires in: <strong>{formatTime(otpCountdown)}</strong></>
+                      ) : (
+                        <span style={{color: '#e53e3e'}}>⚠️ Code expired</span>
+                      )}
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={handleResendOTP}
+                      disabled={!canResendOTP || otpLoading}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: canResendOTP ? '#3182ce' : '#a0aec0',
+                        cursor: canResendOTP ? 'pointer' : 'not-allowed',
+                        fontSize: '13px',
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : 'Resend Code'}
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowOTPModal(false)}
+                    disabled={otpLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={otpLoading || otpCode.length !== 6 || otpCountdown === 0}
+                  >
+                    {otpLoading ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin"></i>
+                        Verifying...
+                      </>
+                    ) : (
+                      'Verify & Login'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Credentials Modal */}
+      {showAdminCredentialsModal && (
+        <div className="modal-overlay" onClick={() => setShowAdminCredentialsModal(false)}>
+          <div className="modal-content settings-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>
+                Admin Credentials
+              </h3>
+              <button 
+                className="modal-close-btn" 
+                onClick={() => setShowAdminCredentialsModal(false)}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {adminCredentialsMessage && (
+                <div className={`modal-message ${adminCredentialsMessage.includes('✅') ? 'success' : 'error'}`}>
+                  {adminCredentialsMessage}
+                </div>
+              )}
+              
+              <form onSubmit={handleUpdateAdminCredentials} className="settings-form">
+                <div className="settings-section">
+                  <h4>
+                    <i className="fas fa-lock"></i>
+                    Change Admin Credentials
+                  </h4>
+                  
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>Current Password</label>
+                      <input
+                        type="password"
+                        value={adminCredentials.currentPassword}
+                        onChange={(e) => setAdminCredentials(prev => ({
+                          ...prev,
+                          currentPassword: e.target.value
+                        }))}
+                        required
+                        placeholder="Enter current password"
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label>New Username</label>
+                      <input
+                        type="text"
+                        value={adminCredentials.newUsername}
+                        onChange={(e) => setAdminCredentials(prev => ({
+                          ...prev,
+                          newUsername: e.target.value
+                        }))}
+                        placeholder="Leave blank to keep current"
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label>New Password</label>
+                      <input
+                        type="password"
+                        value={adminCredentials.newPassword}
+                        onChange={(e) => setAdminCredentials(prev => ({
+                          ...prev,
+                          newPassword: e.target.value
+                        }))}
+                        placeholder="Leave blank to keep current"
+                        minLength="6"
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label>Confirm New Password</label>
+                      <input
+                        type="password"
+                        value={adminCredentials.confirmPassword}
+                        onChange={(e) => setAdminCredentials(prev => ({
+                          ...prev,
+                          confirmPassword: e.target.value
+                        }))}
+                        placeholder="Confirm new password"
+                        disabled={!adminCredentials.newPassword}
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="modal-actions">
+                  <button 
+                    type="button" 
+                    className="btn-cancel"
+                    onClick={() => setShowAdminCredentialsModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn-register"
+                    disabled={adminCredentialsLoading || !adminCredentials.currentPassword}
+                  >
+                    {adminCredentialsLoading ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin"></i>
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-save"></i>
+                        Update
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View All Students Modal */}
+      {showAllStudentsModal && (
+        <div className="modal-overlay" onClick={() => setShowAllStudentsModal(false)}>
+          <div className="modal-content all-students-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>All Students</h2>
+              <button 
+                className="modal-close-btn" 
+                onClick={() => setShowAllStudentsModal(false)}
+              >
+              <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {allStudentsLoading ? (
+                <div className="loading-container">
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <p>Loading students...</p>
+                </div>
+              ) : (
+                <div className="students-table-container">
+                  <div className="students-count">
+                    Total Students: <strong>{allStudents.length}</strong>
+                  </div>
+                  
+                  <div className="students-table-wrapper">
+                    <table className="students-table">
+                      <thead>
+                        <tr>
+                          <th>Student ID</th>
+                          <th>Name</th>
+                          <th>Department</th>
+                          <th>Photo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allStudents.length > 0 ? (
+                          allStudents.map((student) => (
+                            <tr key={student._id}>
+                              <td>{student.id}</td>
+                              <td>{student.name}</td>
+                              <td>{student.department || 'N/A'}</td>
+                              <td>
+                                {student.photoUrl ? (
+                                  <img 
+                                    src={student.photoUrl} 
+                                    alt={student.name}
+                                    className="student-photo-small"
+                                    onError={(e) => {
+                                      e.target.src = '/images/default-student.png';
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="no-photo">No Photo</div>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="4" className="no-data">No students found</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

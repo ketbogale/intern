@@ -3,7 +3,8 @@
 
 .attendance-container {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /*background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);*/
+  background: linear-gradient(135deg, #241654 60%, #6c63ff 100%);
   margin: 0;
   min-height: 100vh;
   display: flex;
@@ -11,7 +12,8 @@
 }
 
 .attendance-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /*background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);*/
+  background: #0056b3;
   color: white;
   padding: 16px 24px;
   display: flex;
@@ -35,14 +37,14 @@
   align-items: center;
   gap: 12px;
 }
-
 .logo-section img {
-  width: 50px;
-  height: 50px;
-  border-radius: 8px;
-  object-fit: cover;
-}
-
+  width: 57px;
+  height: 60px;
+  border-radius: 50%;
+  padding: 7px;
+  margin: 4px 9px;
+  border: 1px solid greenyellow;
+  }
 .brand-name {
   font-size: 24px;
   font-weight: 600;

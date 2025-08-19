@@ -17,16 +17,51 @@ const settingsSchema = new mongoose.Schema({
     max: 120
   },
   
-  // Daily Reset Time
-  dailyResetTime: {
-    type: String,
-    required: true,
-    default: '00:00',
-    validate: {
-      validator: function(v) {
-        return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
-      },
-      message: 'Daily reset time must be in HH:MM format'
+  // Daily Reset Times (4 meal periods)
+  mealResetTimes: {
+    breakfast: {
+      type: String,
+      required: true,
+      default: '06:00',
+      validate: {
+        validator: function(v) {
+          return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
+        },
+        message: 'Reset time must be in HH:MM format'
+      }
+    },
+    lunch: {
+      type: String,
+      required: true,
+      default: '11:00',
+      validate: {
+        validator: function(v) {
+          return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
+        },
+        message: 'Reset time must be in HH:MM format'
+      }
+    },
+    dinner: {
+      type: String,
+      required: true,
+      default: '16:00',
+      validate: {
+        validator: function(v) {
+          return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
+        },
+        message: 'Reset time must be in HH:MM format'
+      }
+    },
+    lateNight: {
+      type: String,
+      required: true,
+      default: '01:00',
+      validate: {
+        validator: function(v) {
+          return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
+        },
+        message: 'Reset time must be in HH:MM format'
+      }
     }
   },
   
@@ -48,13 +83,6 @@ const settingsSchema = new mongoose.Schema({
     max: 365
   },
   
-  // Language Selection
-  language: {
-    type: String,
-    required: true,
-    default: 'en',
-    enum: ['en', 'am', 'or', 'ti']
-  },
   
   // Login Security
   loginAttemptLimit: {

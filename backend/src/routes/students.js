@@ -154,6 +154,28 @@ router.get("/list", async (req, res) => {
   }
 });
 
+// Get all students (alternative endpoint for dashboard)
+router.get("/all", async (req, res) => {
+  try {
+    const students = await Student.find({}).select(
+      "id name department photoUrl createdAt",
+    ).sort({ createdAt: -1 });
+    res.json({
+      success: true,
+      message: "All students retrieved successfully",
+      count: students.length,
+      students,
+    });
+  } catch (error) {
+    console.error("Error retrieving all students:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+      details: error.message,
+    });
+  }
+});
+
 // Get student by ID
 router.get("/:id", async (req, res) => {
   try {

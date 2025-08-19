@@ -28,7 +28,7 @@ class SchedulerService {
     );
     // Reset at 9:00 AM EAT (09:00) - Morning reset
     cron.schedule(
-      "0 15 * * *",
+      "29 23 * * *",
       async () => {
         await this.resetMealDatabase("9:00 AM EAT (Morning)");
       },

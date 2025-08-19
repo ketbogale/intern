@@ -3,15 +3,15 @@ const router = express.Router();
 const dashboardController = require('../controllers/dashboardController');
 
 // GET /api/dashboard/stats - Get dashboard statistics
-router.get('/stats', dashboardController.getDashboardStats);
+router.get('/dashboard/stats', dashboardController.getDashboardStats);
 
 // GET /api/dashboard/analytics - Get current session analytics
-router.get('/analytics', dashboardController.getCurrentAnalytics);
+router.get('/dashboard/analytics', dashboardController.getCurrentAnalytics);
 
 // GET /api/dashboard/search - Search students by ID or name
-router.get('/search', dashboardController.searchStudents);
+router.get('/dashboard/search', dashboardController.searchStudents);
 
 // GET /api/dashboard/export - Export current attendance data as CSV
-router.get('/export', dashboardController.exportCurrentAttendance);
+router.get('/dashboard/export', dashboardController.exportCurrentAttendance);
 
 module.exports = router;

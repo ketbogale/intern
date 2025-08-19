@@ -1,5 +1,6 @@
 const Student = require("../models/student");
 const MealCurrent = require("../models/mealCurrent");
+const Settings = require("../models/Settings");
 
 exports.getDashboardStats = async (req, res) => {
   try {
@@ -38,10 +39,10 @@ exports.getDashboardStats = async (req, res) => {
     const weeklyAttendance = weeklyUniqueAttendees.length;
     console.log('Weekly attendance (unique students):', weeklyAttendance);
 
-    // Get recent attendance records (last 10) with student details
+    // Get recent attendance records (last 50) with student details
     const recentAttendance = await MealCurrent.find()
       .sort({ createdAt: -1 })
-      .limit(10)
+      .limit(50)
       .lean();
     console.log('Recent attendance records found:', recentAttendance.length);
 
@@ -57,10 +58,29 @@ exports.getDashboardStats = async (req, res) => {
       });
     }
 
+    // Check for low attendance alerts
+    const settings = await Settings.findOne();
+    const lowAttendanceThreshold = settings?.lowAttendanceThreshold || 50;
+    const attendancePercentage = totalStudents > 0 ? Math.round((todayAttendance / totalStudents) * 100) : 0;
+    
+    let lowAttendanceAlert = null;
+    if (attendancePercentage < lowAttendanceThreshold) {
+      lowAttendanceAlert = {
+        isActive: true,
+        message: `Low attendance alert: Only ${attendancePercentage}% attendance today (${todayAttendance}/${totalStudents} students)`,
+        threshold: lowAttendanceThreshold,
+        currentPercentage: attendancePercentage,
+        missingStudents: totalStudents - todayAttendance
+      };
+      console.log('🚨 Low attendance alert triggered:', lowAttendanceAlert);
+    }
+
     console.log('Sending response with stats:', {
       totalStudents,
       todayAttendance,
       weeklyAttendance,
+      attendancePercentage,
+      lowAttendanceAlert: lowAttendanceAlert?.isActive || false,
       recentRecords: formattedAttendance.length
     });
 
@@ -69,8 +89,10 @@ exports.getDashboardStats = async (req, res) => {
       stats: {
         totalStudents,
         todayAttendance,
-        weeklyAttendance
+        weeklyAttendance,
+        attendancePercentage
       },
+      lowAttendanceAlert,
       recentAttendance: formattedAttendance
     });
 

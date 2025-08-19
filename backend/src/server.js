@@ -1,13 +1,18 @@
 const express = require("express");
 const path = require("path");
+require('dotenv').config();
 const session = require("express-session");
 const loginRoutes = require("./routes/login");
 const attendanceRoutes = require("./routes/attendance");
 const dashboardRoutes = require("./routes/dashboard");
-const studentsRoutes = require("./routes/students");
-const staffRoutes = require("./routes/staff");
+const studentRoutes = require('./routes/students');
+const staffRoutes = require('./routes/staff');
+const settingsRoutes = require('./routes/settings');
+const securityRoutes = require('./routes/securityRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const mongoose = require("mongoose");
-// const SchedulerService = require("./services/scheduler");
+const SchedulerService = require("./services/scheduler");
+const { verifyEmailService } = require('./services/emailService');
 // Replace with your MongoDB URI
 const MONGO_URI =
   process.env.MONGO_URI || "mongodb://localhost:27017/meal_attendance";
@@ -71,11 +76,14 @@ app.get("/", (req, res) => {
   }
 });
 
-app.use("/api/login", loginRoutes);
-app.use("/api/attendance", requireAuth, attendanceRoutes);
-app.use("/api/dashboard", requireAuth, dashboardRoutes);
-app.use("/api/students", requireAuth, studentsRoutes);
-app.use("/api/staff", requireAuth, staffRoutes);
+app.use("/api", loginRoutes);
+app.use("/api", attendanceRoutes);
+app.use("/api", dashboardRoutes);
+app.use('/api/students', studentRoutes);
+app.use('/api/staff', staffRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/security', securityRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Logout route
 app.post("/api/logout", (req, res) => {
@@ -88,9 +96,18 @@ app.post("/api/logout", (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
 
+  // Verify email service configuration
+  const emailReady = await verifyEmailService();
+  if (emailReady) {
+    console.log('✅ Email service configured and ready for admin 2FA');
+  } else {
+    console.log('⚠️  Email service not configured. Admin 2FA will not work.');
+    console.log('   Please set GMAIL_USER and GMAIL_APP_PASSWORD in your .env file');
+  }
+
   // Start the automatic meal database scheduler for EAT timezone
-  // SchedulerService.startScheduler();
+  SchedulerService.startScheduler();
 });
