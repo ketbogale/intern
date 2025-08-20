@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   updateAdminCredentials,
   getAdminInfo,
+  checkAdminCredentials,
   sendAdminOTP,
   verifyAdminOTP,
   resendAdminOTP
@@ -20,6 +21,7 @@ const requireAdmin = (req, res, next) => {
 };
 
 // Admin 2FA routes (no auth required for initial login)
+router.post('/check-credentials', checkAdminCredentials);
 router.post('/send-otp', sendAdminOTP);
 router.post('/verify-otp', verifyAdminOTP);
 router.post('/resend-otp', resendAdminOTP);

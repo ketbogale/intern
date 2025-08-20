@@ -74,16 +74,6 @@ const settingsSchema = new mongoose.Schema({
     max: 100
   },
   
-  // Maintenance Reminder Days
-  maintenanceReminderDays: {
-    type: Number,
-    required: true,
-    default: 7,
-    min: 1,
-    max: 365
-  },
-  
-  
   // Login Security
   loginAttemptLimit: {
     type: Number,

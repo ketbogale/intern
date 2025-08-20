@@ -58,7 +58,8 @@ const Dashboard = ({ user, onLogout }) => {
     currentPassword: '',
     newUsername: '',
     newPassword: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    email: ''
   });
   const [adminCredentialsLoading, setAdminCredentialsLoading] = useState(false);
   const [adminCredentialsMessage, setAdminCredentialsMessage] = useState('');
@@ -1986,6 +1987,20 @@ const Dashboard = ({ user, onLogout }) => {
                         }))}
                         placeholder="Confirm new password"
                         disabled={!adminCredentials.newPassword}
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label>Email Address</label>
+                      <input
+                        type="email"
+                        value={adminCredentials.email}
+                        onChange={(e) => setAdminCredentials(prev => ({
+                          ...prev,
+                          email: e.target.value
+                        }))}
+                        placeholder="Enter admin email address"
+                        required
                       />
                     </div>
                   </div>

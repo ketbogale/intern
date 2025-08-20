@@ -8,6 +8,12 @@ const LoginPage = ({ onLogin }) => {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
+  // Admin email verification states
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [adminEmail, setAdminEmail] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailMessage, setEmailMessage] = useState('');
+  
   // OTP verification states
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [otpCode, setOtpCode] = useState('');
@@ -65,31 +71,23 @@ const LoginPage = ({ onLogin }) => {
     setMessage('');
 
     try {
-      // Check if this is admin login (requires 2FA)
-      if (username === 'username' && password === 'jidfFDhgg45HVf@%$jkvh657465j,Ahyhj') {
-        // Admin login - send OTP
-        const response = await fetch('/api/admin/send-otp', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ username, password }),
-        });
+      // First check if admin credentials (username/password only)
+      const adminCheckResponse = await fetch('/api/admin/check-credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
-        const data = await response.json();
+      const adminCheckData = await adminCheckResponse.json();
 
-        if (response.ok && data.success) {
-          setMessage('Verification code sent to admin email');
-          setMaskedEmail(data.email);
-          setShowOTPModal(true);
-          setOtpCountdown(300);
-          setCanResendOTP(false);
-          setResendCountdown(60);
-        } else {
-          setMessage(data.message || 'Failed to send verification code');
-        }
+      if (adminCheckResponse.ok && adminCheckData.success) {
+        // Admin credentials valid - show email prompt
+        setMessage('Admin credentials verified. Please enter your email.');
+        setShowEmailModal(true);
       } else {
-        // Regular staff login
+        // Try regular staff login
         const response = await fetch('/api/login', {
           method: 'POST',
           headers: {
@@ -155,6 +153,48 @@ const LoginPage = ({ onLogin }) => {
       setOtpMessage('Network error. Please try again.');
     } finally {
       setOtpLoading(false);
+    }
+  };
+
+  // Handle email verification for admin
+  const handleEmailVerification = async (e) => {
+    e.preventDefault();
+    
+    if (!adminEmail) {
+      setEmailMessage('Please enter your email address');
+      return;
+    }
+    
+    try {
+      setEmailLoading(true);
+      setEmailMessage('');
+      
+      const response = await fetch('/api/admin/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password, email: adminEmail })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setEmailMessage('Verification code sent to your email');
+        setMaskedEmail(data.email);
+        setShowEmailModal(false);
+        setShowOTPModal(true);
+        setOtpCountdown(300);
+        setCanResendOTP(false);
+        setResendCountdown(60);
+      } else {
+        setEmailMessage(data.message || 'Invalid email address');
+      }
+    } catch (error) {
+      console.error('Error verifying email:', error);
+      setEmailMessage('Network error. Please try again.');
+    } finally {
+      setEmailLoading(false);
     }
   };
 
@@ -231,6 +271,7 @@ const LoginPage = ({ onLogin }) => {
               ></i>
             </div>
 
+
             <button type="submit" className="login-button" disabled={isLoading}>
               {isLoading ? 'Logging...' : 'Login'}
             </button>
@@ -243,6 +284,83 @@ const LoginPage = ({ onLogin }) => {
           )}
         </div>
       </div>
+
+      {/* Email Verification Modal */}
+      {showEmailModal && (
+        <div className="modal-overlay" onClick={() => setShowEmailModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>
+                <i className="fas fa-envelope"></i>
+                Admin Email Verification
+              </h3>
+              <button 
+                className="modal-close-btn" 
+                onClick={() => setShowEmailModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {emailMessage && (
+                <div className={`modal-message ${emailMessage.includes('sent') ? 'success' : 'error'}`}>
+                  {emailMessage}
+                </div>
+              )}
+              
+              <form onSubmit={handleEmailVerification} className="email-form">
+                <div className="email-section">
+                  <h4>
+                    <i className="fas fa-user-shield"></i>
+                    Enter Your Admin Email
+                  </h4>
+                  <p style={{color: '#666', fontSize: '14px', marginBottom: '20px'}}>
+                    Please enter the email address associated with your admin account
+                  </p>
+                  
+                  <div className="form-group">
+                    <label>Email Address</label>
+                    <input
+                      type="email"
+                      value={adminEmail}
+                      onChange={(e) => setAdminEmail(e.target.value)}
+                      placeholder="Enter your admin email"
+                      className="email-input"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="email-actions">
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={() => setShowEmailModal(false)}
+                    disabled={emailLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-verify"
+                    disabled={emailLoading || !adminEmail}
+                  >
+                    {emailLoading ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin"></i>
+                        Verifying...
+                      </>
+                    ) : (
+                      'Send Verification Code'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* OTP Verification Modal */}
       {showOTPModal && (

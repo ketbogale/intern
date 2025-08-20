@@ -6,7 +6,7 @@ const { generateOTP, sendOTPEmail } = require('../services/emailService');
 // Update admin credentials (username and/or password)
 const updateAdminCredentials = async (req, res) => {
   try {
-    const { currentPassword, newUsername, newPassword, confirmPassword } = req.body;
+    const { currentPassword, newUsername, newPassword, confirmPassword, email } = req.body;
     
     // Check if user is admin
     if (!req.session.user || req.session.user.role !== 'admin') {
@@ -69,6 +69,9 @@ const updateAdminCredentials = async (req, res) => {
     }
     if (newPassword) {
       updates.password = newPassword; // Will be hashed by pre-save middleware
+    }
+    if (email && email !== adminUser.email) {
+      updates.email = email;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -139,20 +142,91 @@ const getAdminInfo = async (req, res) => {
   }
 };
 
-// Send OTP for admin login
-const sendAdminOTP = async (req, res) => {
+// Check admin credentials (username/password only)
+const checkAdminCredentials = async (req, res) => {
   try {
     const { username, password } = req.body;
     
-    // Validate credentials first
-    if (username !== 'username' || password !== 'jidfFDhgg45HVf@%$jkvh657465j,Ahyhj') {
+    // Validate required fields
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username and password are required'
+      });
+    }
+
+    // Find admin user in database
+    const adminUser = await Staff.findOne({ username, role: 'admin' });
+    if (!adminUser) {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
 
-    const adminEmail = 'ket1boggood@gmail.com';
+    // Verify password
+    const isPasswordValid = await adminUser.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Admin credentials verified'
+    });
+
+  } catch (error) {
+    console.error('Error checking admin credentials:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while checking credentials'
+    });
+  }
+};
+
+// Send OTP for admin login
+const sendAdminOTP = async (req, res) => {
+  try {
+    const { username, password, email } = req.body;
+    
+    // Validate required fields
+    if (!username || !password || !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username, password, and email are required'
+      });
+    }
+
+    // Find admin user in database
+    const adminUser = await Staff.findOne({ username, role: 'admin' });
+    if (!adminUser) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Verify password
+    const isPasswordValid = await adminUser.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Verify email matches database
+    if (adminUser.email !== email) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email address'
+      });
+    }
+
+    const adminEmail = adminUser.email;
     
     // Clear any existing OTP for this email
     await OTP.deleteMany({ email: adminEmail });
@@ -196,7 +270,6 @@ const sendAdminOTP = async (req, res) => {
 const verifyAdminOTP = async (req, res) => {
   try {
     const { otp } = req.body;
-    const adminEmail = 'ket1boggood@gmail.com';
     
     if (!otp) {
       return res.status(400).json({
@@ -205,8 +278,17 @@ const verifyAdminOTP = async (req, res) => {
       });
     }
     
-    // Find OTP record
-    const otpRecord = await OTP.findOne({ email: adminEmail });
+    // Find admin user to get correct email
+    const adminUser = await Staff.findOne({ role: 'admin' });
+    if (!adminUser || !adminUser.email) {
+      return res.status(500).json({
+        success: false,
+        message: 'Admin user or email not found in database'
+      });
+    }
+    
+    // Find OTP record using admin's actual email
+    const otpRecord = await OTP.findOne({ email: adminUser.email });
     
     if (!otpRecord) {
       return res.status(400).json({
@@ -235,12 +317,20 @@ const verifyAdminOTP = async (req, res) => {
       });
     }
     
+    // Admin user already found above, use it for session creation
+    if (!adminUser) {
+      return res.status(500).json({
+        success: false,
+        message: 'Admin user not found in database'
+      });
+    }
+
     // OTP is valid - create admin session
     req.session.user = {
-      id: 'admin',
-      username: 'username',
-      role: 'admin',
-      email: adminEmail
+      id: adminUser._id,
+      username: adminUser.username,
+      role: adminUser.role,
+      email: adminUser.email
     };
     
     // Clean up OTP
@@ -250,8 +340,8 @@ const verifyAdminOTP = async (req, res) => {
       success: true,
       message: 'Admin login successful',
       user: {
-        username: 'username',
-        role: 'admin'
+        username: adminUser.username,
+        role: adminUser.role
       }
     });
     
@@ -267,7 +357,16 @@ const verifyAdminOTP = async (req, res) => {
 // Resend OTP
 const resendAdminOTP = async (req, res) => {
   try {
-    const adminEmail = 'ket1boggood@gmail.com';
+    // Find admin user to get correct email
+    const adminUser = await Staff.findOne({ role: 'admin' });
+    if (!adminUser || !adminUser.email) {
+      return res.status(500).json({
+        success: false,
+        message: 'Admin user or email not found in database'
+      });
+    }
+    
+    const adminEmail = adminUser.email;
     
     // Check if there's an existing OTP that's less than 60 seconds old
     const existingOTP = await OTP.findOne({ email: adminEmail });
@@ -318,6 +417,7 @@ const resendAdminOTP = async (req, res) => {
 module.exports = {
   updateAdminCredentials,
   getAdminInfo,
+  checkAdminCredentials,
   sendAdminOTP,
   verifyAdminOTP,
   resendAdminOTP

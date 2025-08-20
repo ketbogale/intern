@@ -149,13 +149,36 @@ exports.searchStudents = async (req, res) => {
       return res.status(400).json({ error: "Search query is required" });
     }
 
-    // Search by ID (exact match) or name (partial match, case insensitive)
-    const students = await Student.find({
-      $or: [
-        { id: { $regex: query, $options: 'i' } },
-        { name: { $regex: query, $options: 'i' } }
-      ]
-    }).limit(10);
+    // Optimized search using text index and exact matching
+    let students = [];
+    
+    // First try exact ID match (fastest)
+    if (query.length <= 20) { // Assuming student IDs are short
+      const exactMatch = await Student.findOne({ id: query });
+      if (exactMatch) {
+        students = [exactMatch];
+      }
+    }
+    
+    // If no exact match, use text search (indexed)
+    if (students.length === 0) {
+      students = await Student.find(
+        { $text: { $search: query } },
+        { score: { $meta: "textScore" } }
+      )
+      .sort({ score: { $meta: "textScore" } })
+      .limit(10);
+    }
+    
+    // Fallback to optimized regex only if text search fails
+    if (students.length === 0) {
+      students = await Student.find({
+        $or: [
+          { id: { $regex: `^${query}`, $options: 'i' } }, // Anchor to start for better performance
+          { name: { $regex: `^${query}`, $options: 'i' } }
+        ]
+      }).limit(10);
+    }
 
     res.json({
       success: true,

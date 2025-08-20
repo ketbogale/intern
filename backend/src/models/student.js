@@ -5,7 +5,11 @@ const studentSchema = new mongoose.Schema({
   name: String,
   department: String,
   photoUrl: String,
-  mealUsed: { type: Boolean, default: false },
 });
+
+// Create indexes for efficient searching
+studentSchema.index({ id: 1 });
+studentSchema.index({ name: 1 });
+studentSchema.index({ id: "text", name: "text" });
 
 module.exports = mongoose.model("Student", studentSchema);

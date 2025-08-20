@@ -10,33 +10,42 @@ exports.checkAttendance = async (req, res) => {
       return res.json({ status: "invalid" });
     }
 
-    // 2. Check if student already has attendance for this meal today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // 2. Use findOneAndUpdate with upsert for atomic operation
+    const result = await MealCurrent.findOneAndUpdate(
+      { 
+        studentId, 
+        mealType,
+        date: { 
+          $gte: new Date(new Date().setHours(0, 0, 0, 0)),
+          $lt: new Date(new Date().setHours(24, 0, 0, 0))
+        }
+      },
+      { 
+        studentId, 
+        mealType,
+        date: new Date()
+      },
+      { 
+        upsert: true, 
+        new: true,
+        rawResult: true
+      }
+    );
 
-    const existingEntry = await MealCurrent.findOne({ 
-      studentId, 
-      mealType,
-      date: { $gte: today, $lt: tomorrow }
-    });
-
-    if (existingEntry) {
+    // 3. Check if it was a new insert or existing document
+    if (result.lastErrorObject && result.lastErrorObject.updatedExisting) {
       return res.json({ status: "already_used", student });
+    } else {
+      return res.json({ status: "allowed", student });
     }
-
-    // 3. Create new attendance record
-    await MealCurrent.create({ 
-      studentId, 
-      mealType,
-      date: new Date()
-    });
-
-    // 4. Allow entry and show student info
-    return res.json({ status: "allowed", student });
   } catch (err) {
     console.error('Attendance check error:', err);
+    // Handle duplicate key error specifically
+    if (err.code === 11000) {
+      // Find the student again for the response
+      const student = await Student.findOne({ id: studentId });
+      return res.json({ status: "already_used", student });
+    }
     return res.json({ status: "error", message: "System error." });
   }
 };
