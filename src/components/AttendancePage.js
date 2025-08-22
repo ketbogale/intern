@@ -159,6 +159,7 @@ const AttendancePage = ({ user, onLogout }) => {
                     <div><strong>ID Number:</strong> {student.id}</div>
                     <div><strong>Program:</strong> {student.department}</div>
                   </div>
+                    
                   <div className="student-photo">
                     <img 
                       src={student.photoUrl || '/images/default-student.png'} 

@@ -1,7 +1,4 @@
 # Dependencies
-node_modules/
-*/node_modules/
-backend/src/routes/staff.js
 
 # Build outputs
 build/

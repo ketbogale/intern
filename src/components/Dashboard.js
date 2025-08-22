@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Dashboard.css';
 
 const Dashboard = ({ user, onLogout }) => {
@@ -72,6 +72,10 @@ const Dashboard = ({ user, onLogout }) => {
   const [otpCountdown, setOtpCountdown] = useState(300); // 5 minutes
   const [canResendOTP, setCanResendOTP] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
+  const [adminEmail, setAdminEmail] = useState('');
+  
+  // Create ref for search input
+  const searchInputRef = useRef(null);
   const [generalSettings, setGeneralSettings] = useState({
     attendanceWindowBefore: 30,
     attendanceWindowAfter: 30,
@@ -85,6 +89,40 @@ const Dashboard = ({ user, onLogout }) => {
     loginAttemptLimit: 5,
     lockoutDurationMinutes: 5
   });
+  
+  // Meal Windows state
+  const [mealWindows, setMealWindows] = useState({
+    breakfast: {
+      startTime: '06:00',
+      endTime: '09:00',
+      beforeWindow: 30,
+      afterWindow: 30,
+      enabled: true
+    },
+    lunch: {
+      startTime: '12:00',
+      endTime: '14:00',
+      beforeWindow: 30,
+      afterWindow: 30,
+      enabled: true
+    },
+    dinner: {
+      startTime: '18:00',
+      endTime: '20:00',
+      beforeWindow: 30,
+      afterWindow: 30,
+      enabled: true
+    },
+    lateNight: {
+      startTime: '22:00',
+      endTime: '23:30',
+      beforeWindow: 15,
+      afterWindow: 15,
+      enabled: false
+    }
+  });
+  const [mealWindowsLoading, setMealWindowsLoading] = useState(false);
+  const [mealWindowsMessage, setMealWindowsMessage] = useState('');
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState('');
   const [showAllStudentsModal, setShowAllStudentsModal] = useState(false);
@@ -107,10 +145,34 @@ const Dashboard = ({ user, onLogout }) => {
     }
   };
 
+  // Fetch admin email from database
+  const fetchAdminEmail = async () => {
+    try {
+      const response = await fetch('/api/admin/profile');
+      if (response.ok) {
+        const data = await response.json();
+        setAdminEmail(data.email || '');
+      }
+    } catch (error) {
+      console.error('Error fetching admin email:', error);
+    }
+  };
+
   useEffect(() => {
     fetchDashboardData();
     fetchSecurityNotifications();
+    fetchAdminEmail();
   }, []);
+
+  // Focus search input when switching to students section
+  useEffect(() => {
+    if (activeSection === 'students' && searchInputRef.current) {
+      // Small delay to ensure the input is rendered
+      setTimeout(() => {
+        searchInputRef.current.focus();
+      }, 100);
+    }
+  }, [activeSection]);
 
   // OTP countdown timer
   useEffect(() => {
@@ -662,6 +724,76 @@ const Dashboard = ({ user, onLogout }) => {
     }
   };
 
+  // Handle saving meal windows
+  const handleSaveMealWindows = async () => {
+    try {
+      setMealWindowsLoading(true);
+      setMealWindowsMessage('');
+      
+      const response = await fetch('/api/meal-windows', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(mealWindows),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setMealWindowsMessage('✅ Meal windows saved successfully!');
+        setTimeout(() => {
+          setMealWindowsMessage('');
+        }, 3000);
+      } else {
+        setMealWindowsMessage('❌ ' + (data.error || 'Failed to save meal windows.'));
+      }
+    } catch (error) {
+      console.error('Error saving meal windows:', error);
+      setMealWindowsMessage('❌ Network error: ' + error.message);
+    } finally {
+      setMealWindowsLoading(false);
+    }
+  };
+
+  // Handle resetting meal windows to defaults
+  const handleResetMealWindows = () => {
+    setMealWindows({
+      breakfast: {
+        startTime: '06:00',
+        endTime: '09:00',
+        beforeWindow: 30,
+        afterWindow: 30,
+        enabled: true
+      },
+      lunch: {
+        startTime: '12:00',
+        endTime: '14:00',
+        beforeWindow: 30,
+        afterWindow: 30,
+        enabled: true
+      },
+      dinner: {
+        startTime: '18:00',
+        endTime: '20:00',
+        beforeWindow: 30,
+        afterWindow: 30,
+        enabled: true
+      },
+      lateNight: {
+        startTime: '22:00',
+        endTime: '23:30',
+        beforeWindow: 15,
+        afterWindow: 15,
+        enabled: false
+      }
+    });
+    setMealWindowsMessage('✅ Meal windows reset to defaults!');
+    setTimeout(() => {
+      setMealWindowsMessage('');
+    }, 3000);
+  };
+
   // Handle saving general settings
   const handleSaveSettings = async (e) => {
     e.preventDefault();
@@ -784,14 +916,32 @@ const Dashboard = ({ user, onLogout }) => {
             <span className="brand-name">Dashboard</span>
           </div>
         </div>
-        <button 
-          className="mobile-menu-toggle"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          <span className="material-icons">
-            {isMobileMenuOpen ? 'close' : 'menu'}
-          </span>
-        </button>
+        
+        <div className="header-right">
+          <div className="header-icons">
+            <button className="header-icon-btn" title="Notifications">
+              <i className="fas fa-bell"></i>
+            </button>
+            <button className="header-icon-btn" title="Theme Settings">
+              <i className="fas fa-palette"></i>
+            </button>
+            <div className="admin-profile-section">
+              <button className="header-icon-btn" title="Admin Profile">
+                <i className="fas fa-user-circle"></i>
+              </button>
+              <span className="admin-email">{adminEmail}</span>
+            </div>
+          </div>
+          
+          <button 
+            className="mobile-menu-toggle"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            <span className="material-icons">
+              {isMobileMenuOpen ? 'close' : 'menu'}
+            </span>
+          </button>
+        </div>
       </div>
 
       <div className="dashboard-layout">
@@ -806,14 +956,14 @@ const Dashboard = ({ user, onLogout }) => {
               className={`nav-item ${activeSection === 'overview' ? 'active' : ''}`}
               onClick={() => setActiveSection('overview')}
             >
-              <i className="fas fa-chart-bar"></i>
-              <span>Overview</span>
+              <i className="fas fa-home"></i>
+              <span>Home</span>
             </div>
             <div 
               className={`nav-item ${activeSection === 'attendance' ? 'active' : ''}`}
               onClick={() => setActiveSection('attendance')}
             >
-              <i className="fas fa-calendar-check"></i>
+              <i className="fas fa-user-check"></i>
               <span>Attendance</span>
             </div>
             <div 
@@ -832,12 +982,20 @@ const Dashboard = ({ user, onLogout }) => {
               <span>Students</span>
             </div>
             <div 
+              className={`nav-item ${activeSection === 'meal-windows' ? 'active' : ''}`}
+              onClick={() => setActiveSection('meal-windows')}
+            >
+              <i className="fas fa-clock"></i>
+              <span>Meal Windows</span>
+            </div>
+            <div 
               className={`nav-item ${activeSection === 'reports' ? 'active' : ''}`}
               onClick={() => setActiveSection('reports')}
             >
-              <i className="fas fa-chart-line"></i>
+              <i className="fas fa-chart-bar"></i>
               <span>Reports</span>
             </div>
+            
             <hr className='nav-divider'/>
             <div 
               className={`nav-item ${activeSection === 'settings' ? 'active' : ''}`}
@@ -863,6 +1021,7 @@ const Dashboard = ({ user, onLogout }) => {
                 {activeSection === 'notifications' && 'Notifications'}
                 {activeSection === 'students' && 'Students Management'}
                 {activeSection === 'reports' && 'Meal Reports'}
+                {activeSection === 'meal-windows' && 'Meal Windows Configuration'}
                 {activeSection === 'settings' && 'Settings'}
               </h1>
             </div>
@@ -1080,6 +1239,7 @@ const Dashboard = ({ user, onLogout }) => {
                       <div className="search-input-wrapper">
                         <i className="fas fa-search search-icon"></i>
                         <input
+                          ref={searchInputRef}
                           type="text"
                           placeholder="Search Student ID or Name..."
                           value={searchQuery}
@@ -1242,6 +1402,170 @@ const Dashboard = ({ user, onLogout }) => {
                       </div>
                     </>
                   )}
+                </div>
+              </>
+            )}
+
+            {activeSection === 'meal-windows' && (
+              <>
+                <div className="meal-windows-section">
+                  <div className="section-header">
+                    <h2>Meal Time Windows Configuration</h2>
+                    <p>Configure attendance time windows for each meal period. Students can mark attendance within the specified time ranges.</p>
+                  </div>
+
+                  {mealWindowsMessage && (
+                    <div className={`settings-message ${mealWindowsMessage.includes('✅') ? 'success' : 'error'}`}>
+                      {mealWindowsMessage}
+                    </div>
+                  )}
+
+                  <div className="meal-windows-grid">
+                    {Object.entries(mealWindows).map(([mealType, config]) => (
+                      <div key={mealType} className="meal-window-card">
+                        <div className="meal-card-header">
+                          <h3>
+                            <i className={`fas ${
+                              mealType === 'breakfast' ? 'fa-coffee' :
+                              mealType === 'lunch' ? 'fa-hamburger' :
+                              mealType === 'dinner' ? 'fa-utensils' :
+                              'fa-moon'
+                            }`}></i>
+                            {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
+                          </h3>
+                          <label className="toggle-switch">
+                            <input
+                              type="checkbox"
+                              checked={config.enabled}
+                              onChange={(e) => setMealWindows(prev => ({
+                                ...prev,
+                                [mealType]: { ...prev[mealType], enabled: e.target.checked }
+                              }))}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </div>
+
+                        <div className={`meal-card-content ${!config.enabled ? 'disabled' : ''}`}>
+                          <div className="time-range-section">
+                            <h4>Meal Service Hours</h4>
+                            <div className="time-inputs">
+                              <div className="time-input-group">
+                                <label>Start Time</label>
+                                <input
+                                  type="time"
+                                  value={config.startTime}
+                                  disabled={!config.enabled}
+                                  onChange={(e) => setMealWindows(prev => ({
+                                    ...prev,
+                                    [mealType]: { ...prev[mealType], startTime: e.target.value }
+                                  }))}
+                                />
+                              </div>
+                              <div className="time-input-group">
+                                <label>End Time</label>
+                                <input
+                                  type="time"
+                                  value={config.endTime}
+                                  disabled={!config.enabled}
+                                  onChange={(e) => setMealWindows(prev => ({
+                                    ...prev,
+                                    [mealType]: { ...prev[mealType], endTime: e.target.value }
+                                  }))}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="attendance-window-section">
+                            <h4>Attendance Window</h4>
+                            <div className="window-inputs">
+                              <div className="window-input-group">
+                                <label>Before Start (minutes)</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="120"
+                                  value={config.beforeWindow}
+                                  disabled={!config.enabled}
+                                  onChange={(e) => setMealWindows(prev => ({
+                                    ...prev,
+                                    [mealType]: { ...prev[mealType], beforeWindow: parseInt(e.target.value) }
+                                  }))}
+                                />
+                              </div>
+                              <div className="window-input-group">
+                                <label>After End (minutes)</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="120"
+                                  value={config.afterWindow}
+                                  disabled={!config.enabled}
+                                  onChange={(e) => setMealWindows(prev => ({
+                                    ...prev,
+                                    [mealType]: { ...prev[mealType], afterWindow: parseInt(e.target.value) }
+                                  }))}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="window-preview">
+                            <h5>Attendance Window Preview</h5>
+                            <div className="preview-timeline">
+                              <div className="timeline-item before">
+                                <span className="time">{
+                                  new Date(`2000-01-01T${config.startTime}`).getTime() - (config.beforeWindow * 60000) > 0 ?
+                                  new Date(new Date(`2000-01-01T${config.startTime}`).getTime() - (config.beforeWindow * 60000)).toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit'}) :
+                                  '00:00'
+                                }</span>
+                                <span className="label">Window Opens</span>
+                              </div>
+                              <div className="timeline-item meal">
+                                <span className="time">{config.startTime} - {config.endTime}</span>
+                                <span className="label">Meal Service</span>
+                              </div>
+                              <div className="timeline-item after">
+                                <span className="time">{
+                                  new Date(new Date(`2000-01-01T${config.endTime}`).getTime() + (config.afterWindow * 60000)).toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit'})
+                                }</span>
+                                <span className="label">Window Closes</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="meal-windows-actions">
+                    <button 
+                      className="btn-save-windows"
+                      onClick={handleSaveMealWindows}
+                      disabled={mealWindowsLoading}
+                    >
+                      {mealWindowsLoading ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin"></i>
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-save"></i>
+                          Save Meal Windows
+                        </>
+                      )}
+                    </button>
+                    <button 
+                      className="btn-reset-windows"
+                      onClick={handleResetMealWindows}
+                      disabled={mealWindowsLoading}
+                    >
+                      <i className="fas fa-undo"></i>
+                      Reset to Defaults
+                    </button>
+                  </div>
                 </div>
               </>
             )}

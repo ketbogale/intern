@@ -3,6 +3,34 @@ const bcrypt = require('bcrypt');
 const OTP = require('../models/OTP');
 const { generateOTP, sendOTPEmail } = require('../services/emailService');
 
+// Get admin profile
+const getAdminProfile = async (req, res) => {
+  try {
+    // Find admin user
+    const adminUser = await Staff.findOne({ role: 'admin' });
+    
+    if (!adminUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Admin user not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      email: adminUser.email,
+      username: adminUser.username
+    });
+    
+  } catch (error) {
+    console.error('Error fetching admin profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
 // Update admin credentials (username and/or password)
 const updateAdminCredentials = async (req, res) => {
   try {
@@ -415,8 +443,8 @@ const resendAdminOTP = async (req, res) => {
 };
 
 module.exports = {
+  getAdminProfile,
   updateAdminCredentials,
-  getAdminInfo,
   checkAdminCredentials,
   sendAdminOTP,
   verifyAdminOTP,

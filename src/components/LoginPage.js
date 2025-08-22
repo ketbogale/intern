@@ -238,11 +238,6 @@ const LoginPage = ({ onLogin }) => {
       </div>
 
       <div className="container">
-        <div className="header">
-          <img src="/images/salale_university_logo.png" alt="Salale University Logo" />
-          <h2>Salale University Meal <br />Attendance System</h2>
-        </div>
-
         <div className="login-box">
           <form onSubmit={handleSubmit}>
             <label htmlFor="username">Username:</label>
@@ -291,7 +286,6 @@ const LoginPage = ({ onLogin }) => {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>
-                <i className="fas fa-envelope"></i>
                 Admin Email Verification
               </h3>
               <button 
@@ -312,7 +306,6 @@ const LoginPage = ({ onLogin }) => {
               <form onSubmit={handleEmailVerification} className="email-form">
                 <div className="email-section">
                   <h4>
-                    <i className="fas fa-user-shield"></i>
                     Enter Your Admin Email
                   </h4>
                   <p style={{color: '#666', fontSize: '14px', marginBottom: '20px'}}>
@@ -368,7 +361,6 @@ const LoginPage = ({ onLogin }) => {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>
-                <i className="fas fa-shield-alt"></i>
                 Admin Verification
               </h3>
               <button 
@@ -389,7 +381,6 @@ const LoginPage = ({ onLogin }) => {
               <form onSubmit={handleVerifyOTP} className="otp-form">
                 <div className="otp-section">
                   <h4>
-                    <i className="fas fa-envelope"></i>
                     Enter Verification Code
                   </h4>
                   <p style={{color: '#666', fontSize: '14px', marginBottom: '20px'}}>

@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const {
+  getAdminProfile,
   updateAdminCredentials,
-  getAdminInfo,
   checkAdminCredentials,
   sendAdminOTP,
   verifyAdminOTP,
@@ -26,8 +26,8 @@ router.post('/send-otp', sendAdminOTP);
 router.post('/verify-otp', verifyAdminOTP);
 router.post('/resend-otp', resendAdminOTP);
 
-// Get current admin info
-router.get('/info', requireAdmin, getAdminInfo);
+// Get admin profile (no auth required for header display)
+router.get('/profile', getAdminProfile);
 
 // Update admin credentials
 router.patch('/credentials', requireAdmin, updateAdminCredentials);
