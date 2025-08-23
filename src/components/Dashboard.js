@@ -12,8 +12,6 @@ const Dashboard = ({ user, onLogout }) => {
     attendancePercentage: 0
   });
   const [lowAttendanceAlert, setLowAttendanceAlert] = useState(null);
-  const [securityNotifications, setSecurityNotifications] = useState([]);
-  const [notificationFilter, setNotificationFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [activeSection, setActiveSection] = useState('overview');
   const [refreshMessage, setRefreshMessage] = useState('');
@@ -134,21 +132,8 @@ const Dashboard = ({ user, onLogout }) => {
   const [allStudentsLoading, setAllStudentsLoading] = useState(false);
   const [headerShrunk, setHeaderShrunk] = useState(false);
   const [isLightTheme, setIsLightTheme] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
-  // Fetch security notifications
-  const fetchSecurityNotifications = async () => {
-    try {
-      const response = await fetch('/api/security/notifications');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setSecurityNotifications(data.notifications);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching security notifications:', error);
-    }
-  };
 
   // Fetch admin email from database
   const fetchAdminEmail = async () => {
@@ -183,7 +168,6 @@ const Dashboard = ({ user, onLogout }) => {
 
   useEffect(() => {
     fetchDashboardData();
-    fetchSecurityNotifications();
     fetchAdminEmail();
     
     // Load external database reset JavaScript
@@ -192,12 +176,22 @@ const Dashboard = ({ user, onLogout }) => {
     script.async = true;
     document.head.appendChild(script);
     
+    // Close dropdown when clicking outside
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.admin-profile-section')) {
+        setShowProfileDropdown(false);
+      }
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    
     return () => {
       // Cleanup script on unmount
       const existingScript = document.querySelector('script[src="/src/components/DatabaseReset.js"]');
       if (existingScript) {
         document.head.removeChild(existingScript);
       }
+      document.removeEventListener('click', handleClickOutside);
     };
   }, []);
 
@@ -583,57 +577,6 @@ const Dashboard = ({ user, onLogout }) => {
     setStudentToDelete(null);
   };
 
-  // Security notification helper functions
-  const getSecurityIcon = (type) => {
-    switch (type) {
-      case 'failed_login': return 'fa-shield-exclamation';
-      case 'unusual_access': return 'fa-map-marker-alt';
-      case 'password_reset': return 'fa-key';
-      case 'account_locked': return 'fa-lock';
-      default: return 'fa-shield-alt';
-    }
-  };
-
-  const formatTimeAgo = (timestamp) => {
-    const now = new Date();
-    const time = new Date(timestamp);
-    const diffInMinutes = Math.floor((now - time) / (1000 * 60));
-    
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-    return `${Math.floor(diffInMinutes / 1440)}d ago`;
-  };
-
-  const dismissNotification = async (notificationId) => {
-    try {
-      const response = await fetch(`/api/security/notifications/${notificationId}/dismiss`, {
-        method: 'PATCH'
-      });
-      if (response.ok) {
-        setSecurityNotifications(prev => 
-          prev.filter(notif => notif._id !== notificationId)
-        );
-      }
-    } catch (error) {
-      console.error('Error dismissing notification:', error);
-    }
-  };
-
-  const markAllNotificationsAsRead = async () => {
-    try {
-      const response = await fetch('/api/security/notifications/mark-all-read', {
-        method: 'PATCH'
-      });
-      if (response.ok) {
-        setSecurityNotifications(prev => 
-          prev.map(notif => ({ ...notif, isRead: true }))
-        );
-      }
-    } catch (error) {
-      console.error('Error marking all as read:', error);
-    }
-  };
 
   // Handle OTP verification
   const handleVerifyOTP = async (e) => {
@@ -1035,10 +978,23 @@ const Dashboard = ({ user, onLogout }) => {
               <i className={`fas ${isLightTheme ? 'fa-moon' : 'fa-sun'}`}></i>
             </button>
             <div className="admin-profile-section">
-              <button className="header-icon-btn" title="Admin Profile">
-              <i className="fas fa-user-circle" style={{ marginRight: '5px' }}></i>
+              <button 
+                className="header-icon-btn admin-profile-btn" 
+                title="Admin Profile"
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+              >
+                <i className="fas fa-user-circle" style={{ marginRight: '5px' }}></i>
                 <span className="admin-email">{adminEmail}</span>
+                <i className={`fas fa-chevron-down dropdown-arrow ${showProfileDropdown ? 'rotated' : ''}`}></i>
               </button>
+              {showProfileDropdown && (
+                <div className="profile-dropdown">
+                  <div className="dropdown-item logout-item" onClick={() => window.location.href = '/html/login.html'}>
+                    <i className="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           
@@ -1098,13 +1054,6 @@ const Dashboard = ({ user, onLogout }) => {
               <span>Database Reset</span>
             </div>
             <div 
-              className={`nav-item ${activeSection === 'notifications' ? 'active' : ''}`}
-              onClick={() => setActiveSection('notifications')}
-            >
-              <i className="fas fa-bell"></i>
-              <span>Notifications</span>
-            </div>
-            <div 
               className={`nav-item ${activeSection === 'reports' ? 'active' : ''}`}
               onClick={() => setActiveSection('reports')}
             >
@@ -1120,10 +1069,6 @@ const Dashboard = ({ user, onLogout }) => {
               <i className="fas fa-cog"></i>
               <span>Settings</span>
             </div>
-            <div className="nav-item logout-btn" onClick={() => window.location.href = 'login.html'}>
-              <i className="fas fa-sign-out-alt"></i>
-              <span>Logout</span>
-            </div>
           </nav>
         </div>
 
@@ -1134,7 +1079,6 @@ const Dashboard = ({ user, onLogout }) => {
               <h1>
                 {activeSection === 'overview' && 'Dashboard Overview'}
                 {activeSection === 'attendance' && 'Meal Attendance'}
-                {activeSection === 'notifications' && 'Notifications'}
                 {activeSection === 'students' && 'Students Management'}
                 {activeSection === 'reports' && 'Meal Reports'}
                 {activeSection === 'meal-windows' && 'Meal Windows Configuration'}
@@ -1202,113 +1146,6 @@ const Dashboard = ({ user, onLogout }) => {
               </>
             )}
 
-            {activeSection === 'notifications' && (
-              <>
-                <div className="notifications-section">
-                  <div className="notification-header-controls">
-                    <div className="notification-filters">
-                      <select 
-                        value={notificationFilter} 
-                        onChange={(e) => setNotificationFilter(e.target.value)}
-                        className="filter-select"
-                      >
-                        <option value="all">All Notifications</option>
-                        <option value="security">Security & Access</option>
-                        <option value="attendance">Attendance Alerts</option>
-                        <option value="system">System Status</option>
-                      </select>
-                    </div>
-                  </div>
-                  
-                  {/* Security Notifications */}
-                  {securityNotifications
-                    .filter(notif => notificationFilter === 'all' || notificationFilter === 'security')
-                    .map(notification => (
-                    <div key={notification._id} className={`notification-item ${notification.severity}`}>
-                      <div className="notification-header">
-                        <div className="notification-title">
-                          <i className={`fas ${getSecurityIcon(notification.type)}`}></i>
-                          {notification.title}
-                          {!notification.isRead && <span className="unread-dot"></span>}
-                        </div>
-                        <div className="notification-actions">
-                          <span className="notification-time">
-                            {formatTimeAgo(notification.createdAt)}
-                          </span>
-                          <button 
-                            className="notification-dismiss"
-                            onClick={() => dismissNotification(notification._id)}
-                          >
-                            <i className="fas fa-times"></i>
-                          </button>
-                        </div>
-                      </div>
-                      <div className="notification-body">
-                        <p className="notification-message">{notification.message}</p>
-                        <div className="notification-meta">
-                          <span className={`notification-badge ${notification.severity}`}>
-                            {notification.severity.toUpperCase()}
-                          </span>
-                          {notification.metadata?.ipAddress && (
-                            <span className="notification-badge">
-                              IP: {notification.metadata.ipAddress}
-                            </span>
-                          )}
-                          {notification.metadata?.attemptCount && (
-                            <span className="notification-badge">
-                              Attempts: {notification.metadata.attemptCount}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {/* Low Attendance Alert */}
-                  {lowAttendanceAlert && lowAttendanceAlert.isActive && 
-                   (notificationFilter === 'all' || notificationFilter === 'attendance') && (
-                    <div className="notification-item high">
-                      <div className="notification-header">
-                        <div className="notification-title">
-                          <i className="fas fa-exclamation-triangle"></i>
-                          Low Attendance Alert
-                        </div>
-                        <div className="notification-actions">
-                          <span className="notification-time">Now</span>
-                          <button 
-                            className="notification-dismiss"
-                            onClick={() => setLowAttendanceAlert(null)}
-                          >
-                            <i className="fas fa-times"></i>
-                          </button>
-                        </div>
-                      </div>
-                      <div className="notification-body">
-                        <p className="notification-message">{lowAttendanceAlert.message}</p>
-                        <div className="notification-meta">
-                          <span className="notification-badge high">HIGH</span>
-                          <span className="notification-badge">
-                            Threshold: {lowAttendanceAlert.threshold}%
-                          </span>
-                          <span className="notification-badge">
-                            Missing: {lowAttendanceAlert.missingStudents} students
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* No notifications message */}
-                  {(!lowAttendanceAlert || !lowAttendanceAlert.isActive) && 
-                   securityNotifications.length === 0 && (
-                    <div className="no-notifications">
-                      <i className="fas fa-shield-check"></i>
-                      <p>All systems secure. No alerts at this time.</p>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
 
             {activeSection === 'attendance' && (
               <>
