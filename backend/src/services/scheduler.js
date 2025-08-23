@@ -5,41 +5,44 @@ class SchedulerService {
   static startScheduler() {
     console.log("Starting meal database scheduler for East Africa Time (EAT)");
 
-    // Reset at 2:00 AM EAT (02:00) - Night reset
+    // Reset after Late Night meal ends (05:45 AM EAT) - Clear late night attendance
     cron.schedule(
-      "0 21 * * *",
+      "45 5 * * *",
       async () => {
-        await this.resetMealDatabase("2:00 AM EAT (Night)");
-      },
-      {
-        timezone: "Africa/Addis_Ababa",
-      },
-    );
-    cron.schedule(
-      "1 18 * * *",
-      async () => {
-        await this.resetMealDatabase("6:00 AM EAT (Morning)");
-      },
-      {
-        timezone: "Africa/Addis_Ababa",
-      },
-    );
-    // Reset at 9:00 AM EAT (09:00) - Morning reset
-    cron.schedule(
-      "29 23 * * *",
-      async () => {
-        await this.resetMealDatabase("9:00 AM EAT (Morning)");
+        await this.resetMealDatabase("05:45 AM EAT (After Late Night)");
       },
       {
         timezone: "Africa/Addis_Ababa",
       },
     );
 
-    // Reset at 3:00 PM EAT (15:00) - Afternoon reset
+    // Reset after Breakfast ends (09:30 AM EAT) - Clear breakfast attendance  
     cron.schedule(
-      "0 9 * * *",
+      "30 9 * * *",
       async () => {
-        await this.resetMealDatabase("3:00 PM EAT (Afternoon)");
+        await this.resetMealDatabase("09:30 AM EAT (After Breakfast)");
+      },
+      {
+        timezone: "Africa/Addis_Ababa",
+      },
+    );
+
+    // Reset after Lunch ends (14:30 PM EAT) - Clear lunch attendance
+    cron.schedule(
+      "30 14 * * *",
+      async () => {
+        await this.resetMealDatabase("14:30 PM EAT (After Lunch)");
+      },
+      {
+        timezone: "Africa/Addis_Ababa",
+      },
+    );
+
+    // Reset after Dinner ends (20:30 PM EAT) - Clear dinner attendance
+    cron.schedule(
+      "30 20 * * *",
+      async () => {
+        await this.resetMealDatabase("20:30 PM EAT (After Dinner)");
       },
       {
         timezone: "Africa/Addis_Ababa",
@@ -48,7 +51,7 @@ class SchedulerService {
 
     console.log("Meal database scheduler started successfully");
     console.log(
-      "Scheduled automatic resets at: 2:00 AM, 9:00 AM, and 3:00 PM (East Africa Time)",
+      "Scheduled automatic resets at: 05:45, 09:30, 14:30, and 20:30 (East Africa Time)",
     );
     console.log("Timezone: Africa/Addis_Ababa (EAT UTC+3)");
   }

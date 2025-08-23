@@ -1,0 +1,352 @@
+/* Database Reset Section Styles */
+.database-reset-section {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 32px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border: 1px solid var(--border-color);
+}
+
+.database-reset-section h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.database-reset-section h2 i {
+  font-size: 20px;
+  color: var(--danger-color);
+}
+
+.reset-description {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  color: #856404;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.reset-description .warning-icon {
+  color: #f39c12;
+  margin-right: 8px;
+}
+
+.reset-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.reset-option-card {
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.reset-option-card:hover {
+  border-color: var(--primary-orange);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.1);
+}
+
+.reset-option-card.selected {
+  border-color: var(--primary-orange);
+  background: rgba(255, 107, 53, 0.05);
+}
+
+.reset-option-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.reset-option-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.reset-option-header i {
+  font-size: 18px;
+  color: var(--primary-orange);
+}
+
+.reset-option-description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.reset-timing {
+  background: #e3f2fd;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #1565c0;
+  font-weight: 500;
+}
+
+.manual-reset-section {
+  background: #fff5f5;
+  border: 2px solid #fed7d7;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 24px;
+}
+
+.manual-reset-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.manual-reset-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--danger-color);
+}
+
+.manual-reset-header i {
+  font-size: 20px;
+  color: var(--danger-color);
+}
+
+.manual-reset-warning {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: #991b1b;
+}
+
+.reset-controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.reset-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.reset-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.reset-btn.danger {
+  background: var(--danger-color);
+  color: white;
+}
+
+.reset-btn.danger:hover:not(:disabled) {
+  background: #e53e3e;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 101, 101, 0.3);
+}
+
+.reset-btn.secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.reset-btn.secondary:hover:not(:disabled) {
+  background: #5a6268;
+}
+
+.reset-status {
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 16px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.reset-status.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.reset-status.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.reset-status.info {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.reset-confirmation-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.reset-confirmation-content {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.reset-confirmation-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.reset-confirmation-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--danger-color);
+}
+
+.reset-confirmation-header i {
+  font-size: 24px;
+  color: var(--danger-color);
+}
+
+.reset-confirmation-message {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.reset-confirmation-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.schedule-display {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.schedule-display h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.schedule-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.schedule-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #e9ecef;
+  font-size: 13px;
+}
+
+.schedule-list li:last-child {
+  border-bottom: none;
+}
+
+.schedule-time {
+  font-weight: 600;
+  color: var(--primary-orange);
+}
+
+.schedule-meal {
+  color: var(--text-secondary);
+}
+
+/* Light Theme Overrides */
+.dashboard-container.light-theme .database-reset-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.dashboard-container.light-theme .reset-option-card {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.dashboard-container.light-theme .reset-option-card:hover {
+  border-color: var(--primary-orange);
+}
+
+.dashboard-container.light-theme .manual-reset-section {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.dashboard-container.light-theme .schedule-display {
+  background: #f8fafc;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .reset-options-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .reset-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .reset-btn {
+    justify-content: center;
+  }
+  
+  .reset-confirmation-content {
+    margin: 20px;
+    width: calc(100% - 40px);
+  }
+}

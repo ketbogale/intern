@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Dashboard.css';
+import './Dashboard-light.css';
+import './DatabaseReset.css';
 
 const Dashboard = ({ user, onLogout }) => {
   const [attendanceData, setAttendanceData] = useState([]);
@@ -52,7 +54,6 @@ const Dashboard = ({ user, onLogout }) => {
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [showGeneralSettingsModal, setShowGeneralSettingsModal] = useState(false);
   const [showAdminCredentialsModal, setShowAdminCredentialsModal] = useState(false);
   const [adminCredentials, setAdminCredentials] = useState({
     currentPassword: '',
@@ -72,23 +73,28 @@ const Dashboard = ({ user, onLogout }) => {
   const [otpCountdown, setOtpCountdown] = useState(300); // 5 minutes
   const [canResendOTP, setCanResendOTP] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
+
+  // Database Configuration states
+  const [showDatabaseConfigModal, setShowDatabaseConfigModal] = useState(false);
+  const [databaseConfig, setDatabaseConfig] = useState({
+    connectionString: 'mongodb://localhost:27017/meal_attendance',
+    backupSchedule: 'daily',
+    backupTime: '02:00',
+    dataRetentionMonths: 24,
+    archiveAfterMonths: 12,
+    connectionPoolSize: 10,
+    connectionTimeout: 30,
+    cacheEnabled: true,
+    cacheDurationMinutes: 30,
+    indexOptimization: true,
+    gdprCompliance: true
+  });
+  const [databaseConfigLoading, setDatabaseConfigLoading] = useState(false);
+  const [databaseConfigMessage, setDatabaseConfigMessage] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   
   // Create ref for search input
   const searchInputRef = useRef(null);
-  const [generalSettings, setGeneralSettings] = useState({
-    attendanceWindowBefore: 30,
-    attendanceWindowAfter: 30,
-    mealResetTimes: {
-      breakfast: '06:00',
-      lunch: '12:00',
-      dinner: '18:00',
-      lateNight: '23:00'
-    },
-    lowAttendanceThreshold: 50,
-    loginAttemptLimit: 5,
-    lockoutDurationMinutes: 5
-  });
   
   // Meal Windows state
   const [mealWindows, setMealWindows] = useState({
@@ -100,35 +106,34 @@ const Dashboard = ({ user, onLogout }) => {
       enabled: true
     },
     lunch: {
-      startTime: '12:00',
+      startTime: '11:00',
       endTime: '14:00',
       beforeWindow: 30,
       afterWindow: 30,
       enabled: true
     },
     dinner: {
-      startTime: '18:00',
+      startTime: '16:00',
       endTime: '20:00',
       beforeWindow: 30,
       afterWindow: 30,
       enabled: true
     },
     lateNight: {
-      startTime: '22:00',
-      endTime: '23:30',
+      startTime: '01:00',
+      endTime: '05:30',
       beforeWindow: 15,
       afterWindow: 15,
-      enabled: false
+      enabled: true
     }
   });
   const [mealWindowsLoading, setMealWindowsLoading] = useState(false);
   const [mealWindowsMessage, setMealWindowsMessage] = useState('');
-  const [settingsLoading, setSettingsLoading] = useState(false);
-  const [settingsMessage, setSettingsMessage] = useState('');
   const [showAllStudentsModal, setShowAllStudentsModal] = useState(false);
   const [allStudents, setAllStudents] = useState([]);
   const [allStudentsLoading, setAllStudentsLoading] = useState(false);
   const [headerShrunk, setHeaderShrunk] = useState(false);
+  const [isLightTheme, setIsLightTheme] = useState(false);
 
   // Fetch security notifications
   const fetchSecurityNotifications = async () => {
@@ -148,13 +153,31 @@ const Dashboard = ({ user, onLogout }) => {
   // Fetch admin email from database
   const fetchAdminEmail = async () => {
     try {
-      const response = await fetch('/api/admin/profile');
+      const response = await fetch('/api/admin/profile', {
+        method: 'GET',
+        credentials: 'include', // Include session cookies
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Admin profile data:', data); // Debug log
         setAdminEmail(data.email || '');
+      } else {
+        console.error('Failed to fetch admin profile:', response.status, response.statusText);
+        // Fallback: try to get email from user session if available
+        if (user && user.email) {
+          setAdminEmail(user.email);
+        }
       }
     } catch (error) {
       console.error('Error fetching admin email:', error);
+      // Fallback: try to get email from user session if available
+      if (user && user.email) {
+        setAdminEmail(user.email);
+      }
     }
   };
 
@@ -162,6 +185,20 @@ const Dashboard = ({ user, onLogout }) => {
     fetchDashboardData();
     fetchSecurityNotifications();
     fetchAdminEmail();
+    
+    // Load external database reset JavaScript
+    const script = document.createElement('script');
+    script.src = '/src/components/DatabaseReset.js';
+    script.async = true;
+    document.head.appendChild(script);
+    
+    return () => {
+      // Cleanup script on unmount
+      const existingScript = document.querySelector('script[src="/src/components/DatabaseReset.js"]');
+      if (existingScript) {
+        document.head.removeChild(existingScript);
+      }
+    };
   }, []);
 
   // Focus search input when switching to students section
@@ -735,7 +772,7 @@ const Dashboard = ({ user, onLogout }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(mealWindows),
+        body: JSON.stringify({ mealWindows }),
       });
       
       const data = await response.json();
@@ -767,25 +804,25 @@ const Dashboard = ({ user, onLogout }) => {
         enabled: true
       },
       lunch: {
-        startTime: '12:00',
+        startTime: '11:00',
         endTime: '14:00',
         beforeWindow: 30,
         afterWindow: 30,
         enabled: true
       },
       dinner: {
-        startTime: '18:00',
+        startTime: '16:00',
         endTime: '20:00',
         beforeWindow: 30,
         afterWindow: 30,
         enabled: true
       },
       lateNight: {
-        startTime: '22:00',
-        endTime: '23:30',
+        startTime: '01:00',
+        endTime: '05:30',
         beforeWindow: 15,
         afterWindow: 15,
-        enabled: false
+        enabled: true
       }
     });
     setMealWindowsMessage('✅ Meal windows reset to defaults!');
@@ -794,39 +831,6 @@ const Dashboard = ({ user, onLogout }) => {
     }, 3000);
   };
 
-  // Handle saving general settings
-  const handleSaveSettings = async (e) => {
-    e.preventDefault();
-    
-    try {
-      setSettingsLoading(true);
-      setSettingsMessage('');
-      
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(generalSettings),
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setSettingsMessage('✅ Settings saved successfully!');
-        setTimeout(() => {
-          setSettingsMessage('');
-        }, 3000);
-      } else {
-        setSettingsMessage('❌ ' + (data.error || 'Failed to save settings.'));
-      }
-    } catch (error) {
-      console.error('Fetch error:', error);
-      setSettingsMessage('❌ Network error: ' + error.message);
-    } finally {
-      setSettingsLoading(false);
-    }
-  };
 
 
   // Handle adding new staff
@@ -898,6 +902,107 @@ const Dashboard = ({ user, onLogout }) => {
     }
   };
 
+  // Handle database configuration save
+  const handleSaveDatabaseConfig = async (e) => {
+    e.preventDefault();
+    
+    try {
+      setDatabaseConfigLoading(true);
+      setDatabaseConfigMessage('');
+      
+      const response = await fetch('/api/database/config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(databaseConfig),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setDatabaseConfigMessage('✅ Database configuration saved successfully!');
+        setTimeout(() => {
+          setDatabaseConfigMessage('');
+        }, 3000);
+      } else {
+        setDatabaseConfigMessage('❌ ' + (data.error || 'Failed to save database configuration.'));
+      }
+    } catch (error) {
+      console.error('Error saving database config:', error);
+      setDatabaseConfigMessage('❌ Network error: ' + error.message);
+    } finally {
+      setDatabaseConfigLoading(false);
+    }
+  };
+
+  // Handle GDPR data export
+  const handleGDPRExport = async () => {
+    try {
+      setDatabaseConfigLoading(true);
+      setDatabaseConfigMessage('');
+      
+      const response = await fetch('/api/database/gdpr-export', {
+        method: 'GET',
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `gdpr_data_export_${new Date().toISOString().split('T')[0]}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        setDatabaseConfigMessage('✅ GDPR data export completed successfully!');
+      } else {
+        setDatabaseConfigMessage('❌ Failed to export GDPR data.');
+      }
+    } catch (error) {
+      console.error('Error exporting GDPR data:', error);
+      setDatabaseConfigMessage('❌ Network error during GDPR export.');
+    } finally {
+      setDatabaseConfigLoading(false);
+    }
+  };
+
+  // Handle theme toggle
+  const handleThemeToggle = () => {
+    setIsLightTheme(!isLightTheme);
+  };
+
+  // Handle data purge (GDPR compliance)
+  const handleGDPRPurge = async () => {
+    if (!window.confirm('Are you sure you want to purge old data according to retention policy? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      setDatabaseConfigLoading(true);
+      setDatabaseConfigMessage('');
+      
+      const response = await fetch('/api/database/gdpr-purge', {
+        method: 'DELETE',
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setDatabaseConfigMessage(`✅ Data purge completed. ${data.deletedRecords} records removed.`);
+      } else {
+        setDatabaseConfigMessage('❌ ' + (data.error || 'Failed to purge old data.'));
+      }
+    } catch (error) {
+      console.error('Error purging data:', error);
+      setDatabaseConfigMessage('❌ Network error during data purge.');
+    } finally {
+      setDatabaseConfigLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="dashboard-container">
@@ -907,7 +1012,7 @@ const Dashboard = ({ user, onLogout }) => {
   }
 
   return (
-    <div className="dashboard-container">
+    <div className={`dashboard-container ${isLightTheme ? 'light-theme' : ''}`}>
       {/* Top Navigation Header */}
       <div className="dashboard-header">
         <div className="header-left">
@@ -922,14 +1027,18 @@ const Dashboard = ({ user, onLogout }) => {
             <button className="header-icon-btn" title="Notifications">
               <i className="fas fa-bell"></i>
             </button>
-            <button className="header-icon-btn" title="Theme Settings">
-              <i className="fas fa-palette"></i>
+            <button 
+              className="header-icon-btn theme-toggle-btn" 
+              title={isLightTheme ? "Switch to Dark Theme" : "Switch to Light Theme"}
+              onClick={handleThemeToggle}
+            >
+              <i className={`fas ${isLightTheme ? 'fa-moon' : 'fa-sun'}`}></i>
             </button>
             <div className="admin-profile-section">
               <button className="header-icon-btn" title="Admin Profile">
-                <i className="fas fa-user-circle"></i>
+              <i className="fas fa-user-circle" style={{ marginRight: '5px' }}></i>
+                <span className="admin-email">{adminEmail}</span>
               </button>
-              <span className="admin-email">{adminEmail}</span>
             </div>
           </div>
           
@@ -967,26 +1076,33 @@ const Dashboard = ({ user, onLogout }) => {
               <span>Attendance</span>
             </div>
             <div 
-              className={`nav-item ${activeSection === 'notifications' ? 'active' : ''}`}
-              onClick={() => setActiveSection('notifications')}
-            >
-              <i className="fas fa-bell"></i>
-              <span>Notifications</span>
-            </div>
-            <hr className='nav-divider'/>
-            <div 
               className={`nav-item ${activeSection === 'students' ? 'active' : ''}`}
               onClick={() => setActiveSection('students')}
             >
               <i className="fas fa-users"></i>
               <span>Students</span>
             </div>
+           
             <div 
               className={`nav-item ${activeSection === 'meal-windows' ? 'active' : ''}`}
               onClick={() => setActiveSection('meal-windows')}
             >
               <i className="fas fa-clock"></i>
-              <span>Meal Windows</span>
+              <span>Meal Window</span>
+            </div>
+            <div 
+              className={`nav-item ${activeSection === 'database-reset' ? 'active' : ''}`}
+              onClick={() => setActiveSection('database-reset')}
+            >
+              <i className="fas fa-database"></i>
+              <span>Database Reset</span>
+            </div>
+            <div 
+              className={`nav-item ${activeSection === 'notifications' ? 'active' : ''}`}
+              onClick={() => setActiveSection('notifications')}
+            >
+              <i className="fas fa-bell"></i>
+              <span>Notifications</span>
             </div>
             <div 
               className={`nav-item ${activeSection === 'reports' ? 'active' : ''}`}
@@ -996,7 +1112,7 @@ const Dashboard = ({ user, onLogout }) => {
               <span>Reports</span>
             </div>
             
-            <hr className='nav-divider'/>
+           
             <div 
               className={`nav-item ${activeSection === 'settings' ? 'active' : ''}`}
               onClick={() => setActiveSection('settings')}
@@ -1022,6 +1138,7 @@ const Dashboard = ({ user, onLogout }) => {
                 {activeSection === 'students' && 'Students Management'}
                 {activeSection === 'reports' && 'Meal Reports'}
                 {activeSection === 'meal-windows' && 'Meal Windows Configuration'}
+                {activeSection === 'database-reset' && 'Database Reset Management'}
                 {activeSection === 'settings' && 'Settings'}
               </h1>
             </div>
@@ -1410,12 +1527,11 @@ const Dashboard = ({ user, onLogout }) => {
               <>
                 <div className="meal-windows-section">
                   <div className="section-header">
-                    <h2>Meal Time Windows Configuration</h2>
                     <p>Configure attendance time windows for each meal period. Students can mark attendance within the specified time ranges.</p>
                   </div>
 
                   {mealWindowsMessage && (
-                    <div className={`settings-message ${mealWindowsMessage.includes('✅') ? 'success' : 'error'}`}>
+                    <div className={`modal-message ${mealWindowsMessage.includes('✅') ? 'success' : 'error'}`}>
                       {mealWindowsMessage}
                     </div>
                   )}
@@ -1570,19 +1686,106 @@ const Dashboard = ({ user, onLogout }) => {
               </>
             )}
 
+            {activeSection === 'database-reset' && (
+              <>
+                <div className="database-reset-section">
+                  <h2>
+                    <i className="fas fa-database"></i>
+                    Database Reset Management
+                  </h2>
+                  
+                  <div className="reset-description">
+                    <i className="fas fa-info-circle warning-icon"></i>
+                    <strong>Database Reset System:</strong> This system automatically clears meal attendance records after each meal window closes, allowing students to use their meals again for the next period. You can also perform manual resets when needed.
+                  </div>
+
+                  <div className="reset-options-grid">
+                    <div className="reset-option-card selected" data-reset-type="automatic">
+                      <div className="reset-option-header">
+                        <i className="fas fa-clock"></i>
+                        <h3>Automatic Reset Schedule</h3>
+                      </div>
+                      <div className="reset-option-description">
+                        Database automatically resets after each meal window closes based on your meal window configuration.
+                      </div>
+                      <div className="reset-timing">
+                        Active - Next reset varies by meal schedule
+                      </div>
+                    </div>
+
+                    <div className="reset-option-card" data-reset-type="manual">
+                      <div className="reset-option-header">
+                        <i className="fas fa-hand-paper"></i>
+                        <h3>Manual Reset Control</h3>
+                      </div>
+                      <div className="reset-option-description">
+                        Perform immediate database reset when needed for maintenance or emergency situations.
+                      </div>
+                      <div className="reset-timing">
+                        Available anytime - Admin controlled
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="schedule-display">
+                    <h4>
+                      <i className="fas fa-calendar-alt"></i>
+                      Automatic Reset Schedule (EAT)
+                    </h4>
+                    <ul className="schedule-list">
+                      <li>
+                        <span className="schedule-time">05:45 EAT</span>
+                        <span className="schedule-meal">After Late Night Meal</span>
+                      </li>
+                      <li>
+                        <span className="schedule-time">09:30 EAT</span>
+                        <span className="schedule-meal">After Breakfast</span>
+                      </li>
+                      <li>
+                        <span className="schedule-time">14:30 EAT</span>
+                        <span className="schedule-meal">After Lunch</span>
+                      </li>
+                      <li>
+                        <span className="schedule-time">20:30 EAT</span>
+                        <span className="schedule-meal">After Dinner</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="manual-reset-section">
+                    <div className="manual-reset-header">
+                      <i className="fas fa-exclamation-triangle"></i>
+                      <h3>Manual Database Reset</h3>
+                    </div>
+                    
+                    <div className="manual-reset-warning">
+                      <strong>Warning:</strong> Manual reset will immediately delete all current meal attendance records. This action cannot be undone. Use only when necessary.
+                    </div>
+
+                    <div className="reset-controls">
+                      <button className="reset-btn danger manual-reset-btn">
+                        <i className="fas fa-trash-alt"></i>
+                        Reset Database Now
+                      </button>
+                      <button className="reset-btn secondary test-reset-btn">
+                        <i className="fas fa-vial"></i>
+                        Test Reset (Safe)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
             {activeSection === 'settings' && (
               <>
                 <div className="settings-section">
                   <div className="feature-list">
-                    <div className="feature-item clickable" onClick={() => setShowGeneralSettingsModal(true)}>
-                      <i className="fas fa-cog"></i>
-                      <span>General Settings</span>
-                    </div>
                     
                     {user.role === 'admin' && (
                       <div className="feature-item clickable" onClick={() => setShowAdminCredentialsModal(true)}>
                         <i className="fas fa-user-shield"></i>
-                        <span>Admin Credentials</span>
+                        <span>Admin Credential</span>
                       </div>
                     )}
                     
@@ -1591,9 +1794,12 @@ const Dashboard = ({ user, onLogout }) => {
                       onClick={() => setShowAddStaffModal(true)}
                     >
                       <i className="fas fa-users-cog"></i>
-                      <span>Scanner Management</span>
+                      <span>Scanner Credential</span>
                     </div>
-                    <div className="feature-item">
+                    <div 
+                      className="feature-item clickable"
+                      onClick={() => setShowDatabaseConfigModal(true)}
+                    >
                       <i className="fas fa-database"></i>
                       <span>Database Configuration</span>
                     </div>
@@ -1926,198 +2132,6 @@ const Dashboard = ({ user, onLogout }) => {
         </div>
       )}
 
-      {/* General Settings Modal */}
-      {showGeneralSettingsModal && (
-        <div className="modal-overlay" onClick={() => setShowGeneralSettingsModal(false)}>
-          <div className="modal-content settings-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>General Settings</h3>
-              <button 
-                className="modal-close-btn"
-                onClick={() => setShowGeneralSettingsModal(false)}
-              >
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              {settingsMessage && (
-                <div className={`modal-message ${settingsMessage.includes('successfully') ? 'success' : 'error'}`}>
-                  {settingsMessage}
-                </div>
-              )}
-              
-              <form onSubmit={handleSaveSettings} className="settings-form">
-                {/* Attendance Window Settings */}
-                <div className="settings-section">
-                  <h4><i className="fas fa-clock"></i> Attendance Window</h4>
-                  <div className="settings-row">
-                    <div className="form-group">
-                      <label>Minutes Before Meal Time</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="120"
-                        value={generalSettings.attendanceWindowBefore}
-                        onChange={(e) => setGeneralSettings({...generalSettings, attendanceWindowBefore: parseInt(e.target.value)})}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Minutes After Meal Time</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="120"
-                        value={generalSettings.attendanceWindowAfter}
-                        onChange={(e) => setGeneralSettings({...generalSettings, attendanceWindowAfter: parseInt(e.target.value)})}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Meal Reset Times */}
-                <div className="settings-section">
-                  <h4><i className="fas fa-calendar-day"></i> Meal Reset Times</h4>
-                  <div className="settings-row">
-                    <div className="form-group">
-                      <label>Breakfast Reset Time</label>
-                      <input
-                        type="time"
-                        value={generalSettings.mealResetTimes.breakfast}
-                        onChange={(e) => setGeneralSettings({
-                          ...generalSettings, 
-                          mealResetTimes: {
-                            ...generalSettings.mealResetTimes,
-                            breakfast: e.target.value
-                          }
-                        })}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Lunch Reset Time</label>
-                      <input
-                        type="time"
-                        value={generalSettings.mealResetTimes.lunch}
-                        onChange={(e) => setGeneralSettings({
-                          ...generalSettings, 
-                          mealResetTimes: {
-                            ...generalSettings.mealResetTimes,
-                            lunch: e.target.value
-                          }
-                        })}
-                      />
-                    </div>
-                  </div>
-                  <div className="settings-row">
-                    <div className="form-group">
-                      <label>Dinner Reset Time</label>
-                      <input
-                        type="time"
-                        value={generalSettings.mealResetTimes.dinner}
-                        onChange={(e) => setGeneralSettings({
-                          ...generalSettings, 
-                          mealResetTimes: {
-                            ...generalSettings.mealResetTimes,
-                            dinner: e.target.value
-                          }
-                        })}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Late Night Reset Time</label>
-                      <input
-                        type="time"
-                        value={generalSettings.mealResetTimes.lateNight}
-                        onChange={(e) => setGeneralSettings({
-                          ...generalSettings, 
-                          mealResetTimes: {
-                            ...generalSettings.mealResetTimes,
-                            lateNight: e.target.value
-                          }
-                        })}
-                      />
-                    </div>
-                  </div>
-                  <div className="settings-note">
-                    <p><i className="fas fa-info-circle"></i> Database will automatically reset at these times to clear meal attendance data for each period.</p>
-                  </div>
-                </div>
-
-                {/* Low Attendance Alerts */}
-                <div className="settings-section">
-                  <h4><i className="fas fa-exclamation-triangle"></i> Low Attendance Alerts</h4>
-                  <div className="form-group">
-                    <label>Alert when attendance drops below (%)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="100"
-                      value={generalSettings.lowAttendanceThreshold}
-                      onChange={(e) => setGeneralSettings({...generalSettings, lowAttendanceThreshold: parseInt(e.target.value)})}
-                    />
-                  </div>
-                </div>
-
-
-                {/* Login Security */}
-                <div className="settings-section">
-                  <h4><i className="fas fa-shield-alt"></i> Login Security</h4>
-                  <div className="settings-row">
-                    <div className="form-group">
-                      <label>Maximum login attempts before lockout</label>
-                      <input
-                        type="number"
-                        min="3"
-                        max="10"
-                        value={generalSettings.loginAttemptLimit}
-                        onChange={(e) => setGeneralSettings({...generalSettings, loginAttemptLimit: parseInt(e.target.value)})}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Lockout duration (minutes)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="60"
-                        value={generalSettings.lockoutDurationMinutes}
-                        onChange={(e) => setGeneralSettings({...generalSettings, lockoutDurationMinutes: parseInt(e.target.value)})}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-
-                <div className="form-actions">
-                  <button 
-                    type="button" 
-                    className="btn-cancel"
-                    onClick={() => setShowGeneralSettingsModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="btn-register"
-                    disabled={settingsLoading}
-                  >
-                    {settingsLoading ? (
-                      <>
-                        <i className="fas fa-spinner fa-spin"></i>
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-save"></i>
-                        Save Settings
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* OTP Verification Modal */}
       {showOTPModal && (
@@ -2431,6 +2445,241 @@ const Dashboard = ({ user, onLogout }) => {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Database Configuration Modal */}
+      {showDatabaseConfigModal && (
+        <div className="modal-overlay" onClick={() => setShowDatabaseConfigModal(false)}>
+          <div className="modal-content database-config-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>
+                <i className="fas fa-database"></i>
+                Database Configuration
+              </h3>
+              <button 
+                className="modal-close-btn" 
+                onClick={() => setShowDatabaseConfigModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {databaseConfigMessage && (
+                <div className={`modal-message ${databaseConfigMessage.includes('✅') ? 'success' : 'error'}`}>
+                  {databaseConfigMessage}
+                </div>
+              )}
+              
+              <form onSubmit={handleSaveDatabaseConfig} className="database-config-form">
+                {/* Connection Settings */}
+                <div className="config-section">
+                  <h4><i className="fas fa-plug"></i> Connection Settings</h4>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>MongoDB Connection String</label>
+                      <input
+                        type="text"
+                        value={databaseConfig.connectionString}
+                        onChange={(e) => setDatabaseConfig({...databaseConfig, connectionString: e.target.value})}
+                        placeholder="mongodb://localhost:27017/meal_attendance"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Connection Pool Size</label>
+                      <input
+                        type="number"
+                        min="5"
+                        max="50"
+                        value={databaseConfig.connectionPoolSize}
+                        onChange={(e) => setDatabaseConfig({...databaseConfig, connectionPoolSize: parseInt(e.target.value)})}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Connection Timeout (seconds)</label>
+                      <input
+                        type="number"
+                        min="10"
+                        max="120"
+                        value={databaseConfig.connectionTimeout}
+                        onChange={(e) => setDatabaseConfig({...databaseConfig, connectionTimeout: parseInt(e.target.value)})}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Backup Settings */}
+                <div className="config-section">
+                  <h4><i className="fas fa-save"></i> Backup Settings</h4>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Backup Schedule</label>
+                      <select
+                        value={databaseConfig.backupSchedule}
+                        onChange={(e) => setDatabaseConfig({...databaseConfig, backupSchedule: e.target.value})}
+                      >
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Backup Time</label>
+                      <input
+                        type="time"
+                        value={databaseConfig.backupTime}
+                        onChange={(e) => setDatabaseConfig({...databaseConfig, backupTime: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Data Retention & Archive */}
+                <div className="config-section">
+                  <h4><i className="fas fa-archive"></i> Data Retention & Archive</h4>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Data Retention (months)</label>
+                      <input
+                        type="number"
+                        min="6"
+                        max="60"
+                        value={databaseConfig.dataRetentionMonths}
+                        onChange={(e) => setDatabaseConfig({...databaseConfig, dataRetentionMonths: parseInt(e.target.value)})}
+                      />
+                      <small>Keep attendance records for this duration</small>
+                    </div>
+                    <div className="form-group">
+                      <label>Archive After (months)</label>
+                      <input
+                        type="number"
+                        min="3"
+                        max="24"
+                        value={databaseConfig.archiveAfterMonths}
+                        onChange={(e) => setDatabaseConfig({...databaseConfig, archiveAfterMonths: parseInt(e.target.value)})}
+                      />
+                      <small>Move old records to archive storage</small>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Performance Settings */}
+                <div className="config-section">
+                  <h4><i className="fas fa-tachometer-alt"></i> Performance Settings</h4>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={databaseConfig.cacheEnabled}
+                          onChange={(e) => setDatabaseConfig({...databaseConfig, cacheEnabled: e.target.checked})}
+                        />
+                        Enable Caching
+                      </label>
+                    </div>
+                    <div className="form-group">
+                      <label>Cache Duration (minutes)</label>
+                      <input
+                        type="number"
+                        min="5"
+                        max="120"
+                        value={databaseConfig.cacheDurationMinutes}
+                        onChange={(e) => setDatabaseConfig({...databaseConfig, cacheDurationMinutes: parseInt(e.target.value)})}
+                        disabled={!databaseConfig.cacheEnabled}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={databaseConfig.indexOptimization}
+                          onChange={(e) => setDatabaseConfig({...databaseConfig, indexOptimization: e.target.checked})}
+                        />
+                        Enable Index Optimization
+                      </label>
+                      <small>Automatically optimize database queries</small>
+                    </div>
+                  </div>
+                </div>
+
+                {/* GDPR Compliance */}
+                <div className="config-section">
+                  <h4><i className="fas fa-shield-alt"></i> GDPR Compliance</h4>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={databaseConfig.gdprCompliance}
+                          onChange={(e) => setDatabaseConfig({...databaseConfig, gdprCompliance: e.target.checked})}
+                        />
+                        Enable GDPR Compliance Features
+                      </label>
+                      <small>Data export, deletion, and privacy controls</small>
+                    </div>
+                  </div>
+                  
+                  {databaseConfig.gdprCompliance && (
+                    <div className="gdpr-actions">
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={handleGDPRExport}
+                        disabled={databaseConfigLoading}
+                      >
+                        <i className="fas fa-download"></i>
+                        Export All Data
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-danger"
+                        onClick={handleGDPRPurge}
+                        disabled={databaseConfigLoading}
+                      >
+                        <i className="fas fa-trash"></i>
+                        Purge Old Data
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={() => setShowDatabaseConfigModal(false)}
+                  >
+                    <i className="fas fa-times"></i>
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn-primary"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <span className="spinner"></span>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-save"></i>
+                        Save Configuration
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

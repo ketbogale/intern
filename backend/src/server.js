@@ -7,9 +7,10 @@ const attendanceRoutes = require("./routes/attendance");
 const dashboardRoutes = require("./routes/dashboard");
 const studentRoutes = require('./routes/students');
 const staffRoutes = require('./routes/staff');
-const settingsRoutes = require('./routes/settings');
 const securityRoutes = require('./routes/securityRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const mealWindowsRoutes = require('./routes/mealWindows');
+const databaseRoutes = require('./routes/databaseRoutes');
 const mongoose = require("mongoose");
 const SchedulerService = require("./services/scheduler");
 const { verifyEmailService } = require('./services/emailService');
@@ -81,9 +82,10 @@ app.use("/api", attendanceRoutes);
 app.use("/api", dashboardRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/staff', staffRoutes);
-app.use('/api/settings', settingsRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/meal-windows', mealWindowsRoutes);
+app.use('/api/database', databaseRoutes);
 
 // Logout route
 app.post("/api/logout", (req, res) => {

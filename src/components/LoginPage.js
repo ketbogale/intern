@@ -232,8 +232,10 @@ const LoginPage = ({ onLogin }) => {
   return (
     <div className="login-container">
       <div className="head-row">
-        <img src="/images/salale_university_logo.png" alt="Salale University" />
-        <h1>Salale University</h1>
+        <div className="header-left">
+          <img src="/images/salale_university_logo.png" alt="Salale University" />
+          <h1>Salale University</h1>
+        </div>
         <i className="material-icons cafeteria-icon">restaurant</i>
       </div>
 

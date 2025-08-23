@@ -1,5 +1,4 @@
 const Staff = require("../models/staff");
-const Settings = require("../models/Settings");
 const { trackFailedLogin } = require("./securityController");
 
 // In-memory store for login attempts (in production, use Redis or database)
@@ -14,10 +13,9 @@ exports.login = async (req, res) => {
   }
 
   try {
-    // Get settings for login attempt limits
-    const settings = await Settings.findOne();
-    const loginAttemptLimit = settings?.loginAttemptLimit || 5;
-    const lockoutDurationMinutes = settings?.lockoutDurationMinutes || 5;
+    // Use default login attempt limits
+    const loginAttemptLimit = 5;
+    const lockoutDurationMinutes = 5;
 
     const clientIP = req.ip || req.connection.remoteAddress;
     const attemptKey = `${clientIP}:${username}`;

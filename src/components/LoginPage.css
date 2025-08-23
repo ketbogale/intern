@@ -4,13 +4,14 @@
 
 .login-container {
   font-family: 'Segoe UI', Arial, sans-serif;
-  background: linear-gradient(135deg, #241654 60%, #6c63ff 100%);
+  background: #0f1419;
   margin: 0;
   min-height: 100vh;
 }
 
 .head-row {
-  background: #0056b3;
+  background: rgba(30, 42, 58, 0.95);
+  backdrop-filter: blur(10px);
   width: 100%;
   display: flex;
   align-items: center;
@@ -22,33 +23,37 @@
   left: 0;
   right: 0;
   top: 0;
-  margin-top: 3px;
   z-index: 100;
-  margin-bottom: 27px;
-  border-bottom: 1px solid gold;
+  margin-bottom: 40px;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .head-row img {
-  width: 57px;
-  height: 60px;
-  border-radius: 50%;
-  padding: 7px;
-  margin: 4px 9px;
-  border: 1px solid greenyellow;
+  width: 50px;
+  height: 50px;
+  border-radius: 0;
+  padding: 0;
+  margin: 0 12px 0 0;
+  border: none;
 }
 
-.head-row h1 {
-  font-size: 23px;
-  color: #fff;
+.header-left h1 {
+  color: #ecf0f1;
+  font-size: 1.5rem;
   font-weight: 500;
   margin: 0;
-  flex: 1;
-  
 }
 
 .cafeteria-icon {
   color: #fff;
-  font-size: 38px;
+  font-size: 28px;
   margin-left: auto;
   padding: 8px;
   border-radius: 50%;
@@ -93,18 +98,20 @@
 .login-box {
   padding: 40px 32px 32px 32px;
   min-width: 320px;
-  max-width: 370px;
+  max-width: 400px;
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  border-radius: 19px;
+  border-radius: 16px;
   justify-content: center;
   margin-bottom: 32px;
-  transition: box-shadow 0.2s;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  transition: box-shadow 0.3s ease;
+  background: rgba(52, 73, 94, 0.85);
+  backdrop-filter: blur(15px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(149, 165, 166, 0.2);
 }
 
 .login-box:hover {
@@ -113,9 +120,9 @@
 
 .login-box label {
   font-size: 1rem;
-  color: #fff;
+  color: #bdc3c7;
   margin-bottom: 6px;
-  margin-top: 12px;
+  align-self: flex-start;
   text-align: left;
   font-weight: 500;
   display: block;
@@ -123,17 +130,19 @@
 }
 
 .login-box input {
-  padding: 12px;
-  border-radius: 7px;
-  border: 1.5px solid #007bff;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(149, 165, 166, 0.3);
   font-size: 1rem;
   margin-bottom: 8px;
   outline: none;
   text-align: left;
-  transition: border 0.2s, box-shadow 0.2s;
-  box-shadow: 0 1px 4px rgba(44,62,80,0.08);
+  transition: all 0.3s ease;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
   width: 100%;
   box-sizing: border-box;
+  background: rgba(44, 62, 80, 0.6);
+  color: #ecf0f1;
 }
 
 .password-wrapper {
@@ -162,32 +171,32 @@
 }
 
 .login-box input:focus {
-  border: 2px solid #0056b3;
-  box-shadow: 0 2px 8px rgba(44,62,80,0.12);
+  border: 1px solid #74b9ff;
+  box-shadow: 0 0 0 3px rgba(116, 185, 255, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: rgba(44, 62, 80, 0.8);
 }
 
 .login-button {
-  background: linear-gradient(90deg, #27ae60 60%, #219150 100%);
+  background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
   color: #fff;
   border: none;
   border-radius: 12px;
-  padding: 12px 24px;
+  padding: 16px 24px;
   font-size: 1rem;
   margin: 19px auto 0 auto;
   cursor: pointer;
-  font-weight: 450;
-  width: 120px;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 8px rgba(44,62,80,0.10);
-  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
-  transform: translateY(-2px);
+  font-weight: 500;
+  width: 100%;
+  letter-spacing: 0.3px;
+  box-shadow: 0 6px 20px rgba(116, 185, 255, 0.25);
+  transition: all 0.3s ease;
   display: block;
 }
 
 .login-button:hover:not(:disabled) {
-  background: linear-gradient(90deg, #219150 60%, #27ae60 100%);
-  box-shadow: 0 4px 16px rgba(44,62,80,0.16);
-  transform: translateY(-3px) scale(1.02);
+  background: linear-gradient(135deg, #0984e3 0%, #74b9ff 100%);
+  box-shadow: 0 8px 25px rgba(116, 185, 255, 0.35);
+  transform: translateY(-2px);
 }
 
 .login-button:disabled {
@@ -198,12 +207,11 @@
 
 .login-message {
   margin-top: 12px;
-  font-size: 1rem;
-  min-height: 22px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 400;
   text-align: center;
-  font-weight: 500;
-  padding: 8px;
-  border-radius: 6px;
 }
 
 .login-message.success {
@@ -225,26 +233,29 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
+  padding-top: 60px;
   z-index: 1000;
 }
 
 .modal-content {
-  background: white;
-  border-radius: 12px;
+  background: rgba(52, 73, 94, 0.95);
+  backdrop-filter: blur(15px);
+  border-radius: 16px;
   width: 90%;
   max-width: 400px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  animation: modalSlideIn 0.3s ease-out;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  animation: modalDropDown 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: 1px solid rgba(149, 165, 166, 0.3);
 }
 
-@keyframes modalSlideIn {
+@keyframes modalDropDown {
   from {
     opacity: 0;
-    transform: translateY(-20px) scale(0.95);
+    transform: translateY(-100px) scale(0.9);
   }
   to {
     opacity: 1;
@@ -253,10 +264,10 @@
 }
 
 .modal-header {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
+  background: linear-gradient(135deg, #1a252f 0%, #2c3e50 100%);
+  color: #ecf0f1;
   padding: 16px 20px;
-  border-radius: 12px 12px 0 0;
+  border-radius: 16px 16px 0 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -285,26 +296,31 @@
 
 .modal-body {
   padding: 20px;
+  background: rgba(52, 73, 94, 0.95);
+  border-radius: 0 0 16px 16px;
+  color: #ecf0f1;
 }
 
 .modal-message {
   padding: 12px 16px;
-  border-radius: 6px;
+  border-radius: 0;
   margin-bottom: 16px;
   font-size: 14px;
   font-weight: 500;
 }
 
 .modal-message.success {
-  background: #f0fff4;
-  color: #22543d;
-  border: 1px solid #9ae6b4;
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #10b981;
+  border-left: 4px solid #10b981;
 }
 
 .modal-message.error {
-  background: #fed7d7;
-  color: #742a2a;
-  border: 1px solid #feb2b2;
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #ef4444;
+  border-left: 4px solid #ef4444;
 }
 
 .otp-form {

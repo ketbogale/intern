@@ -103,10 +103,8 @@ const AttendancePage = ({ user, onLogout }) => {
     <div className="attendance-container">
       <div className="attendance-header">
         <div className="header-left">
-          <div className="logo-section">
-            <img src="/images/salale_university_logo.png" alt="Salale University" />
-            <h1 className="brand-name">Meal Attendance System</h1>
-          </div>
+          <img src="/images/salale_university_logo.png" alt="Salale University" />
+          <h1>Salale University</h1>
         </div>
         <button onClick={handleLogout} className="logout-btn">
           <i className="fas fa-sign-out-alt"></i>

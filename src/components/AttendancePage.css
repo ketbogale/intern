@@ -3,8 +3,7 @@
 
 .attendance-container {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  /*background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);*/
-  background: linear-gradient(135deg, #241654 60%, #6c63ff 100%);
+  background: #0f1419;
   margin: 0;
   min-height: 100vh;
   display: flex;
@@ -12,14 +11,15 @@
 }
 
 .attendance-header {
-  /*background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);*/
-  background: #0056b3;
-  color: white;
+  background: rgba(30, 42, 58, 0.95);
+  backdrop-filter: blur(10px);
+  color: #ecf0f1;
   padding: 16px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   position: sticky;
   top: 0;
   z-index: 1000;
@@ -32,19 +32,35 @@
   gap: 16px;
 }
 
+.header-left h1 {
+  color: #ecf0f1;
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.header-left img {
+  width: 50px;
+  height: 50px;
+  border-radius: 0;
+  object-fit: contain;
+}
+
 .logo-section {
   display: flex;
   align-items: center;
   gap: 12px;
 }
+
 .logo-section img {
-  width: 57px;
-  height: 60px;
-  border-radius: 50%;
-  padding: 7px;
-  margin: 4px 9px;
-  border: 1px solid greenyellow;
-  }
+  width: 50px;
+  height: 50px;
+  border-radius: 0;
+  padding: 0;
+  margin: 0 12px 0 0;
+  border: none;
+}
+
 .brand-name {
   font-size: 24px;
   font-weight: 600;
@@ -95,53 +111,61 @@
 }
 
 .input-card {
-  background: white;
-  border-radius: 12px;
+  background: rgba(52, 73, 94, 0.85);
+  backdrop-filter: blur(15px);
+  border-radius: 16px;
   padding: 32px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-  border: 1px solid #e1e5e9;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(149, 165, 166, 0.2);
 }
 
 .input-card label {
   font-size: 16px;
-  color: #2c3e50;
+  color: #bdc3c7;
   margin-bottom: 12px;
-  font-weight: 600;
+  font-weight: 500;
   display: block;
 }
 
 .input-card input {
   width: 100%;
   padding: 16px;
-  border-radius: 8px;
-  border: 2px solid #e1e5e9;
+  border-radius: 10px;
+  border: 1px solid rgba(149, 165, 166, 0.3);
   font-size: 16px;
   margin-bottom: 20px;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: all 0.3s ease;
   box-sizing: border-box;
+  background: rgba(44, 62, 80, 0.6);
+  color: #ecf0f1;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .input-card input:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #74b9ff;
+  box-shadow: 0 0 0 3px rgba(116, 185, 255, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: rgba(44, 62, 80, 0.8);
 }
 
 .check-btn {
-  background: #667eea;
+  background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 16px 24px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   width: 100%;
-  transition: background 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 6px 20px rgba(116, 185, 255, 0.25);
 }
 
 .check-btn:hover:not(:disabled) {
-  background: #5f4fcf;
+  background: linear-gradient(135deg, #0984e3 0%, #74b9ff 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(116, 185, 255, 0.35);
 }
 
 .check-btn:disabled {
@@ -161,20 +185,30 @@
 }
 
 .attendance-message.allowed {
-  background: rgba(39, 174, 96, 0.2);
-  border: 2px solid #27ae60;
-  color: #27ae60;
+  background: rgba(39, 174, 96, 0.15);
+  border: 1px solid rgba(39, 174, 96, 0.4);
+  border-left: 4px solid #27ae60;
+  color: #2ecc71;
 }
 
 .attendance-message.already_used {
-  background: rgba(231, 76, 60, 0.2);
-  border: 2px solid #e74c3c;
-  color: #e74c3c;
+  background: #fef2f2;
+  border: 1px solid #ef4444;
+  border-left: 4px solid #ef4444;
+  color: #991b1b;
 }
 
 .attendance-message.invalid {
-  background: rgba(231, 76, 60, 0.2);
-  border: 2px solid #e74c3c;
+  background: #fef2f2;
+  border: 1px solid #ef4444;
+  border-left: 4px solid #ef4444;
+  color: #991b1b;
+}
+
+.attendance-message.not-allowed {
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  border-left: 4px solid #e74c3c;
   color: #e74c3c;
 }
 
@@ -184,38 +218,49 @@
 }
 
 .student-card {
-  background: white;
-  border-radius: 12px;
+  background: rgba(52, 73, 94, 0.85);
+  backdrop-filter: blur(15px);
+  border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-  border: 1px solid #e1e5e9;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(149, 165, 166, 0.2);
   animation: fadeIn 0.3s ease-in;
 }
 
 .status-message {
   font-size: 1.4rem;
-  font-weight: bold;
+  font-weight: 500;
   text-align: center;
   padding: 16px;
-  border-radius: 8px;
+  border-radius: 12px;
   margin-bottom: 20px;
 }
 
 .status-message.allowed {
-  background: rgba(39, 174, 96, 0.2);
-  border: 2px solid #27ae60;
-  color: #27ae60;
+  background: rgba(39, 174, 96, 0.15);
+  border: 1px solid rgba(39, 174, 96, 0.4);
+  border-left: 4px solid #27ae60;
+  color: #2ecc71;
 }
 
 .status-message.already_used {
-  background: rgba(231, 76, 60, 0.2);
-  border: 2px solid #e74c3c;
-  color: #e74c3c;
+  background: #fef2f2;
+  border: 1px solid #ef4444;
+  border-left: 4px solid #ef4444;
+  color: #991b1b;
 }
 
 .status-message.invalid {
-  background: rgba(231, 76, 60, 0.2);
-  border: 2px solid #e74c3c;
+  background: #fef2f2;
+  border: 1px solid #ef4444;
+  border-left: 4px solid #ef4444;
+  color: #991b1b;
+}
+
+.status-message.not-allowed {
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  border-left: 4px solid #e74c3c;
   color: #e74c3c;
 }
 
@@ -227,17 +272,25 @@
 
 .student-details {
   flex: 1;
-  color: #2c3e50;
+  color: #bdc3c7;
 }
 
-.student-details div {
-  margin-bottom: 12px;
-  font-size: 1.1rem;
-  line-height: 1.4;
+.student-info h3 {
+  margin: 0 0 8px 0;
+  color: #ecf0f1;
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.student-info p {
+  margin: 4px 0;
+  color: #bdc3c7;
+  font-size: 1rem;
+  font-weight: 500;
 }
 
 .student-details strong {
-  color: #667eea;
+  color: #74b9ff;
   margin-right: 8px;
 }
 
@@ -250,8 +303,8 @@
   height: 200px;
   border-radius: 12px;
   object-fit: cover;
-  border: 3px solid #667eea;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 3px solid #74b9ff;
+  box-shadow: 0 6px 20px rgba(116, 185, 255, 0.3);
 }
 
 /* Animations */

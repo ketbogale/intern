@@ -1,6 +1,5 @@
 const Student = require("../models/student");
 const MealCurrent = require("../models/mealCurrent");
-const Settings = require("../models/Settings");
 
 exports.getDashboardStats = async (req, res) => {
   try {
@@ -59,8 +58,7 @@ exports.getDashboardStats = async (req, res) => {
     }
 
     // Check for low attendance alerts
-    const settings = await Settings.findOne();
-    const lowAttendanceThreshold = settings?.lowAttendanceThreshold || 50;
+    const lowAttendanceThreshold = 50;
     const attendancePercentage = totalStudents > 0 ? Math.round((todayAttendance / totalStudents) * 100) : 0;
     
     let lowAttendanceAlert = null;
@@ -221,5 +219,46 @@ exports.exportCurrentAttendance = async (req, res) => {
   } catch (error) {
     console.error('Export error:', error);
     res.status(500).json({ error: "Failed to export current attendance data" });
+  }
+};
+
+// Manual meal database reset
+exports.resetMealDatabase = async (req, res) => {
+  try {
+    console.log('Manual meal database reset requested');
+    
+    // Get current time in EAT
+    const eatTime = new Date().toLocaleString("en-US", {
+      timeZone: "Africa/Addis_Ababa",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+
+    console.log(`[${eatTime} EAT] Starting manual meal database reset`);
+
+    // Delete all meal attendance records
+    const result = await MealCurrent.deleteMany({});
+
+    console.log(`[${eatTime} EAT] Manual database reset completed`);
+    console.log(`Deleted ${result.deletedCount} meal attendance records`);
+
+    res.json({
+      success: true,
+      message: `Meal database reset successfully. Deleted ${result.deletedCount} records.`,
+      resetTime: eatTime,
+      deletedCount: result.deletedCount
+    });
+
+  } catch (error) {
+    console.error('Manual reset error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to reset meal database",
+      details: error.message 
+    });
   }
 };
