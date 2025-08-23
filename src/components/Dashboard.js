@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import './Dashboard.css';
 import './Dashboard-light.css';
 import './DatabaseReset.css';
+import DatabaseResetComponent from './DatabaseResetComponent';
 
-const Dashboard = ({ user, onLogout }) => {
+const Dashboard = () => {
   const [attendanceData, setAttendanceData] = useState([]);
   const [stats, setStats] = useState({
     totalStudents: 0,
@@ -32,13 +33,6 @@ const Dashboard = ({ user, onLogout }) => {
   });
   const [addStudentLoading, setAddStudentLoading] = useState(false);
   const [addStudentMessage, setAddStudentMessage] = useState('');
-  const [showAddStaffModal, setShowAddStaffModal] = useState(false);
-  const [newStaffData, setNewStaffData] = useState({
-    username: '',
-    password: ''
-  });
-  const [addStaffLoading, setAddStaffLoading] = useState(false);
-  const [addStaffMessage, setAddStaffMessage] = useState('');
   const [showEditStudentModal, setShowEditStudentModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [editStudentData, setEditStudentData] = useState({
@@ -130,9 +124,15 @@ const Dashboard = ({ user, onLogout }) => {
   const [showAllStudentsModal, setShowAllStudentsModal] = useState(false);
   const [allStudents, setAllStudents] = useState([]);
   const [allStudentsLoading, setAllStudentsLoading] = useState(false);
-  const [headerShrunk, setHeaderShrunk] = useState(false);
   const [isLightTheme, setIsLightTheme] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showAddStaffModal, setShowAddStaffModal] = useState(false);
+  const [newStaffData, setNewStaffData] = useState({
+    username: '',
+    password: ''
+  });
+  const [addStaffLoading, setAddStaffLoading] = useState(false);
+  const [addStaffMessage, setAddStaffMessage] = useState('');
 
 
   // Fetch admin email from database
@@ -152,17 +152,9 @@ const Dashboard = ({ user, onLogout }) => {
         setAdminEmail(data.email || '');
       } else {
         console.error('Failed to fetch admin profile:', response.status, response.statusText);
-        // Fallback: try to get email from user session if available
-        if (user && user.email) {
-          setAdminEmail(user.email);
-        }
       }
     } catch (error) {
       console.error('Error fetching admin email:', error);
-      // Fallback: try to get email from user session if available
-      if (user && user.email) {
-        setAdminEmail(user.email);
-      }
     }
   };
 
@@ -170,29 +162,6 @@ const Dashboard = ({ user, onLogout }) => {
     fetchDashboardData();
     fetchAdminEmail();
     
-    // Load external database reset JavaScript
-    const script = document.createElement('script');
-    script.src = '/src/components/DatabaseReset.js';
-    script.async = true;
-    document.head.appendChild(script);
-    
-    // Close dropdown when clicking outside
-    const handleClickOutside = (event) => {
-      if (!event.target.closest('.admin-profile-section')) {
-        setShowProfileDropdown(false);
-      }
-    };
-    
-    document.addEventListener('click', handleClickOutside);
-    
-    return () => {
-      // Cleanup script on unmount
-      const existingScript = document.querySelector('script[src="/src/components/DatabaseReset.js"]');
-      if (existingScript) {
-        document.head.removeChild(existingScript);
-      }
-      document.removeEventListener('click', handleClickOutside);
-    };
   }, []);
 
   // Focus search input when switching to students section
@@ -776,6 +745,7 @@ const Dashboard = ({ user, onLogout }) => {
 
 
 
+
   // Handle adding new staff
   const handleAddStaff = async (e) => {
     e.preventDefault();
@@ -1074,7 +1044,7 @@ const Dashboard = ({ user, onLogout }) => {
 
         {/* Main Content */}
         <div className="main-content">
-          <div className={`content-header ${headerShrunk ? 'shrunk' : ''}`}>
+          <div className="content-header">
             <div className="header-left-content">
               <h1>
                 {activeSection === 'overview' && 'Dashboard Overview'}
@@ -1524,94 +1494,7 @@ const Dashboard = ({ user, onLogout }) => {
             )}
 
             {activeSection === 'database-reset' && (
-              <>
-                <div className="database-reset-section">
-                  <h2>
-                    <i className="fas fa-database"></i>
-                    Database Reset Management
-                  </h2>
-                  
-                  <div className="reset-description">
-                    <i className="fas fa-info-circle warning-icon"></i>
-                    <strong>Database Reset System:</strong> This system automatically clears meal attendance records after each meal window closes, allowing students to use their meals again for the next period. You can also perform manual resets when needed.
-                  </div>
-
-                  <div className="reset-options-grid">
-                    <div className="reset-option-card selected" data-reset-type="automatic">
-                      <div className="reset-option-header">
-                        <i className="fas fa-clock"></i>
-                        <h3>Automatic Reset Schedule</h3>
-                      </div>
-                      <div className="reset-option-description">
-                        Database automatically resets after each meal window closes based on your meal window configuration.
-                      </div>
-                      <div className="reset-timing">
-                        Active - Next reset varies by meal schedule
-                      </div>
-                    </div>
-
-                    <div className="reset-option-card" data-reset-type="manual">
-                      <div className="reset-option-header">
-                        <i className="fas fa-hand-paper"></i>
-                        <h3>Manual Reset Control</h3>
-                      </div>
-                      <div className="reset-option-description">
-                        Perform immediate database reset when needed for maintenance or emergency situations.
-                      </div>
-                      <div className="reset-timing">
-                        Available anytime - Admin controlled
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="schedule-display">
-                    <h4>
-                      <i className="fas fa-calendar-alt"></i>
-                      Automatic Reset Schedule (EAT)
-                    </h4>
-                    <ul className="schedule-list">
-                      <li>
-                        <span className="schedule-time">05:45 EAT</span>
-                        <span className="schedule-meal">After Late Night Meal</span>
-                      </li>
-                      <li>
-                        <span className="schedule-time">09:30 EAT</span>
-                        <span className="schedule-meal">After Breakfast</span>
-                      </li>
-                      <li>
-                        <span className="schedule-time">14:30 EAT</span>
-                        <span className="schedule-meal">After Lunch</span>
-                      </li>
-                      <li>
-                        <span className="schedule-time">20:30 EAT</span>
-                        <span className="schedule-meal">After Dinner</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div className="manual-reset-section">
-                    <div className="manual-reset-header">
-                      <i className="fas fa-exclamation-triangle"></i>
-                      <h3>Manual Database Reset</h3>
-                    </div>
-                    
-                    <div className="manual-reset-warning">
-                      <strong>Warning:</strong> Manual reset will immediately delete all current meal attendance records. This action cannot be undone. Use only when necessary.
-                    </div>
-
-                    <div className="reset-controls">
-                      <button className="reset-btn danger manual-reset-btn">
-                        <i className="fas fa-trash-alt"></i>
-                        Reset Database Now
-                      </button>
-                      <button className="reset-btn secondary test-reset-btn">
-                        <i className="fas fa-vial"></i>
-                        Test Reset (Safe)
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </>
+              <DatabaseResetComponent fetchDashboardData={fetchDashboardData} />
             )}
 
             {activeSection === 'settings' && (
@@ -1619,12 +1502,10 @@ const Dashboard = ({ user, onLogout }) => {
                 <div className="settings-section">
                   <div className="feature-list">
                     
-                    {user.role === 'admin' && (
-                      <div className="feature-item clickable" onClick={() => setShowAdminCredentialsModal(true)}>
-                        <i className="fas fa-user-shield"></i>
-                        <span>Admin Credential</span>
-                      </div>
-                    )}
+                    <div className="feature-item clickable" onClick={() => setShowAdminCredentialsModal(true)}>
+                      <i className="fas fa-user-shield"></i>
+                      <span>Admin Credential</span>
+                    </div>
                     
                     <div 
                       className="feature-item clickable"
@@ -1633,6 +1514,7 @@ const Dashboard = ({ user, onLogout }) => {
                       <i className="fas fa-users-cog"></i>
                       <span>Scanner Credential</span>
                     </div>
+                    
                     <div 
                       className="feature-item clickable"
                       onClick={() => setShowDatabaseConfigModal(true)}

@@ -34,68 +34,6 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.alert-content {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.alert-icon {
-  font-size: 16px;
-  color: #f56565;
-  margin-top: 2px;
-  flex-shrink: 0;
-}
-
-.alert-text {
-  flex: 1;
-}
-
-.alert-text h4 {
-  margin: 0 0 4px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #2d3748;
-}
-
-.alert-text p {
-  margin: 0 0 8px 0;
-  font-size: 13px;
-  color: #4a5568;
-  line-height: 1.4;
-}
-
-.alert-details {
-  display: flex;
-  gap: 12px;
-  font-size: 11px;
-}
-
-.alert-details span {
-  background: #fed7d7;
-  color: #c53030;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-weight: 500;
-}
-
-.alert-dismiss {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: none;
-  border: none;
-  color: #a0aec0;
-  font-size: 14px;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: color 0.2s ease;
-}
-
-.alert-dismiss:hover {
-  color: #718096;
-}
 
 .stat-card.low-attendance {
   border-left: 4px solid #ff6b6b;
