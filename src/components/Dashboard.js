@@ -3,8 +3,9 @@ import './Dashboard.css';
 import './Dashboard-light.css';
 import './DatabaseReset.css';
 import DatabaseResetComponent from './DatabaseResetComponent';
+import Notification from './Notification';
 
-const Dashboard = () => {
+const Dashboard = ({ user, onLogout }) => {
   const [attendanceData, setAttendanceData] = useState([]);
   const [stats, setStats] = useState({
     totalStudents: 0,
@@ -57,6 +58,25 @@ const Dashboard = () => {
   const [adminCredentialsLoading, setAdminCredentialsLoading] = useState(false);
   const [adminCredentialsMessage, setAdminCredentialsMessage] = useState('');
   
+  // Admin approval states (required for all credential updates)
+  const [showAdminApproval, setShowAdminApproval] = useState(false);
+  const [adminApprovalCode, setAdminApprovalCode] = useState('');
+  const [adminApprovalLoading, setAdminApprovalLoading] = useState(false);
+  const [adminApprovalMessage, setAdminApprovalMessage] = useState('');
+  const [adminApprovalCountdown, setAdminApprovalCountdown] = useState(300); // 5 minutes
+  const [canResendAdminApproval, setCanResendAdminApproval] = useState(false);
+  const [resendAdminApprovalCountdown, setResendAdminApprovalCountdown] = useState(0);
+
+  // Email verification states for credential update
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
+  const [emailVerificationCode, setEmailVerificationCode] = useState('');
+  const [emailVerificationLoading, setEmailVerificationLoading] = useState(false);
+  const [emailVerificationMessage, setEmailVerificationMessage] = useState('');
+  const [verificationCountdown, setVerificationCountdown] = useState(300); // 5 minutes
+  const [canResendVerification, setCanResendVerification] = useState(false);
+  const [resendVerificationCountdown, setResendVerificationCountdown] = useState(0);
+  const [pendingCredentials, setPendingCredentials] = useState(null);
+  
   // OTP verification states
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [otpCode, setOtpCode] = useState('');
@@ -89,36 +109,7 @@ const Dashboard = () => {
   const searchInputRef = useRef(null);
   
   // Meal Windows state
-  const [mealWindows, setMealWindows] = useState({
-    breakfast: {
-      startTime: '06:00',
-      endTime: '09:00',
-      beforeWindow: 30,
-      afterWindow: 30,
-      enabled: true
-    },
-    lunch: {
-      startTime: '11:00',
-      endTime: '14:00',
-      beforeWindow: 30,
-      afterWindow: 30,
-      enabled: true
-    },
-    dinner: {
-      startTime: '16:00',
-      endTime: '20:00',
-      beforeWindow: 30,
-      afterWindow: 30,
-      enabled: true
-    },
-    lateNight: {
-      startTime: '01:00',
-      endTime: '05:30',
-      beforeWindow: 15,
-      afterWindow: 15,
-      enabled: true
-    }
-  });
+  const [mealWindows, setMealWindows] = useState({});
   const [mealWindowsLoading, setMealWindowsLoading] = useState(false);
   const [mealWindowsMessage, setMealWindowsMessage] = useState('');
   const [showAllStudentsModal, setShowAllStudentsModal] = useState(false);
@@ -134,6 +125,25 @@ const Dashboard = () => {
   const [addStaffLoading, setAddStaffLoading] = useState(false);
   const [addStaffMessage, setAddStaffMessage] = useState('');
 
+  // Notification states
+  const [notifications, setNotifications] = useState([]);
+  const [newStudentRegistrations, setNewStudentRegistrations] = useState([]);
+  
+  // Meal window states
+  const [mealWindowStatus, setMealWindowStatus] = useState({
+    isOpen: false,
+    nextMealTime: null,
+    timeUntilOpen: null,
+    mealType: 'Dinner'
+  });
+  const [attendanceBlocked, setAttendanceBlocked] = useState(false);
+
+  // Handle logout
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout();
+    }
+  };
 
   // Fetch admin email from database
   const fetchAdminEmail = async () => {
@@ -158,10 +168,104 @@ const Dashboard = () => {
     }
   };
 
+  // Meal window timing logic
+  const checkMealWindow = () => {
+    // Don't process if meal windows haven't been loaded from database yet
+    if (Object.keys(mealWindows).length === 0) {
+      console.log('Dashboard: Meal windows not loaded yet, skipping check');
+      return;
+    }
+
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    
+    let isInMealWindow = false;
+    let nextMealType = '';
+    let timeUntilOpen = null;
+    let nextMealTime = null;
+    let currentMeal = '';
+    
+    // Check each meal window
+    Object.entries(mealWindows).forEach(([mealType, config]) => {
+      if (!config.enabled) return;
+      
+      const [startHour, startMinute] = config.startTime.split(':').map(Number);
+      const [endHour, endMinute] = config.endTime.split(':').map(Number);
+      
+      const startTime = startHour * 60 + startMinute;
+      const endTime = endHour * 60 + endMinute;
+      
+      // Expand window with before/after buffers
+      const windowStart = startTime - config.beforeWindow;
+      const windowEnd = endTime + config.afterWindow;
+      
+      // Check if currently in this meal window
+      if (currentTime >= windowStart && currentTime <= windowEnd) {
+        isInMealWindow = true;
+        currentMeal = mealType;
+      }
+      
+      // Find next meal window if not currently in one
+      if (!isInMealWindow && currentTime < windowStart) {
+        if (!nextMealTime || windowStart < nextMealTime) {
+          nextMealTime = windowStart;
+          nextMealType = mealType;
+          timeUntilOpen = windowStart - currentTime;
+        }
+      }
+    });
+    
+    // If no meal found today, next is breakfast tomorrow
+    if (!isInMealWindow && !nextMealType) {
+      const breakfastConfig = mealWindows.breakfast;
+      if (breakfastConfig && breakfastConfig.enabled) {
+        const [startHour, startMinute] = breakfastConfig.startTime.split(':').map(Number);
+        const startTime = startHour * 60 + startMinute;
+        const windowStart = startTime - breakfastConfig.beforeWindow;
+        
+        nextMealType = 'breakfast';
+        timeUntilOpen = windowStart + (24 * 60) - currentTime;
+        nextMealTime = windowStart + (24 * 60);
+      }
+    }
+    
+    setMealWindowStatus({
+      isOpen: isInMealWindow,
+      nextMealTime,
+      timeUntilOpen,
+      mealType: isInMealWindow ? currentMeal : nextMealType
+    });
+    
+    setAttendanceBlocked(!isInMealWindow);
+    
+    // Notification logic moved to Notification.js to avoid duplicates
+  };
+
+  // Fetch meal windows from database
+  const fetchMealWindows = async () => {
+    try {
+      const response = await fetch('/api/meal-windows');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.mealWindows) {
+          setMealWindows(data.mealWindows);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching meal windows:', error);
+    }
+  };
+
   useEffect(() => {
     fetchDashboardData();
     fetchAdminEmail();
+    fetchMealWindows();
+    checkMealWindow();
     
+    // Check meal window every minute
+    const mealWindowInterval = setInterval(checkMealWindow, 60000);
+    
+    return () => clearInterval(mealWindowInterval);
   }, []);
 
   // Focus search input when switching to students section
@@ -208,6 +312,74 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, [resendCountdown]);
 
+  // Email verification countdown timer
+  useEffect(() => {
+    let interval;
+    if (showEmailVerification && verificationCountdown > 0) {
+      interval = setInterval(() => {
+        setVerificationCountdown(prev => {
+          if (prev <= 1) {
+            setEmailVerificationMessage('Verification code expired. Please request a new one.');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [showEmailVerification, verificationCountdown]);
+
+  // Admin approval countdown timer
+  useEffect(() => {
+    let interval;
+    if (showAdminApproval && adminApprovalCountdown > 0) {
+      interval = setInterval(() => {
+        setAdminApprovalCountdown(prev => {
+          if (prev <= 1) {
+            setAdminApprovalMessage('Admin approval code expired. Please request a new one.');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [showAdminApproval, adminApprovalCountdown]);
+
+  // Resend admin approval countdown
+  useEffect(() => {
+    let interval;
+    if (resendAdminApprovalCountdown > 0) {
+      interval = setInterval(() => {
+        setResendAdminApprovalCountdown(prev => {
+          if (prev <= 1) {
+            setCanResendAdminApproval(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendAdminApprovalCountdown]);
+
+  // Resend email verification countdown
+  useEffect(() => {
+    let interval;
+    if (resendVerificationCountdown > 0) {
+      interval = setInterval(() => {
+        setResendVerificationCountdown(prev => {
+          if (prev <= 1) {
+            setCanResendVerification(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendVerificationCountdown]);
+
   const fetchDashboardData = async () => {
     try {
       setIsLoading(true);
@@ -239,7 +411,7 @@ const Dashboard = () => {
           hour12: true
         });
         setLastUpdated(timeString);
-        setRefreshMessage('Data has been refreshed successfully!');
+        setRefreshMessage('✅ Dashboard data refreshed successfully!');
         
         // Clear success message after 3 seconds
         setTimeout(() => {
@@ -254,7 +426,7 @@ const Dashboard = () => {
         });
         setAttendanceData([]);
         setIsLoading(false);
-        setRefreshMessage('Failed to refresh data. Please try again.');
+        setRefreshMessage('❌ Failed to refresh data. Please try again.');
         
         setTimeout(() => {
           setRefreshMessage('');
@@ -263,7 +435,7 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       setIsLoading(false);
-      setRefreshMessage('Failed to refresh data. Please try again.');
+      setRefreshMessage('❌ Failed to refresh data. Please check your connection and try again.');
       
       // Clear error message after 3 seconds
     }
@@ -290,18 +462,18 @@ const Dashboard = () => {
       if (response.ok && data.success) {
         setSearchResults(data.students);
         if (data.students.length === 0) {
-          setSearchMessage('No students found matching your search.');
+          setSearchMessage('🔍 No students found matching your search. Try different keywords or check spelling.');
         } else {
-          setSearchMessage(`Found ${data.students.length} student(s).`);
+          setSearchMessage(`✅ Found ${data.students.length} student(s) matching your search.`);
         }
       } else {
         setSearchResults([]);
-        setSearchMessage(data.error || 'Error searching students.');
+        setSearchMessage('❌ ' + (data.error || 'Error searching students. Please try again.'));
       }
     } catch (error) {
       console.error('Search error:', error);
       setSearchResults([]);
-      setSearchMessage('Network error. Please check if the backend server is running.');
+      setSearchMessage('🌐 Network error occurred. Please check your internet connection and try again.');
     } finally {
       setSearchLoading(false);
     }
@@ -341,15 +513,15 @@ const Dashboard = () => {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
         
-        setRefreshMessage('CSV export completed successfully!');
+        setRefreshMessage('📄 CSV export completed successfully!');
         setTimeout(() => setRefreshMessage(''), 3000);
       } else {
-        setRefreshMessage('Failed to export CSV file.');
+        setRefreshMessage('❌ Failed to export CSV file. Please try again.');
         setTimeout(() => setRefreshMessage(''), 3000);
       }
     } catch (error) {
       console.error('Export error:', error);
-      setRefreshMessage('Error exporting CSV file.');
+      setRefreshMessage('❌ Error exporting CSV file. Please try again.');
       setTimeout(() => setRefreshMessage(''), 3000);
     }
   };
@@ -398,7 +570,7 @@ const Dashboard = () => {
     e.preventDefault();
     
     if (!newStudentData.id.trim() || !newStudentData.name.trim()) {
-      setAddStudentMessage('Student ID and Name are required fields.');
+      setAddStudentMessage('📝 Please fill in both Student ID and Name - these fields are required.');
       return;
     }
 
@@ -417,7 +589,11 @@ const Dashboard = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setAddStudentMessage('Student registered successfully!');
+        setAddStudentMessage('🎉 Student registered successfully! You can now add another student or close this window.');
+        
+        // Track new student registration for notifications
+        trackNewStudentRegistration(newStudentData);
+        
         // Reset form data
         setNewStudentData({
           id: '',
@@ -432,11 +608,11 @@ const Dashboard = () => {
           setAddStudentMessage('');
         }, 2500);
       } else {
-        setAddStudentMessage(data.error || 'Failed to register student.');
+        setAddStudentMessage('❌ ' + (data.error || 'Failed to register student. Please check the information and try again.'));
       }
     } catch (error) {
       console.error('Error adding student:', error);
-      setAddStudentMessage('Network error. Please check if the backend server is running.');
+      setAddStudentMessage('🌐 Network error occurred. Please check your internet connection and try again.');
     } finally {
       setAddStudentLoading(false);
     }
@@ -459,7 +635,7 @@ const Dashboard = () => {
     e.preventDefault();
     
     if (!editStudentData.id.trim() || !editStudentData.name.trim()) {
-      setEditStudentMessage('Student ID and Name are required fields.');
+      setEditStudentMessage('📝 Please fill in both Student ID and Name - these fields are required.');
       return;
     }
 
@@ -478,7 +654,7 @@ const Dashboard = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setEditStudentMessage('Student updated successfully!');
+        setEditStudentMessage('✅ Student information updated successfully!');
         // Refresh search results
         handleStudentSearch(searchQuery);
         // Close modal after 2 seconds
@@ -488,11 +664,11 @@ const Dashboard = () => {
           setEditingStudent(null);
         }, 2000);
       } else {
-        setEditStudentMessage(data.error || 'Failed to update student.');
+        setEditStudentMessage('❌ ' + (data.error || 'Failed to update student. Please check the information and try again.'));
       }
     } catch (error) {
       console.error('Error updating student:', error);
-      setEditStudentMessage('Network error. Please check if the backend server is running.');
+      setEditStudentMessage('🌐 Network error occurred. Please check your internet connection and try again.');
     } finally {
       setEditStudentLoading(false);
     }
@@ -523,17 +699,17 @@ const Dashboard = () => {
         // Refresh search results and dashboard stats
         handleStudentSearch(searchQuery);
         fetchDashboardData();
-        setRefreshMessage('Student deleted successfully!');
+        setRefreshMessage('🗑️ Student deleted successfully!');
         setTimeout(() => setRefreshMessage(''), 3000);
         setShowDeleteConfirmModal(false);
         setStudentToDelete(null);
       } else {
-        setRefreshMessage(data.error || 'Failed to delete student.');
+        setRefreshMessage('❌ ' + (data.error || 'Failed to delete student. Please try again.'));
         setTimeout(() => setRefreshMessage(''), 3000);
       }
     } catch (error) {
       console.error('Error deleting student:', error);
-      setRefreshMessage('Network error. Please check if the backend server is running.');
+      setRefreshMessage('🌐 Network error occurred. Please check your internet connection and try again.');
       setTimeout(() => setRefreshMessage(''), 3000);
     } finally {
       setDeleteLoading(false);
@@ -552,7 +728,7 @@ const Dashboard = () => {
     e.preventDefault();
     
     if (!otpCode || otpCode.length !== 6) {
-      setOtpMessage('Please enter a valid 6-digit verification code');
+      setOtpMessage('⚠️ Please enter the complete 6-digit verification code from your email.');
       return;
     }
     
@@ -571,7 +747,7 @@ const Dashboard = () => {
       const data = await response.json();
       
       if (data.success) {
-        setOtpMessage('Login successful! Redirecting...');
+        setOtpMessage('🎉 Login successful! Redirecting to your dashboard...');
         
         // Close OTP modal and redirect to dashboard
         setTimeout(() => {
@@ -582,11 +758,11 @@ const Dashboard = () => {
           window.location.reload();
         }, 1500);
       } else {
-        setOtpMessage(data.message || 'Invalid verification code');
+        setOtpMessage('❌ ' + (data.message || 'Invalid verification code. Please check the code and try again.'));
       }
     } catch (error) {
       console.error('Error verifying OTP:', error);
-      setOtpMessage('Network error. Please try again.');
+      setOtpMessage('🌐 Network error occurred. Please check your connection and try again.');
     } finally {
       setOtpLoading(false);
     }
@@ -608,16 +784,16 @@ const Dashboard = () => {
       const data = await response.json();
       
       if (data.success) {
-        setOtpMessage('New verification code sent to your email');
+        setOtpMessage('📧 New verification code sent to your email. Please check your inbox.');
         setOtpCountdown(300); // Reset to 5 minutes
         setCanResendOTP(false);
         setResendCountdown(60); // 60 seconds before next resend
       } else {
-        setOtpMessage(data.message || 'Failed to resend code');
+        setOtpMessage('❌ ' + (data.message || 'Failed to resend verification code. Please try again in a moment.'));
       }
     } catch (error) {
       console.error('Error resending OTP:', error);
-      setOtpMessage('Network error. Please try again.');
+      setOtpMessage('🌐 Network error occurred. Please check your connection and try again.');
     } finally {
       setOtpLoading(false);
     }
@@ -630,46 +806,305 @@ const Dashboard = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Handle admin credentials update
-  const handleUpdateAdminCredentials = async (e) => {
+  // Send email verification for credential update
+  const handleSendEmailVerification = async () => {
+    if (!adminCredentials.email || !adminCredentials.currentPassword) {
+      setAdminCredentialsMessage('Please enter current password and new email address.');
+      return;
+    }
+
+    try {
+      setEmailVerificationLoading(true);
+      setEmailVerificationMessage('');
+      
+      const response = await fetch('/api/admin/send-credential-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentPassword: adminCredentials.currentPassword,
+          newEmail: adminCredentials.email
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setShowEmailVerification(true);
+        setVerificationCountdown(300); // Reset to 5 minutes
+        setCanResendVerification(false);
+        setResendVerificationCountdown(60); // 60 seconds before next resend
+        setEmailVerificationMessage(`Verification code sent to ${data.email}`);
+        setPendingCredentials(adminCredentials);
+      } else {
+        setAdminCredentialsMessage(data.message || 'Failed to send verification email');
+      }
+    } catch (error) {
+      console.error('Error sending email verification:', error);
+      setAdminCredentialsMessage('Network error. Please try again.');
+    } finally {
+      setEmailVerificationLoading(false);
+    }
+  };
+
+  // Verify email and update credentials (includes admin approval)
+  const handleVerifyEmailAndUpdateCredentials = async (e) => {
     e.preventDefault();
     
+    if (!emailVerificationCode || emailVerificationCode.length !== 6) {
+      setEmailVerificationMessage('⚠️ Please enter the complete 6-digit verification code from your email.');
+      return;
+    }
+    
+    if (!adminApprovalCode || adminApprovalCode.length !== 6) {
+      setEmailVerificationMessage('🔑 Admin approval code is required. Please go back and complete admin approval first.');
+      return;
+    }
+    
     try {
-      setAdminCredentialsLoading(true);
-      setAdminCredentialsMessage('');
+      setEmailVerificationLoading(true);
+      setEmailVerificationMessage('');
+      
+      const credentialsToUpdate = {
+        ...pendingCredentials,
+        otp: emailVerificationCode,
+        adminApprovalOtp: adminApprovalCode
+      };
       
       const response = await fetch('/api/admin/credentials', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(adminCredentials)
+        body: JSON.stringify(credentialsToUpdate)
       });
       
       const data = await response.json();
       
       if (data.success) {
-        setAdminCredentialsMessage('Admin credentials updated successfully!');
+        setEmailVerificationMessage('🎉 Your credentials have been updated successfully!');
+        
+        // Reset all states
         setAdminCredentials({
           currentPassword: '',
           newUsername: '',
           newPassword: '',
-          confirmPassword: ''
+          confirmPassword: '',
+          email: ''
         });
+        setEmailVerificationCode('');
+        setAdminApprovalCode('');
+        setPendingCredentials(null);
         
-        // Close modal after 2 seconds
+        // Update admin email display
+        fetchAdminEmail();
+        
+        // Close modals after 2 seconds
         setTimeout(() => {
+          setShowEmailVerification(false);
+          setShowAdminApproval(false);
           setShowAdminCredentialsModal(false);
+          setEmailVerificationMessage('');
+          setAdminApprovalMessage('');
           setAdminCredentialsMessage('');
         }, 2000);
       } else {
-        setAdminCredentialsMessage(data.message || 'Failed to update credentials');
+        setEmailVerificationMessage('❌ ' + (data.message || 'Invalid verification code. Please check the code and try again.'));
       }
     } catch (error) {
-      console.error('Error updating admin credentials:', error);
-      setAdminCredentialsMessage('Network error. Please try again.');
+      console.error('Error verifying email and updating credentials:', error);
+      setEmailVerificationMessage('Network error. Please try again.');
     } finally {
-      setAdminCredentialsLoading(false);
+      setEmailVerificationLoading(false);
+    }
+  };
+
+  // Send admin approval OTP (required for all credential updates)
+  const handleSendAdminApproval = async () => {
+    if (!adminCredentials.currentPassword) {
+      setAdminCredentialsMessage('🔒 Please enter your current password to verify your identity before making any changes.');
+      return;
+    }
+
+    try {
+      setAdminApprovalLoading(true);
+      setAdminApprovalMessage('');
+      
+      const response = await fetch('/api/admin/send-admin-approval-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentPassword: adminCredentials.currentPassword
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setShowAdminApproval(true);
+        setAdminApprovalCountdown(300); // Reset to 5 minutes
+        setCanResendAdminApproval(false);
+        setResendAdminApprovalCountdown(60); // 60 seconds before next resend
+        setAdminApprovalMessage(`✅ Admin verification code sent to ${data.email}. Please check your email and enter the 6-digit code below.`);
+        setPendingCredentials(adminCredentials);
+      } else {
+        setAdminCredentialsMessage('❌ ' + (data.message || 'Failed to send admin approval code. Please check your current password and try again.'));
+      }
+    } catch (error) {
+      console.error('Error sending admin approval:', error);
+      setAdminCredentialsMessage('🌐 Network error occurred. Please check your internet connection and try again.');
+    } finally {
+      setAdminApprovalLoading(false);
+    }
+  };
+
+  // Handle admin credentials update - now requires admin approval first
+  const handleUpdateAdminCredentials = async (e) => {
+    e.preventDefault();
+    
+    // ALWAYS require admin approval for ANY credential update
+    handleSendAdminApproval();
+  };
+
+  // Proceed with credential update after admin approval
+  const handleProceedAfterAdminApproval = async () => {
+    if (!adminApprovalCode || adminApprovalCode.length !== 6) {
+      setAdminApprovalMessage('⚠️ Please enter the complete 6-digit admin approval code from your email.');
+      return;
+    }
+
+    // Check if email is being changed
+    if (pendingCredentials.email && pendingCredentials.email !== adminEmail) {
+      // Email is being changed, need email verification too
+      handleSendEmailVerification();
+      return;
+    }
+    
+    // No email change, proceed with credential update
+    try {
+      setAdminApprovalLoading(true);
+      setAdminApprovalMessage('');
+      
+      const credentialsToUpdate = {
+        ...pendingCredentials,
+        adminApprovalOtp: adminApprovalCode
+      };
+      
+      const response = await fetch('/api/admin/credentials', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentialsToUpdate)
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setAdminApprovalMessage('🎉 Your admin credentials have been updated successfully!');
+        
+        // Reset all states
+        setAdminCredentials({
+          currentPassword: '',
+          newUsername: '',
+          newPassword: '',
+          confirmPassword: '',
+          email: ''
+        });
+        setAdminApprovalCode('');
+        setPendingCredentials(null);
+        
+        // Close modals after 2 seconds
+        setTimeout(() => {
+          setShowAdminApproval(false);
+          setShowAdminCredentialsModal(false);
+          setAdminApprovalMessage('');
+          setAdminCredentialsMessage('');
+        }, 2000);
+      } else {
+        setAdminApprovalMessage('❌ ' + (data.message || 'Invalid admin approval code. Please check the code and try again.'));
+      }
+    } catch (error) {
+      console.error('Error updating credentials after admin approval:', error);
+      setAdminApprovalMessage('🌐 Network error occurred. Please check your connection and try again.');
+    } finally {
+      setAdminApprovalLoading(false);
+    }
+  };
+
+  // Resend admin approval OTP
+  const handleResendAdminApproval = async () => {
+    if (!pendingCredentials) return;
+    
+    try {
+      setAdminApprovalLoading(true);
+      setAdminApprovalMessage('');
+      
+      const response = await fetch('/api/admin/send-admin-approval-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentPassword: pendingCredentials.currentPassword
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setAdminApprovalMessage('📧 New admin approval code sent to your email. Please check your inbox.');
+        setAdminApprovalCountdown(300); // Reset to 5 minutes
+        setCanResendAdminApproval(false);
+        setResendAdminApprovalCountdown(60); // 60 seconds before next resend
+      } else {
+        setAdminApprovalMessage('❌ ' + (data.message || 'Failed to resend admin approval code. Please try again in a moment.'));
+      }
+    } catch (error) {
+      console.error('Error resending admin approval:', error);
+      setAdminApprovalMessage('🌐 Network error occurred. Please check your connection and try again.');
+    } finally {
+      setAdminApprovalLoading(false);
+    }
+  };
+
+  // Resend email verification
+  const handleResendEmailVerification = async () => {
+    if (!pendingCredentials) return;
+    
+    try {
+      setEmailVerificationLoading(true);
+      setEmailVerificationMessage('');
+      
+      const response = await fetch('/api/admin/send-credential-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentPassword: pendingCredentials.currentPassword,
+          newEmail: pendingCredentials.email
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setEmailVerificationMessage('📧 New verification code sent to your email. Please check your inbox.');
+        setVerificationCountdown(300); // Reset to 5 minutes
+        setCanResendVerification(false);
+        setResendVerificationCountdown(60); // 60 seconds before next resend
+      } else {
+        setEmailVerificationMessage('❌ ' + (data.message || 'Failed to resend verification code. Please try again in a moment.'));
+      }
+    } catch (error) {
+      console.error('Error resending email verification:', error);
+      setEmailVerificationMessage('🌐 Network error occurred. Please check your connection and try again.');
+    } finally {
+      setEmailVerificationLoading(false);
     }
   };
 
@@ -691,6 +1126,10 @@ const Dashboard = () => {
       
       if (data.success) {
         setMealWindowsMessage('✅ Meal windows saved successfully!');
+        // Update local state with saved data
+        if (data.mealWindows) {
+          setMealWindows(data.mealWindows);
+        }
         setTimeout(() => {
           setMealWindowsMessage('');
         }, 3000);
@@ -751,7 +1190,7 @@ const Dashboard = () => {
     e.preventDefault();
     
     if (!newStaffData.username.trim() || !newStaffData.password.trim()) {
-      setAddStaffMessage('Username and Password are required fields.');
+      setAddStaffMessage('📝 Please fill in both Username and Password - these fields are required.');
       return;
     }
 
@@ -770,7 +1209,15 @@ const Dashboard = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setAddStaffMessage('Staff registered successfully!');
+        setAddStaffMessage('✅ Staff member registered successfully!');
+        
+        // Track new staff registration for notifications
+        trackNewStudentRegistration({
+          id: newStaffData.username,
+          name: `Staff: ${newStaffData.username}`,
+          department: 'Staff'
+        });
+        
         // Reset form data
         setNewStaffData({
           username: '',
@@ -782,11 +1229,11 @@ const Dashboard = () => {
           setAddStaffMessage('');
         }, 2000);
       } else {
-        setAddStaffMessage(data.error || 'Failed to register staff.');
+        setAddStaffMessage('❌ ' + (data.error || 'Failed to register staff member. Please check the information and try again.'));
       }
     } catch (error) {
       console.error('Error adding staff:', error);
-      setAddStaffMessage('Network error. Please check if the backend server is running.');
+      setAddStaffMessage('🌐 Network error occurred. Please check your internet connection and try again.');
     } finally {
       setAddStaffLoading(false);
     }
@@ -887,6 +1334,45 @@ const Dashboard = () => {
     setIsLightTheme(!isLightTheme);
   };
 
+  // Notification handlers
+  const handleMarkNotificationAsRead = (notificationId) => {
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === notificationId 
+          ? { ...notification, read: true }
+          : notification
+      )
+    );
+  };
+
+  const handleClearAllNotifications = () => {
+    setNotifications([]);
+    setNewStudentRegistrations([]);
+  };
+
+  // Track new student registrations for notifications
+  const trackNewStudentRegistration = (studentData) => {
+    const newRegistration = {
+      id: studentData.id,
+      name: studentData.name,
+      department: studentData.department,
+      registeredAt: new Date()
+    };
+    
+    setNewStudentRegistrations(prev => {
+      // Keep only last 10 registrations to avoid memory issues
+      const updated = [newRegistration, ...prev].slice(0, 10);
+      return updated;
+    });
+    
+    // Clear the registration after 24 hours
+    setTimeout(() => {
+      setNewStudentRegistrations(prev => 
+        prev.filter(reg => reg.id !== studentData.id)
+      );
+    }, 24 * 60 * 60 * 1000); // 24 hours
+  };
+
   // Handle data purge (GDPR compliance)
   const handleGDPRPurge = async () => {
     if (!window.confirm('Are you sure you want to purge old data according to retention policy? This action cannot be undone.')) {
@@ -931,15 +1417,24 @@ const Dashboard = () => {
         <div className="header-left">
           <div className="logo-section">
             <i className="fas fa-cube"></i>
-            <span className="brand-name">Dashboard</span>
+            <span className="brand-name">Admin Dashboard</span>
           </div>
         </div>
         
         <div className="header-right">
           <div className="header-icons">
-            <button className="header-icon-btn" title="Notifications">
-              <i className="fas fa-bell"></i>
-            </button>
+            <Notification
+              lowAttendanceAlert={lowAttendanceAlert}
+              mealWindows={mealWindows}
+              mealWindowStatus={mealWindowStatus}
+              attendanceBlocked={attendanceBlocked}
+              lastUpdated={lastUpdated}
+              refreshMessage={refreshMessage}
+              newStudentRegistrations={newStudentRegistrations}
+              notifications={notifications}
+              onMarkAsRead={handleMarkNotificationAsRead}
+              onClearAll={handleClearAllNotifications}
+            />
             <button 
               className="header-icon-btn theme-toggle-btn" 
               title={isLightTheme ? "Switch to Dark Theme" : "Switch to Light Theme"}
@@ -959,7 +1454,7 @@ const Dashboard = () => {
               </button>
               {showProfileDropdown && (
                 <div className="profile-dropdown">
-                  <div className="dropdown-item logout-item" onClick={() => window.location.href = '/html/login.html'}>
+                  <div className="dropdown-item logout-item" onClick={handleLogout}>
                     <i className="fas fa-sign-out-alt"></i>
                     <span>Logout</span>
                   </div>
@@ -995,11 +1490,19 @@ const Dashboard = () => {
               <span>Home</span>
             </div>
             <div 
-              className={`nav-item ${activeSection === 'attendance' ? 'active' : ''}`}
-              onClick={() => setActiveSection('attendance')}
+              className={`nav-item ${activeSection === 'attendance' ? 'active' : ''} ${attendanceBlocked ? 'disabled' : ''}`}
+              onClick={() => {
+                if (attendanceBlocked) {
+                  const timeText = mealWindowStatus.timeUntilOpen === 1 ? '1 minute' : `${mealWindowStatus.timeUntilOpen} minutes`;
+                  alert(`Attendance is currently blocked. ${mealWindowStatus.mealType.charAt(0).toUpperCase() + mealWindowStatus.mealType.slice(1)} window opens in ${timeText}.`);
+                  return;
+                }
+                setActiveSection('attendance');
+              }}
             >
               <i className="fas fa-user-check"></i>
               <span>Attendance</span>
+              {attendanceBlocked && <i className="fas fa-lock" style={{marginLeft: '8px', fontSize: '12px', color: '#f56565'}}></i>}
             </div>
             <div 
               className={`nav-item ${activeSection === 'students' ? 'active' : ''}`}
@@ -1125,25 +1628,29 @@ const Dashboard = () => {
                     <table>
                       <thead>
                         <tr>
+                          <th>Roll-no</th>
                           <th>Student ID</th>
                           <th>Name</th>
                           <th>Date</th>
-                          <th>Time</th>
+                          <th>Meal Type</th>
                         </tr>
                       </thead>
                       <tbody>
                         {attendanceData.length > 0 ? (
                           attendanceData.map((record, index) => (
                             <tr key={index}>
+                              <td className="roll-no-cell">
+                                <span className="roll-no-badge">{index + 1}</span>
+                              </td>
                               <td>{record.studentId}</td>
                               <td>{record.studentName}</td>
                               <td>{new Date(record.date).toLocaleDateString()}</td>
-                              <td>{new Date(record.date).toLocaleTimeString()}</td>
+                              <td>{record.mealType || 'N/A'}</td>
                             </tr>
                           ))
                         ) : (
                           <tr>
-                            <td colSpan="4" className="no-data">No recent attendance records</td>
+                            <td colSpan="5" className="no-data">No recent attendance records</td>
                           </tr>
                         )}
                       </tbody>
@@ -1544,12 +2051,6 @@ const Dashboard = () => {
             </div>
             
             <div className="modal-body">
-              {addStudentMessage && (
-                <div className={`modal-message ${addStudentMessage.includes('successfully') ? 'success' : 'error'}`}>
-                  {addStudentMessage}
-                </div>
-              )}
-              
               <form onSubmit={handleAddStudent} className="add-student-form">
                 <div className="form-group">
                   <label htmlFor="studentId">Student ID</label>
@@ -1597,6 +2098,12 @@ const Dashboard = () => {
                   />
                 </div>
                 
+                {addStudentMessage && (
+                  <div className={`modal-message ${addStudentMessage.includes('successfully') ? 'success' : 'error'}`}>
+                    {addStudentMessage}
+                  </div>
+                )}
+                
                 <div className="form-actions">
                   <button 
                     type="button" 
@@ -1641,12 +2148,6 @@ const Dashboard = () => {
             </div>
             
             <div className="modal-body">
-              {addStaffMessage && (
-                <div className={`modal-message ${addStaffMessage.includes('successfully') ? 'success' : 'error'}`}>
-                  {addStaffMessage}
-                </div>
-              )}
-              
               <form onSubmit={handleAddStaff} className="add-staff-form">
                 <div className="form-group">
                   <label htmlFor="staffUsername">Username</label>
@@ -1671,6 +2172,12 @@ const Dashboard = () => {
                     required
                   />
                 </div>
+                
+                {addStaffMessage && (
+                  <div className={`modal-message ${addStaffMessage.includes('successfully') ? 'success' : 'error'}`}>
+                    {addStaffMessage}
+                  </div>
+                )}
                 
                 <div className="form-actions">
                   <button 
@@ -1716,12 +2223,6 @@ const Dashboard = () => {
             </div>
             
             <div className="modal-body">
-              {editStudentMessage && (
-                <div className={`modal-message ${editStudentMessage.includes('successfully') ? 'success' : 'error'}`}>
-                  {editStudentMessage}
-                </div>
-              )}
-              
               <form onSubmit={handleUpdateStudent} className="edit-student-form">
                 <div className="form-group">
                   <label htmlFor="editStudentId">Student ID</label>
@@ -1768,6 +2269,12 @@ const Dashboard = () => {
                     placeholder="e.g., /public/images/student.jpg"
                   />
                 </div>
+                
+                {editStudentMessage && (
+                  <div className={`modal-message ${editStudentMessage.includes('successfully') ? 'success' : 'error'}`}>
+                    {editStudentMessage}
+                  </div>
+                )}
                 
                 <div className="form-actions">
                   <button 
@@ -1962,7 +2469,7 @@ const Dashboard = () => {
       )}
 
       {/* Admin Credentials Modal */}
-      {showAdminCredentialsModal && (
+      {showAdminCredentialsModal && !showAdminApproval && !showEmailVerification && (
         <div className="modal-overlay" onClick={() => setShowAdminCredentialsModal(false)}>
           <div className="modal-content settings-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -1979,7 +2486,7 @@ const Dashboard = () => {
             
             <div className="modal-body">
               {adminCredentialsMessage && (
-                <div className={`modal-message ${adminCredentialsMessage.includes('✅') ? 'success' : 'error'}`}>
+                <div className={`modal-message ${adminCredentialsMessage.includes('successfully') ? 'success' : 'error'}`}>
                   {adminCredentialsMessage}
                 </div>
               )}
@@ -1987,7 +2494,6 @@ const Dashboard = () => {
               <form onSubmit={handleUpdateAdminCredentials} className="settings-form">
                 <div className="settings-section">
                   <h4>
-                    <i className="fas fa-lock"></i>
                     Change Admin Credentials
                   </h4>
                   
@@ -2057,8 +2563,13 @@ const Dashboard = () => {
                           email: e.target.value
                         }))}
                         placeholder="Enter admin email address"
-                        required
                       />
+                      <small style={{color: '#666', fontSize: '12px', marginTop: '4px'}}>
+                        {adminCredentials.email && adminCredentials.email !== adminEmail ? 
+                          'Email verification will be required for this change' : 
+                          'Leave blank to keep current email'
+                        }
+                      </small>
                     </div>
                   </div>
                 </div>
@@ -2076,15 +2587,247 @@ const Dashboard = () => {
                     className="btn-register"
                     disabled={adminCredentialsLoading || !adminCredentials.currentPassword}
                   >
-                    {adminCredentialsLoading ? (
+                    {adminCredentialsLoading || adminApprovalLoading ? (
                       <>
                         <i className="fas fa-spinner fa-spin"></i>
-                        Updating...
+                        Sending Admin Approval...
                       </>
                     ) : (
                       <>
-                        <i className="fas fa-save"></i>
-                        Update
+                        <i className="fas fa-shield-alt"></i>
+                        Request Admin Approval
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Approval Modal (Required for all credential updates) */}
+      {showAdminApproval && (
+        <div className="modal-overlay" onClick={() => setShowAdminApproval(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>
+                <i className="fas fa-shield-alt"></i>
+                Admin Identity Verification
+              </h3>
+              <button 
+                className="modal-close-btn" 
+                onClick={() => setShowAdminApproval(false)}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {adminApprovalMessage && (
+                <div className={`modal-message ${adminApprovalMessage.includes('successfully') || adminApprovalMessage.includes('sent') ? 'success' : 'error'}`}>
+                  {adminApprovalMessage}
+                </div>
+              )}
+              
+              <form onSubmit={(e) => { e.preventDefault(); handleProceedAfterAdminApproval(); }} className="settings-form">
+                <div className="settings-section">
+                  <h4>
+                    <i className="fas fa-user-shield"></i>
+                    Verify Admin Identity
+                  </h4>
+                  <p style={{color: '#666', fontSize: '14px', marginBottom: '20px'}}>
+                    For security purposes, we need to verify your identity before making any credential changes. 
+                    We've sent a verification code to your current admin email address.
+                  </p>
+                  
+                  <div className="form-group">
+                    <label>Admin Approval Code</label>
+                    <input
+                      type="text"
+                      value={adminApprovalCode}
+                      onChange={(e) => setAdminApprovalCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="Enter 6-digit code"
+                      maxLength="6"
+                      style={{
+                        textAlign: 'center',
+                        fontSize: '18px',
+                        letterSpacing: '4px',
+                        fontFamily: 'monospace'
+                      }}
+                      required
+                    />
+                  </div>
+                  
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px'}}>
+                    <div style={{fontSize: '13px', color: '#666'}}>
+                      {adminApprovalCountdown > 0 ? (
+                        <>⏰ Code expires in: <strong>{formatTime(adminApprovalCountdown)}</strong></>
+                      ) : (
+                        <span style={{color: '#e53e3e'}}>⚠️ Code expired</span>
+                      )}
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={handleResendAdminApproval}
+                      disabled={!canResendAdminApproval || adminApprovalLoading}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: canResendAdminApproval ? '#3182ce' : '#a0aec0',
+                        cursor: canResendAdminApproval ? 'pointer' : 'not-allowed',
+                        fontSize: '13px',
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      {resendAdminApprovalCountdown > 0 ? `Resend in ${resendAdminApprovalCountdown}s` : 'Resend Code'}
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={() => {
+                      setShowAdminApproval(false);
+                      setShowAdminCredentialsModal(true);
+                    }}
+                    disabled={adminApprovalLoading}
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-register"
+                    disabled={adminApprovalLoading || adminApprovalCode.length !== 6 || adminApprovalCountdown === 0}
+                  >
+                    {adminApprovalLoading ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin"></i>
+                        Verifying...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-check-shield"></i>
+                        Verify & Continue
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email Verification Modal for Credential Update */}
+      {showEmailVerification && (
+        <div className="modal-overlay" onClick={() => setShowEmailVerification(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>
+                <i className="fas fa-shield-alt"></i>
+                Email Verification Required
+              </h3>
+              <button 
+                className="modal-close-btn" 
+                onClick={() => setShowEmailVerification(false)}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {emailVerificationMessage && (
+                <div className={`modal-message ${emailVerificationMessage.includes('successfully') || emailVerificationMessage.includes('sent') ? 'success' : 'error'}`}>
+                  {emailVerificationMessage}
+                </div>
+              )}
+              
+              <form onSubmit={handleVerifyEmailAndUpdateCredentials} className="settings-form">
+                <div className="settings-section">
+                  <h4>
+                    <i className="fas fa-envelope"></i>
+                    Verify New Email Address
+                  </h4>
+                  <p style={{color: '#666', fontSize: '14px', marginBottom: '20px'}}>
+                    We've sent a 6-digit verification code to your new email address. 
+                    Please enter the code below to complete the credential update.
+                  </p>
+                  
+                  <div className="form-group">
+                    <label>Verification Code</label>
+                    <input
+                      type="text"
+                      value={emailVerificationCode}
+                      onChange={(e) => setEmailVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="Enter 6-digit code"
+                      maxLength="6"
+                      style={{
+                        textAlign: 'center',
+                        fontSize: '18px',
+                        letterSpacing: '4px',
+                        fontFamily: 'monospace'
+                      }}
+                      required
+                    />
+                  </div>
+                  
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px'}}>
+                    <div style={{fontSize: '13px', color: '#666'}}>
+                      {verificationCountdown > 0 ? (
+                        <>⏰ Code expires in: <strong>{formatTime(verificationCountdown)}</strong></>
+                      ) : (
+                        <span style={{color: '#e53e3e'}}>⚠️ Code expired</span>
+                      )}
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={handleResendEmailVerification}
+                      disabled={!canResendVerification || emailVerificationLoading}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: canResendVerification ? '#3182ce' : '#a0aec0',
+                        cursor: canResendVerification ? 'pointer' : 'not-allowed',
+                        fontSize: '13px',
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      {resendVerificationCountdown > 0 ? `Resend in ${resendVerificationCountdown}s` : 'Resend Code'}
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={() => {
+                      setShowEmailVerification(false);
+                      setShowAdminCredentialsModal(true);
+                    }}
+                    disabled={emailVerificationLoading}
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-register"
+                    disabled={emailVerificationLoading || emailVerificationCode.length !== 6 || verificationCountdown === 0}
+                  >
+                    {emailVerificationLoading ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin"></i>
+                        Verifying...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-check"></i>
+                        Verify & Update
                       </>
                     )}
                   </button>

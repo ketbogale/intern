@@ -3,6 +3,8 @@ const router = express.Router();
 const {
   getAdminProfile,
   updateAdminCredentials,
+  sendCredentialUpdateOTP,
+  sendAdminApprovalOTP,
   checkAdminCredentials,
   sendAdminOTP,
   verifyAdminOTP,
@@ -28,6 +30,12 @@ router.post('/resend-otp', resendAdminOTP);
 
 // Get admin profile (no auth required for header display)
 router.get('/profile', getAdminProfile);
+
+// Send admin approval OTP before any credential update
+router.post('/send-admin-approval-otp', requireAdmin, sendAdminApprovalOTP);
+
+// Send OTP for credential update email verification
+router.post('/send-credential-otp', requireAdmin, sendCredentialUpdateOTP);
 
 // Update admin credentials
 router.patch('/credentials', requireAdmin, updateAdminCredentials);

@@ -13,13 +13,32 @@ const databaseRoutes = require('./routes/databaseRoutes');
 const mongoose = require("mongoose");
 const SchedulerService = require("./services/scheduler");
 const { verifyEmailService } = require('./services/emailService');
+const MealWindow = require('./models/MealWindows');
 // Replace with your MongoDB URI
 const MONGO_URI =
   process.env.MONGO_URI || "mongodb://localhost:27017/meal_attendance";
 
 mongoose
   .connect(MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
+  .then(async () => {
+    console.log("MongoDB connected");
+    
+    // Initialize meal windows defaults only if none exist
+    const existingWindows = await MealWindow.countDocuments();
+    if (existingWindows === 0) {
+      await MealWindow.initializeDefaults();
+      console.log("Default meal windows initialized");
+    } else {
+      console.log("Meal windows already exist in database");
+    }
+    
+    // Start the scheduler service
+    try {
+      await SchedulerService.startScheduler();
+    } catch (error) {
+      console.error("Scheduler startup error:", error);
+    }
+  })
   .catch((err) => console.error("MongoDB connection error:", err));
 const app = express();
 app.use(express.json());
@@ -33,6 +52,8 @@ app.use(
     cookie: {
       secure: false, // Set to true in production with HTTPS
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      httpOnly: true,
+      sameSite: 'lax'
     },
   }),
 );
@@ -85,15 +106,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/meal-windows', mealWindowsRoutes);
 app.use('/api/database', databaseRoutes);
 
-// Logout route
-app.post("/api/logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({ error: "Could not log out" });
-    }
-    res.json({ message: "Logged out successfully" });
-  });
-});
+// Logout route is now handled in login.js routes
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, async () => {

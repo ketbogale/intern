@@ -1,38 +1,6 @@
 const express = require('express');
 const router = express.Router();
-
-// In-memory storage for meal windows configuration
-// In production, this should be stored in a database
-let mealWindowsConfig = {
-  breakfast: {
-    startTime: '06:00',
-    endTime: '09:00',
-    beforeWindow: 30,
-    afterWindow: 30,
-    enabled: true
-  },
-  lunch: {
-    startTime: '12:00',
-    endTime: '14:00',
-    beforeWindow: 30,
-    afterWindow: 30,
-    enabled: true
-  },
-  dinner: {
-    startTime: '18:00',
-    endTime: '20:00',
-    beforeWindow: 30,
-    afterWindow: 30,
-    enabled: true
-  },
-  lateNight: {
-    startTime: '22:00',
-    endTime: '23:30',
-    beforeWindow: 15,
-    afterWindow: 15,
-    enabled: false
-  }
-};
+const MealWindow = require('../models/MealWindows');
 
 // POST /api/meal-windows - Save meal windows configuration
 router.post('/', async (req, res) => {
@@ -75,15 +43,42 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // Update the configuration
-    mealWindowsConfig = { ...mealWindows };
+    // Save to database - update or create each meal window
+    const savedWindows = {};
+    for (const mealType of requiredMeals) {
+      const mealData = mealWindows[mealType];
+      
+      const updatedWindow = await MealWindow.findOneAndUpdate(
+        { mealType },
+        {
+          startTime: mealData.startTime,
+          endTime: mealData.endTime,
+          beforeWindow: mealData.beforeWindow,
+          afterWindow: mealData.afterWindow,
+          enabled: mealData.enabled
+        },
+        { 
+          new: true, 
+          upsert: true,
+          runValidators: true
+        }
+      );
+      
+      savedWindows[mealType] = {
+        startTime: updatedWindow.startTime,
+        endTime: updatedWindow.endTime,
+        beforeWindow: updatedWindow.beforeWindow,
+        afterWindow: updatedWindow.afterWindow,
+        enabled: updatedWindow.enabled
+      };
+    }
 
-    console.log('Meal windows configuration updated:', mealWindowsConfig);
+    console.log('Meal windows configuration saved to database:', savedWindows);
 
     res.status(200).json({
       success: true,
       message: 'Meal windows configuration saved successfully',
-      mealWindows: mealWindowsConfig
+      mealWindows: savedWindows
     });
 
   } catch (error) {
@@ -97,9 +92,22 @@ router.get('/', async (req, res) => {
   try {
     console.log('Meal Windows GET endpoint called');
 
+    // Get all meal windows from database
+    const mealWindows = await MealWindow.getAllAsObject();
+    
+    // Only initialize defaults if no windows exist at all
+    if (Object.keys(mealWindows).length === 0) {
+      await MealWindow.initializeDefaults();
+      const defaultWindows = await MealWindow.getAllAsObject();
+      return res.status(200).json({
+        success: true,
+        mealWindows: defaultWindows
+      });
+    }
+
     res.status(200).json({
       success: true,
-      mealWindows: mealWindowsConfig
+      mealWindows: mealWindows
     });
 
   } catch (error) {

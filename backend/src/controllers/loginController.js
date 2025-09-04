@@ -35,24 +35,40 @@ exports.login = async (req, res) => {
       // Successful login - clear any existing attempt data
       loginAttempts.delete(attemptKey);
       
-      // Set session for authenticated user
-      req.session.user = {
-        id: staff._id,
-        username: staff.username,
-        role: staff.role,
-        loginTime: new Date(),
-      };
-      
-      console.log(`Successful login for user: ${username} from IP: ${clientIP}`);
-      
-      // Return user data including role for frontend routing
-      res.json({ 
-        success: true,
-        user: {
+      // Clear any existing session data and set new session
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error('Session regeneration error:', err);
+          return res.status(500).json({ error: "Session error" });
+        }
+        
+        // Set session for authenticated user
+        req.session.user = {
           id: staff._id,
           username: staff.username,
-          role: staff.role
-        }
+          role: staff.role,
+          loginTime: new Date(),
+        };
+        
+        // Save session to ensure it's persisted
+        req.session.save((err) => {
+          if (err) {
+            console.error('Session save error:', err);
+            return res.status(500).json({ error: "Session save error" });
+          }
+          
+          console.log(`Successful login for user: ${username} with role: ${staff.role} from IP: ${clientIP}`);
+          
+          // Return user data including role for frontend routing
+          res.json({ 
+            success: true,
+            user: {
+              id: staff._id,
+              username: staff.username,
+              role: staff.role
+            }
+          });
+        });
       });
     } else {
       // Failed login - track attempt

@@ -21,21 +21,28 @@ const generateOTP = () => {
 };
 
 // Send OTP email
-const sendOTPEmail = async (email, otp) => {
+const sendOTPEmail = async (email, otp, purpose = 'Admin Login Verification Code') => {
+  const isCredentialUpdate = purpose.includes('Credential Update');
+  
   const mailOptions = {
     from: process.env.GMAIL_USER || 'your-email@gmail.com',
     to: email,
-    subject: 'Admin Login Verification Code',
+    subject: purpose,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #667eea, #764ba2); padding: 30px; border-radius: 10px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 24px;">🔐 Admin Verification</h1>
+          <h1 style="color: white; margin: 0; font-size: 24px;">
+            ${isCredentialUpdate ? '🔐 Admin Credential Update' : '🔐 Admin Verification'}
+          </h1>
         </div>
         
         <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
           <h2 style="color: #2d3748; margin-top: 0;">Verification Code</h2>
           <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">
-            Someone is trying to access the admin dashboard. If this was you, please use the verification code below:
+            ${isCredentialUpdate ? 
+              'You are updating your admin credentials. Please verify your new email address using the verification code below:' :
+              'Someone is trying to access the admin dashboard. If this was you, please use the verification code below:'
+            }
           </p>
           
           <div style="background: white; border: 2px solid #667eea; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
@@ -48,6 +55,14 @@ const sendOTPEmail = async (email, otp) => {
             ⏰ This code will expire in <strong>5 minutes</strong><br>
             🔒 If you didn't request this, please ignore this email
           </p>
+          
+          ${isCredentialUpdate ? `
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin: 20px 0;">
+              <p style="color: #856404; font-size: 14px; margin: 0;">
+                <strong>Security Notice:</strong> This verification is required to confirm your new email address before updating your admin credentials.
+              </p>
+            </div>
+          ` : ''}
           
           <div style="border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 30px;">
             <p style="color: #a0aec0; font-size: 12px; text-align: center;">

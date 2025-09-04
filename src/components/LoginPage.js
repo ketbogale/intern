@@ -31,7 +31,7 @@ const LoginPage = ({ onLogin }) => {
       interval = setInterval(() => {
         setOtpCountdown(prev => {
           if (prev <= 1) {
-            setOtpMessage('Verification code expired. Please request a new one.');
+            setOtpMessage('⏰ Verification code expired. Please request a new one to continue.');
             return 0;
           }
           return prev - 1;
@@ -84,7 +84,7 @@ const LoginPage = ({ onLogin }) => {
 
       if (adminCheckResponse.ok && adminCheckData.success) {
         // Admin credentials valid - show email prompt
-        setMessage('Admin credentials verified. Please enter your email.');
+        setMessage('✅ Admin credentials verified! Please enter your email address to receive a verification code.');
         setShowEmailModal(true);
       } else {
         // Try regular staff login
@@ -96,17 +96,23 @@ const LoginPage = ({ onLogin }) => {
           body: JSON.stringify({ username, password }),
         });
 
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-          setMessage('Login successful!');
-          onLogin(data.user);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.user) {
+            // Show warning if user might have other tabs open
+            const warningMessage = 'Login successful! Note: If you have other tabs open, they will be logged out automatically.';
+            console.log(warningMessage);
+            onLogin(data.user);
+          } else {
+            setMessage(data.error || 'Login failed');
+          }
         } else {
+          const data = await response.json();
           setMessage(data.error || 'Login failed');
         }
       }
     } catch (error) {
-      setMessage('Network error. Please try again.');
+      setMessage('🌐 Network error occurred. Please check your internet connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -117,7 +123,7 @@ const LoginPage = ({ onLogin }) => {
     e.preventDefault();
     
     if (!otpCode || otpCode.length !== 6) {
-      setOtpMessage('Please enter a valid 6-digit verification code');
+      setOtpMessage('⚠️ Please enter the complete 6-digit verification code from your email.');
       return;
     }
     
@@ -136,7 +142,7 @@ const LoginPage = ({ onLogin }) => {
       const data = await response.json();
       
       if (data.success) {
-        setOtpMessage('Login successful! Redirecting...');
+        setOtpMessage('🎉 Login successful! Redirecting to your dashboard...');
         
         // Close OTP modal and login
         setTimeout(() => {
@@ -146,11 +152,11 @@ const LoginPage = ({ onLogin }) => {
           onLogin(data.user);
         }, 1500);
       } else {
-        setOtpMessage(data.message || 'Invalid verification code');
+        setOtpMessage('❌ ' + (data.message || 'Invalid verification code. Please check the code and try again.'));
       }
     } catch (error) {
       console.error('Error verifying OTP:', error);
-      setOtpMessage('Network error. Please try again.');
+      setOtpMessage('🌐 Network error occurred. Please check your connection and try again.');
     } finally {
       setOtpLoading(false);
     }
@@ -161,7 +167,7 @@ const LoginPage = ({ onLogin }) => {
     e.preventDefault();
     
     if (!adminEmail) {
-      setEmailMessage('Please enter your email address');
+      setEmailMessage('📧 Please enter your admin email address to continue.');
       return;
     }
     
@@ -180,7 +186,7 @@ const LoginPage = ({ onLogin }) => {
       const data = await response.json();
       
       if (data.success) {
-        setEmailMessage('Verification code sent to your email');
+        setEmailMessage('✅ Verification code sent to your email. Please check your inbox.');
         setMaskedEmail(data.email);
         setShowEmailModal(false);
         setShowOTPModal(true);
@@ -188,11 +194,11 @@ const LoginPage = ({ onLogin }) => {
         setCanResendOTP(false);
         setResendCountdown(60);
       } else {
-        setEmailMessage(data.message || 'Invalid email address');
+        setEmailMessage('❌ ' + (data.message || 'Invalid email address. Please check and try again.'));
       }
     } catch (error) {
       console.error('Error verifying email:', error);
-      setEmailMessage('Network error. Please try again.');
+      setEmailMessage('🌐 Network error occurred. Please check your connection and try again.');
     } finally {
       setEmailLoading(false);
     }
@@ -214,16 +220,16 @@ const LoginPage = ({ onLogin }) => {
       const data = await response.json();
       
       if (data.success) {
-        setOtpMessage('New verification code sent to your email');
+        setOtpMessage('📧 New verification code sent to your email. Please check your inbox.');
         setOtpCountdown(300);
         setCanResendOTP(false);
         setResendCountdown(60);
       } else {
-        setOtpMessage(data.message || 'Failed to resend code');
+        setOtpMessage('❌ ' + (data.message || 'Failed to resend verification code. Please try again in a moment.'));
       }
     } catch (error) {
       console.error('Error resending OTP:', error);
-      setOtpMessage('Network error. Please try again.');
+      setOtpMessage('🌐 Network error occurred. Please check your connection and try again.');
     } finally {
       setOtpLoading(false);
     }
@@ -241,6 +247,7 @@ const LoginPage = ({ onLogin }) => {
 
       <div className="container">
         <div className="login-box">
+        <h2>Sign In</h2>
           <form onSubmit={handleSubmit}>
             <label htmlFor="username">Username:</label>
             <input
@@ -270,7 +277,7 @@ const LoginPage = ({ onLogin }) => {
 
 
             <button type="submit" className="login-button" disabled={isLoading}>
-              {isLoading ? 'Logging...' : 'Login'}
+              {isLoading ? '🔄 Logging in...' : '🔐 Login'}
             </button>
           </form>
 
@@ -299,19 +306,13 @@ const LoginPage = ({ onLogin }) => {
             </div>
             
             <div className="modal-body">
-              {emailMessage && (
-                <div className={`modal-message ${emailMessage.includes('sent') ? 'success' : 'error'}`}>
-                  {emailMessage}
-                </div>
-              )}
-              
               <form onSubmit={handleEmailVerification} className="email-form">
                 <div className="email-section">
                   <h4>
                     Enter Your Admin Email
                   </h4>
                   <p style={{color: '#666', fontSize: '14px', marginBottom: '20px'}}>
-                    Please enter the email address associated with your admin account
+                    Please enter the email address associated with your admin account to receive a verification code
                   </p>
                   
                   <div className="form-group">
@@ -326,6 +327,12 @@ const LoginPage = ({ onLogin }) => {
                     />
                   </div>
                 </div>
+                
+                {emailMessage && (
+                  <div className={`modal-message ${emailMessage.includes('sent') ? 'success' : 'error'}`}>
+                    {emailMessage}
+                  </div>
+                )}
                 
                 <div className="email-actions">
                   <button
@@ -374,19 +381,13 @@ const LoginPage = ({ onLogin }) => {
             </div>
             
             <div className="modal-body">
-              {otpMessage && (
-                <div className={`modal-message ${otpMessage.includes('successful') || otpMessage.includes('sent') ? 'success' : 'error'}`}>
-                  {otpMessage}
-                </div>
-              )}
-              
               <form onSubmit={handleVerifyOTP} className="otp-form">
                 <div className="otp-section">
                   <h4>
                     Enter Verification Code
                   </h4>
                   <p style={{color: '#666', fontSize: '14px', marginBottom: '20px'}}>
-                    We've sent a 6-digit verification code to <strong>{maskedEmail}</strong>
+                    We've sent a 6-digit verification code to <strong>{maskedEmail}</strong>. Please check your email and enter the code below.
                   </p>
                   
                   <div className="form-group">
@@ -422,6 +423,12 @@ const LoginPage = ({ onLogin }) => {
                   </div>
                 </div>
                 
+                {otpMessage && (
+                  <div className={`modal-message ${otpMessage.includes('successful') || otpMessage.includes('sent') ? 'success' : 'error'}`}>
+                    {otpMessage}
+                  </div>
+                )}
+                
                 <div className="otp-actions">
                   <button
                     type="button"
@@ -442,7 +449,7 @@ const LoginPage = ({ onLogin }) => {
                         Verifying...
                       </>
                     ) : (
-                      'Verify & Login'
+                      '🔐 Verify & Login'
                     )}
                   </button>
                 </div>

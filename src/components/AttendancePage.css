@@ -1,6 +1,63 @@
 /* AttendancePage Styles */
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css');
 
+/* Meal Window Warning Styles */
+.meal-window-warning {
+  background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+  color: #2d3436;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-weight: 500;
+  border-left: 4px solid #e17055;
+}
+
+.countdown-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.countdown-timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.countdown-number {
+  background: rgba(45, 52, 54, 0.1);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 1.1em;
+  color: green;
+  min-width: 60px;
+  text-align: center;
+  border: 2px solid rgba(45, 52, 54, 0.2);
+}
+
+.countdown-label {
+  font-size: 0.9em;
+  opacity: 0.8;
+  font-weight: normal;
+}
+
+.meal-window-warning i {
+  font-size: 18px;
+  color: #2d3436;
+  color: white;
+}
+
+.meal-window-warning span {
+  font-weight: 600;
+  font-size: 16px;
+}
+
 .attendance-container {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: #0f1419;

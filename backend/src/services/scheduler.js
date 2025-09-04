@@ -1,62 +1,141 @@
 const cron = require("node-cron");
 const MealCurrent = require("../models/mealCurrent");
+const MealWindow = require("../models/MealWindows");
 
 class SchedulerService {
-  static startScheduler() {
-    console.log("Starting meal database scheduler for East Africa Time (EAT)");
+  static async startScheduler() {
+    console.log("Starting dynamic meal database scheduler for East Africa Time (EAT)");
 
-    // Reset after Late Night meal ends (05:45 AM EAT) - Clear late night attendance
-    cron.schedule(
-      "45 5 * * *",
-      async () => {
-        await this.resetMealDatabase("05:45 AM EAT (After Late Night)");
-      },
-      {
-        timezone: "Africa/Addis_Ababa",
-      },
-    );
+    // Initialize meal windows and set up dynamic scheduling
+    await this.initializeDynamicScheduler();
+    
+    // Set up a periodic check to update schedules if meal windows change
+    cron.schedule("0 * * * *", async () => {
+      await this.updateSchedulerIfNeeded();
+    }, {
+      timezone: "Africa/Addis_Ababa",
+    });
 
-    // Reset after Breakfast ends (09:30 AM EAT) - Clear breakfast attendance  
-    cron.schedule(
-      "30 9 * * *",
-      async () => {
-        await this.resetMealDatabase("09:30 AM EAT (After Breakfast)");
-      },
-      {
-        timezone: "Africa/Addis_Ababa",
-      },
-    );
-
-    // Reset after Lunch ends (14:30 PM EAT) - Clear lunch attendance
-    cron.schedule(
-      "30 14 * * *",
-      async () => {
-        await this.resetMealDatabase("14:30 PM EAT (After Lunch)");
-      },
-      {
-        timezone: "Africa/Addis_Ababa",
-      },
-    );
-
-    // Reset after Dinner ends (20:30 PM EAT) - Clear dinner attendance
-    cron.schedule(
-      "30 20 * * *",
-      async () => {
-        await this.resetMealDatabase("20:30 PM EAT (After Dinner)");
-      },
-      {
-        timezone: "Africa/Addis_Ababa",
-      },
-    );
-
-    console.log("Meal database scheduler started successfully");
-    console.log(
-      "Scheduled automatic resets at: 05:45, 09:30, 14:30, and 20:30 (East Africa Time)",
-    );
+    console.log("Dynamic meal database scheduler started successfully");
     console.log("Timezone: Africa/Addis_Ababa (EAT UTC+3)");
   }
 
-  static async resetMealDatabase(timeLabel) {
+  static async initializeDynamicScheduler() {
+    try {
+      // Get current meal windows from database (don't reinitialize defaults)
+      const mealWindows = await MealWindow.find({ enabled: true });
+      
+      // Clear any existing scheduled jobs
+      if (this.scheduledJobs) {
+        this.scheduledJobs.forEach(job => job.stop());
+      }
+      this.scheduledJobs = [];
+
+      // Create dynamic schedules based on database meal windows
+      for (const window of mealWindows) {
+        const resetTime = this.calculateResetTime(window);
+        if (resetTime) {
+          const job = cron.schedule(
+            resetTime.cronExpression,
+            async () => {
+              const mealDisplayName = window.mealType === 'lateNight' ? 'Late Night' : 
+                                    window.mealType.charAt(0).toUpperCase() + window.mealType.slice(1);
+              await this.resetMealDatabase(
+                `${resetTime.displayTime} EAT (30 min before ${mealDisplayName} at ${resetTime.mealStartTime})`,
+                window.mealType
+              );
+            },
+            {
+              timezone: "Africa/Addis_Ababa",
+              scheduled: false
+            }
+          );
+          
+          job.start();
+          this.scheduledJobs.push(job);
+          
+          const mealDisplayName = window.mealType === 'lateNight' ? 'Late Night' : 
+                                window.mealType.charAt(0).toUpperCase() + window.mealType.slice(1);
+          console.log(`✓ Scheduled reset for ${mealDisplayName}: ${resetTime.displayTime} EAT (30 min before ${resetTime.mealStartTime} start)`);
+        }
+      }
+      
+      // Store current configuration hash for change detection
+      this.currentConfigHash = this.generateConfigHash(mealWindows);
+      
+    } catch (error) {
+      console.error("Error initializing dynamic scheduler:", error);
+      // Fallback to default schedule
+      this.startFallbackScheduler();
+    }
+  }
+
+  static calculateResetTime(mealWindow) {
+    try {
+      // Parse start time from database and subtract 30 minutes for reset
+      const [hours, minutes] = mealWindow.startTime.split(':').map(Number);
+      const startDate = new Date();
+      startDate.setHours(hours, minutes, 0, 0);
+      
+      // Subtract 30 minutes before start time for reset
+      const resetDate = new Date(startDate.getTime() - (30 * 60000));
+      
+      const resetHours = resetDate.getHours();
+      const resetMinutes = resetDate.getMinutes();
+      
+      console.log(`${mealWindow.mealType}: Start time ${mealWindow.startTime} → Reset time ${resetHours.toString().padStart(2, '0')}:${resetMinutes.toString().padStart(2, '0')}`);
+      
+      return {
+        cronExpression: `${resetMinutes} ${resetHours} * * *`,
+        displayTime: `${resetHours.toString().padStart(2, '0')}:${resetMinutes.toString().padStart(2, '0')}`,
+        mealStartTime: mealWindow.startTime
+      };
+    } catch (error) {
+      console.error(`Error calculating reset time for ${mealWindow.mealType}:`, error);
+      return null;
+    }
+  }
+
+  static generateConfigHash(mealWindows) {
+    const config = mealWindows.map(w => `${w.mealType}:${w.startTime}:${w.enabled}`).join('|');
+    return require('crypto').createHash('md5').update(config).digest('hex');
+  }
+
+  static async updateSchedulerIfNeeded() {
+    try {
+      const currentWindows = await MealWindow.find({ enabled: true });
+      const newConfigHash = this.generateConfigHash(currentWindows);
+      
+      if (newConfigHash !== this.currentConfigHash) {
+        console.log("Meal window configuration changed, updating scheduler...");
+        await this.initializeDynamicScheduler();
+      }
+    } catch (error) {
+      console.error("Error checking for scheduler updates:", error);
+    }
+  }
+
+  static startFallbackScheduler() {
+    console.log("Starting fallback scheduler with default times");
+    
+    // Fallback to original hardcoded schedule
+    const fallbackSchedules = [
+      { cron: "45 5 * * *", label: "05:45 AM EAT (After Late Night)" },
+      { cron: "30 9 * * *", label: "09:30 AM EAT (After Breakfast)" },
+      { cron: "30 14 * * *", label: "14:30 PM EAT (After Lunch)" },
+      { cron: "30 20 * * *", label: "20:30 PM EAT (After Dinner)" }
+    ];
+
+    fallbackSchedules.forEach(schedule => {
+      cron.schedule(schedule.cron, async () => {
+        await this.resetMealDatabase(schedule.label);
+      }, {
+        timezone: "Africa/Addis_Ababa",
+      });
+    });
+  }
+
+  static async resetMealDatabase(timeLabel, mealType = null) {
     try {
       const eatTime = new Date().toLocaleString("en-US", {
         timeZone: "Africa/Addis_Ababa",

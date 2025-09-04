@@ -31,10 +31,10 @@ const getAdminProfile = async (req, res) => {
   }
 };
 
-// Update admin credentials (username and/or password)
-const updateAdminCredentials = async (req, res) => {
+// Send OTP for email verification during credential update
+const sendCredentialUpdateOTP = async (req, res) => {
   try {
-    const { currentPassword, newUsername, newPassword, confirmPassword, email } = req.body;
+    const { currentPassword, newEmail } = req.body;
     
     // Check if user is admin
     if (!req.session.user || req.session.user.role !== 'admin') {
@@ -61,6 +61,253 @@ const updateAdminCredentials = async (req, res) => {
         message: 'Current password is incorrect.'
       });
     }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid email address.'
+      });
+    }
+
+    // Clear any existing OTP for this email
+    await OTP.deleteMany({ email: newEmail });
+    
+    // Generate new OTP
+    const otp = generateOTP();
+    
+    // Save OTP to database with credential update context
+    const otpRecord = new OTP({
+      email: newEmail,
+      otp: otp,
+      purpose: 'credential_update',
+      adminId: adminUser._id
+    });
+    await otpRecord.save();
+    
+    // Send OTP email
+    const emailSent = await sendOTPEmail(newEmail, otp, 'Admin Credential Update Verification');
+    
+    if (!emailSent) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send verification email'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Verification code sent to new email address',
+      email: newEmail.replace(/(.{3}).*(@.*)/, '$1***$2') // Mask email for security
+    });
+    
+  } catch (error) {
+    console.error('Error sending credential update OTP:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while sending verification code'
+    });
+  }
+};
+
+// Send admin email approval OTP before any credential update
+const sendAdminApprovalOTP = async (req, res) => {
+  try {
+    const { currentPassword } = req.body;
+    
+    // Check if user is admin
+    if (!req.session.user || req.session.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin role required.'
+      });
+    }
+
+    // Find current admin user
+    const adminUser = await Staff.findById(req.session.user.id);
+    if (!adminUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Admin user not found.'
+      });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await adminUser.comparePassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect.'
+      });
+    }
+
+    // Clear any existing approval OTP for this admin
+    await OTP.deleteMany({ 
+      email: adminUser.email, 
+      purpose: 'admin_approval',
+      adminId: adminUser._id 
+    });
+    
+    // Generate new OTP
+    const otp = generateOTP();
+    
+    // Save OTP to database with admin approval context
+    const otpRecord = new OTP({
+      email: adminUser.email,
+      otp: otp,
+      purpose: 'admin_approval',
+      adminId: adminUser._id
+    });
+    await otpRecord.save();
+    
+    // Send OTP email to current admin email
+    const emailSent = await sendOTPEmail(adminUser.email, otp, 'Admin Identity Verification - Credential Update');
+    
+    if (!emailSent) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send verification email'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Admin verification code sent to your current email address',
+      email: adminUser.email.replace(/(.{3}).*(@.*)/, '$1***$2') // Mask email for security
+    });
+    
+  } catch (error) {
+    console.error('Error sending admin approval OTP:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while sending verification code'
+    });
+  }
+};
+
+// Update admin credentials after admin approval and email verification
+const updateAdminCredentials = async (req, res) => {
+  try {
+    const { currentPassword, newUsername, newPassword, confirmPassword, email, otp, adminApprovalOtp } = req.body;
+    
+    // Check if user is admin
+    if (!req.session.user || req.session.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin role required.'
+      });
+    }
+
+    // Find current admin user
+    const adminUser = await Staff.findById(req.session.user.id);
+    if (!adminUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Admin user not found.'
+      });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await adminUser.comparePassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect.'
+      });
+    }
+
+    // ALWAYS require admin approval OTP for ANY credential update
+    if (!adminApprovalOtp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Admin approval verification code is required for all credential updates.'
+      });
+    }
+
+    // Verify admin approval OTP
+    const adminApprovalRecord = await OTP.findOne({ 
+      email: adminUser.email, 
+      purpose: 'admin_approval',
+      adminId: adminUser._id
+    });
+    
+    if (!adminApprovalRecord) {
+      return res.status(400).json({
+        success: false,
+        message: 'Admin approval code expired or not found. Please request a new approval code.'
+      });
+    }
+    
+    // Check attempts limit for admin approval
+    if (adminApprovalRecord.attempts >= 3) {
+      await OTP.deleteOne({ _id: adminApprovalRecord._id });
+      return res.status(429).json({
+        success: false,
+        message: 'Too many failed attempts for admin approval. Please request a new code.'
+      });
+    }
+    
+    // Verify admin approval OTP
+    if (adminApprovalRecord.otp !== adminApprovalOtp) {
+      adminApprovalRecord.attempts += 1;
+      await adminApprovalRecord.save();
+      
+      return res.status(400).json({
+        success: false,
+        message: `Invalid admin approval code. ${3 - adminApprovalRecord.attempts} attempts remaining.`
+      });
+    }
+
+    // If email is being changed, also verify new email OTP
+    if (email && email !== adminUser.email) {
+      if (!otp) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email verification code is required for email changes.'
+        });
+      }
+
+      // Find OTP record for new email
+      const otpRecord = await OTP.findOne({ 
+        email: email, 
+        purpose: 'credential_update',
+        adminId: adminUser._id
+      });
+      
+      if (!otpRecord) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email verification code expired or not found. Please request a new code.'
+        });
+      }
+      
+      // Check attempts limit for email verification
+      if (otpRecord.attempts >= 3) {
+        await OTP.deleteOne({ _id: otpRecord._id });
+        return res.status(429).json({
+          success: false,
+          message: 'Too many failed attempts for email verification. Please request a new verification code.'
+        });
+      }
+      
+      // Verify email OTP
+      if (otpRecord.otp !== otp) {
+        otpRecord.attempts += 1;
+        await otpRecord.save();
+        
+        return res.status(400).json({
+          success: false,
+          message: `Invalid email verification code. ${3 - otpRecord.attempts} attempts remaining.`
+        });
+      }
+      
+      // Clean up email verification OTP after successful verification
+      await OTP.deleteOne({ _id: otpRecord._id });
+    }
+
+    // Clean up admin approval OTP after successful verification
+    await OTP.deleteOne({ _id: adminApprovalRecord._id });
 
     // Validate new password if provided
     if (newPassword) {
@@ -113,9 +360,12 @@ const updateAdminCredentials = async (req, res) => {
     Object.assign(adminUser, updates);
     await adminUser.save();
 
-    // Update session with new username if changed
+    // Update session with new username and email if changed
     if (newUsername) {
       req.session.user.username = newUsername;
+    }
+    if (email) {
+      req.session.user.email = email;
     }
 
     res.json({
@@ -445,6 +695,8 @@ const resendAdminOTP = async (req, res) => {
 module.exports = {
   getAdminProfile,
   updateAdminCredentials,
+  sendCredentialUpdateOTP,
+  sendAdminApprovalOTP,
   checkAdminCredentials,
   sendAdminOTP,
   verifyAdminOTP,

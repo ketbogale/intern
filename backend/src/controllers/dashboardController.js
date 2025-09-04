@@ -1,5 +1,6 @@
 const Student = require("../models/student");
 const MealCurrent = require("../models/mealCurrent");
+const MealWindow = require("../models/MealWindows");
 
 exports.getDashboardStats = async (req, res) => {
   try {
@@ -45,14 +46,54 @@ exports.getDashboardStats = async (req, res) => {
       .lean();
     console.log('Recent attendance records found:', recentAttendance.length);
 
+    // Get meal windows for determining meal type
+    const mealWindows = await MealWindow.getAllAsObject();
+
+    // Helper function to determine meal type based on time
+    const determineMealType = (timestamp) => {
+      const date = new Date(timestamp);
+      const timeString = date.getHours().toString().padStart(2, '0') + ':' + 
+                        date.getMinutes().toString().padStart(2, '0');
+      
+      // Check each meal window to see which one the time falls into
+      for (const [mealType, window] of Object.entries(mealWindows)) {
+        if (window.enabled && timeString >= window.startTime && timeString <= window.endTime) {
+          return mealType;
+        }
+      }
+      
+      // If no exact match, find the closest meal window
+      const timeMinutes = date.getHours() * 60 + date.getMinutes();
+      let closestMeal = 'lunch';
+      let closestDistance = Infinity;
+      
+      for (const [mealType, window] of Object.entries(mealWindows)) {
+        if (!window.enabled) continue;
+        
+        const [startHour, startMin] = window.startTime.split(':').map(Number);
+        const startMinutes = startHour * 60 + startMin;
+        const distance = Math.abs(timeMinutes - startMinutes);
+        
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestMeal = mealType;
+        }
+      }
+      
+      return closestMeal;
+    };
+
     // Get student details for recent attendance
     const formattedAttendance = [];
     for (const record of recentAttendance) {
       const student = await Student.findOne({ id: record.studentId });
+      const mealType = record.mealType || determineMealType(record.date || record.createdAt);
+      
       formattedAttendance.push({
         studentId: record.studentId,
         studentName: student?.name || `Student ${record.studentId}`,
         date: record.date || record.createdAt,
+        mealType: mealType,
         status: 'Present'
       });
     }

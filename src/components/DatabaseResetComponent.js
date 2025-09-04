@@ -6,11 +6,89 @@ const DatabaseResetComponent = ({ fetchDashboardData }) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [resetStatus, setResetStatus] = useState({ message: '', type: '' });
 
-  const resetSchedule = {
-    afterLateNight: '05:45',
-    afterBreakfast: '09:30', 
-    afterLunch: '14:30',
-    afterDinner: '20:30'
+  const [dynamicResetSchedule, setDynamicResetSchedule] = useState([]);
+  const [automaticResetEnabled, setAutomaticResetEnabled] = useState(true);
+
+  // Fetch meal windows and calculate reset schedule
+  useEffect(() => {
+    const fetchMealWindows = async () => {
+      try {
+        const response = await fetch('/api/meal-windows', {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        
+        if (data.success && data.mealWindows) {
+          calculateResetSchedule(data.mealWindows);
+        }
+      } catch (error) {
+        console.error('Error fetching meal windows:', error);
+        // Fallback to calculated schedule based on default meal times if API fails
+        const fallbackWindows = {
+          breakfast: { startTime: '06:00', enabled: true },
+          lunch: { startTime: '12:00', enabled: true },
+          dinner: { startTime: '17:00', enabled: true },
+          lateNight: { startTime: '22:00', enabled: false }
+        };
+        calculateResetSchedule(fallbackWindows);
+      }
+    };
+    
+    fetchMealWindows();
+  }, []);
+
+  // Calculate reset times (30 minutes before each meal start)
+  const calculateResetSchedule = (mealWindowsObj) => {
+    console.log('Calculating reset schedule from database:', mealWindowsObj);
+    
+    const schedule = Object.entries(mealWindowsObj)
+      .filter(([mealType, window]) => window.enabled)
+      .map(([mealType, window]) => {
+        // Validate startTime format
+        if (!window.startTime || !window.startTime.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+          console.error(`Invalid startTime format for ${mealType}:`, window.startTime);
+          return null;
+        }
+
+        const [hours, minutes] = window.startTime.split(':').map(Number);
+        const startDate = new Date();
+        startDate.setHours(hours, minutes, 0, 0);
+        
+        // Subtract 30 minutes for reset time
+        const resetDate = new Date(startDate.getTime() - (30 * 60000));
+        
+        // Handle day rollover (if reset time goes to previous day)
+        let resetTime;
+        if (resetDate.getDate() !== startDate.getDate()) {
+          // Reset time is on previous day, show as 23:XX
+          resetTime = `${resetDate.getHours().toString().padStart(2, '0')}:${resetDate.getMinutes().toString().padStart(2, '0')}`;
+        } else {
+          resetTime = `${resetDate.getHours().toString().padStart(2, '0')}:${resetDate.getMinutes().toString().padStart(2, '0')}`;
+        }
+        
+        console.log(`${mealType}: Start ${window.startTime} → Reset ${resetTime}`);
+        
+        // Format meal type display name
+        let displayName = mealType;
+        if (mealType === 'lateNight') {
+          displayName = 'Late Night';
+        } else {
+          displayName = mealType.charAt(0).toUpperCase() + mealType.slice(1);
+        }
+        
+        return {
+          time: resetTime,
+          meal: displayName,
+          resetType: 'Before',
+          startTime: window.startTime,
+          mealType: mealType
+        };
+      })
+      .filter(item => item !== null) // Remove invalid entries
+      .sort((a, b) => a.time.localeCompare(b.time));
+    
+    console.log('Final schedule for all meal types:', schedule);
+    setDynamicResetSchedule(schedule);
   };
 
   // Show reset status message
@@ -88,34 +166,28 @@ const DatabaseResetComponent = ({ fetchDashboardData }) => {
     }
   };
 
-  // Get next scheduled reset time
-  const getNextResetTime = () => {
-    const now = new Date();
-    const currentTime = now.toLocaleTimeString('en-US', { 
-      hour12: false, 
-      hour: '2-digit', 
-      minute: '2-digit',
-      timeZone: 'Africa/Addis_Ababa'
-    });
-
-    const resetTimes = Object.values(resetSchedule).sort();
-    
-    for (const time of resetTimes) {
-      if (time > currentTime) {
-        return time;
-      }
+  // Toggle automatic reset schedule
+  const toggleAutomaticReset = async () => {
+    try {
+      setIsLoading(true);
+      const newStatus = !automaticResetEnabled;
+      
+      // Here you would call an API to enable/disable the scheduler
+      // For now, we'll just update the local state
+      setAutomaticResetEnabled(newStatus);
+      
+      showResetStatus(
+        `✅ Automatic reset schedule ${newStatus ? 'enabled' : 'disabled'}`,
+        'success'
+      );
+      
+    } catch (error) {
+      console.error('Error toggling automatic reset:', error);
+      showResetStatus('❌ Failed to toggle automatic reset schedule', 'error');
+    } finally {
+      setIsLoading(false);
     }
-    
-    // If no reset time today, return first reset time tomorrow
-    return resetTimes[0] + ' (tomorrow)';
   };
-
-  const scheduleItems = [
-    { time: resetSchedule.afterLateNight, meal: 'After Late Night Meal' },
-    { time: resetSchedule.afterBreakfast, meal: 'After Breakfast' },
-    { time: resetSchedule.afterLunch, meal: 'After Lunch' },
-    { time: resetSchedule.afterDinner, meal: 'After Dinner' }
-  ];
 
   return (
     <div className="database-reset-section">
@@ -125,9 +197,9 @@ const DatabaseResetComponent = ({ fetchDashboardData }) => {
       </h2>
 
       <div className="reset-description">
-        <i className="fas fa-exclamation-triangle warning-icon"></i>
-        <strong>Database Reset System:</strong> This system automatically clears meal attendance records after each meal window closes, allowing 
-        students to use their meals again for the next period. You can also perform manual resets when needed.
+        <i className="fas fa-clock warning-icon"></i>
+        <strong>MealCurrent Database Reset Schedule:</strong> Student meal records are automatically cleared at the times shown below, 
+        allowing students to scan meals again for the next meal period.
       </div>
 
       <div className="reset-options-grid">
@@ -141,7 +213,7 @@ const DatabaseResetComponent = ({ fetchDashboardData }) => {
             <h3>Automatic Reset Schedule</h3>
           </div>
           <div className="reset-option-description">
-            Database automatically resets after each meal window closes based on your meal window configuration.
+            MealCurrent database automatically clears student records 30 minutes before each meal starts, based on meal window times from database.
           </div>
           <div className="reset-timing">
             Active - Next reset varies by meal schedule
@@ -167,18 +239,44 @@ const DatabaseResetComponent = ({ fetchDashboardData }) => {
       </div>
 
       <div className="schedule-display">
-        <h4>
-          <i className="fas fa-calendar-alt"></i>
-          Automatic Reset Schedule (EAT)
-        </h4>
-        <ul className="schedule-list">
-          {scheduleItems.map((item, index) => (
-            <li key={index}>
-              <span className="schedule-time">{item.time} EAT</span>
-              <span className="schedule-meal">{item.meal}</span>
-            </li>
+        <div className="schedule-header">
+          <h4>
+            <i className="fas fa-calendar-alt"></i>
+            Automatic Reset Schedule (EAT)
+          </h4>
+          <div className="schedule-toggle">
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={automaticResetEnabled}
+                onChange={toggleAutomaticReset}
+                disabled={isLoading}
+              />
+              <span className="toggle-slider"></span>
+            </label>
+            <span className="toggle-label">
+              {automaticResetEnabled ? 'Enabled' : 'Disabled'}
+            </span>
+          </div>
+        </div>
+        <div className="schedule-grid">
+          {dynamicResetSchedule.map((item, index) => (
+            <div key={index} className={`schedule-card ${!automaticResetEnabled ? 'disabled' : ''}`}>
+              <div className="schedule-time">{item.time}</div>
+              <div className="schedule-meal">{item.meal}</div>
+              <div className="schedule-info">
+                <div className="meal-start">Meal: {item.startTime}</div>
+                <div className="schedule-badge">Database Reset</div>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
+        {!automaticResetEnabled && (
+          <div className="schedule-disabled-notice">
+            <i className="fas fa-info-circle"></i>
+            Automatic reset schedule is currently disabled. Enable it to automatically clear meal records.
+          </div>
+        )}
       </div>
 
       <div className="manual-reset-section">
