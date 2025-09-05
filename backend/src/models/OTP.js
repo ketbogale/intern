@@ -17,12 +17,16 @@ const otpSchema = new mongoose.Schema({
   },
   purpose: {
     type: String,
-    enum: ['login', 'credential_update', 'admin_approval'],
+    enum: ['login', 'credential_update', 'admin_approval', 'email_change_approval'],
     default: 'login'
   },
   adminId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Staff',
+    required: false
+  },
+  metadata: {
+    type: mongoose.Schema.Types.Mixed,
     required: false
   },
   createdAt: {

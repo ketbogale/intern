@@ -3,6 +3,7 @@ import './App.css';
 import LoginPage from './components/LoginPage';
 import AttendancePage from './components/AttendancePage';
 import Dashboard from './components/Dashboard';
+import EmailChangeVerification from './components/EmailChangeVerification';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -127,6 +128,20 @@ function App() {
           <div className="spinner"></div>
           <p>Checking authentication...</p>
         </div>
+      </div>
+    );
+  }
+
+  // Check if current URL is for email verification
+  const currentPath = window.location.pathname;
+  const isEmailVerificationRoute = currentPath.startsWith('/admin/verify-email-change/');
+  
+  // If it's email verification route, show that component
+  if (isEmailVerificationRoute) {
+    const token = currentPath.split('/admin/verify-email-change/')[1];
+    return (
+      <div className="App">
+        <EmailChangeVerification token={token} />
       </div>
     );
   }

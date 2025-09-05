@@ -1,0 +1,145 @@
+.email-verification-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f1419 0%, #1e2a3a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.email-verification-card {
+  background: rgba(52, 73, 94, 0.95);
+  backdrop-filter: blur(15px);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.email-verification-header {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  padding: 30px;
+  text-align: center;
+}
+
+.email-verification-header h1 {
+  color: white;
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.email-verification-content {
+  padding: 40px 30px;
+}
+
+.loading-section {
+  text-align: center;
+  color: #ecf0f1;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.result-section {
+  text-align: center;
+}
+
+.result-icon {
+  font-size: 60px;
+  margin-bottom: 20px;
+}
+
+.result-message {
+  color: #ecf0f1;
+  margin-bottom: 30px;
+}
+
+.result-message p {
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 15px;
+}
+
+.success-details {
+  background: rgba(39, 174, 96, 0.1);
+  border: 1px solid rgba(39, 174, 96, 0.3);
+  border-radius: 10px;
+  padding: 20px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.success-details p {
+  margin-bottom: 10px;
+}
+
+.success-details strong {
+  color: #27ae60;
+}
+
+.action-buttons {
+  margin: 30px 0;
+}
+
+.return-button {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.return-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.auto-redirect {
+  margin-top: 20px;
+  padding: 15px;
+  background: rgba(52, 152, 219, 0.1);
+  border: 1px solid rgba(52, 152, 219, 0.3);
+  border-radius: 8px;
+  color: #3498db;
+  font-size: 14px;
+}
+
+.result-section.error .result-message {
+  color: #e74c3c;
+}
+
+@media (max-width: 768px) {
+  .email-verification-card {
+    margin: 10px;
+  }
+  
+  .email-verification-header {
+    padding: 20px;
+  }
+  
+  .email-verification-header h1 {
+    font-size: 20px;
+  }
+  
+  .email-verification-content {
+    padding: 30px 20px;
+  }
+}

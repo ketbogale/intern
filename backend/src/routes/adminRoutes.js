@@ -3,7 +3,8 @@ const router = express.Router();
 const {
   getAdminProfile,
   updateAdminCredentials,
-  sendCredentialUpdateOTP,
+  sendEmailChangeApprovalLink,
+  verifyEmailChangeApproval,
   sendAdminApprovalOTP,
   checkAdminCredentials,
   sendAdminOTP,
@@ -34,8 +35,11 @@ router.get('/profile', getAdminProfile);
 // Send admin approval OTP before any credential update
 router.post('/send-admin-approval-otp', requireAdmin, sendAdminApprovalOTP);
 
-// Send OTP for credential update email verification
-router.post('/send-credential-otp', requireAdmin, sendCredentialUpdateOTP);
+// Send email change approval link to current admin email
+router.post('/send-email-change-approval', requireAdmin, sendEmailChangeApprovalLink);
+
+// Verify email change approval link (no auth required as it's accessed via email link)
+router.get('/verify-email-change/:token', verifyEmailChangeApproval);
 
 // Update admin credentials
 router.patch('/credentials', requireAdmin, updateAdminCredentials);

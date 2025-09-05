@@ -304,12 +304,12 @@ const AttendancePage = ({ user, onLogout }) => {
               <Card.Body>
                 {/* Meal Window Warning */}
                 {mealWindowBlocked && nextMealInfo && (
-                  <Alert variant="warning" className="d-flex align-items-center mb-2 py-1">
-                    <i className="fas fa-clock me-2 small"></i>
+                  <Alert variant="warning" className="meal-window-alert d-flex align-items-center mb-2">
+                    <i className="fas fa-clock me-3"></i>
                     <div className="flex-grow-1">
-                      <div className="fw-semibold" style={{fontSize: '0.8rem'}}>{nextMealInfo}</div>
+                      <div className="meal-window-text">{nextMealInfo}</div>
                       {countdownSeconds > 0 && (
-                        <Badge bg="success" className="px-2 py-1 mt-1" style={{fontSize: '0.7rem'}}>
+                        <Badge className="countdown-badge mt-2">
                           {countdownSeconds >= 3600
                             ? `${Math.floor(countdownSeconds / 3600)}h ${Math.floor((countdownSeconds % 3600) / 60)}m`
                             : countdownSeconds >= 60

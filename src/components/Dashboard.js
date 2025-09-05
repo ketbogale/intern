@@ -262,6 +262,25 @@ const Dashboard = ({ user, onLogout }) => {
     fetchMealWindows();
     checkMealWindow();
     
+    // Check if redirected from email verification link
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('showEmailVerification') === 'true') {
+      const newEmail = urlParams.get('newEmail');
+      setShowEmailVerification(true);
+      setEmailVerificationMessage(`📧 Enter the 6-digit verification code sent to ${newEmail}`);
+      
+      // Set pending credentials for email-only change
+      setPendingCredentials({
+        email: newEmail,
+        currentPassword: 'verified', // Mark as already verified via link
+        newUsername: null,
+        newPassword: null
+      });
+      
+      // Clean up URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     // Check meal window every minute
     const mealWindowInterval = setInterval(checkMealWindow, 60000);
     
@@ -806,8 +825,8 @@ const Dashboard = ({ user, onLogout }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Send email verification for credential update
-  const handleSendEmailVerification = async () => {
+  // Send email change approval link to current admin email
+  const handleSendEmailChangeApproval = async () => {
     if (!adminCredentials.email || !adminCredentials.currentPassword) {
       setAdminCredentialsMessage('Please enter current password and new email address.');
       return;
@@ -817,7 +836,7 @@ const Dashboard = ({ user, onLogout }) => {
       setEmailVerificationLoading(true);
       setEmailVerificationMessage('');
       
-      const response = await fetch('/api/admin/send-credential-otp', {
+      const response = await fetch('/api/admin/send-email-change-approval', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -831,17 +850,13 @@ const Dashboard = ({ user, onLogout }) => {
       const data = await response.json();
       
       if (data.success) {
-        setShowEmailVerification(true);
-        setVerificationCountdown(300); // Reset to 5 minutes
-        setCanResendVerification(false);
-        setResendVerificationCountdown(60); // 60 seconds before next resend
-        setEmailVerificationMessage(`Verification code sent to ${data.email}`);
+        setAdminCredentialsMessage(`📧 Email change approval link sent to ${data.currentEmail}. Please check your current email and click the approval link. After clicking, return here to enter the verification code.`);
         setPendingCredentials(adminCredentials);
       } else {
-        setAdminCredentialsMessage(data.message || 'Failed to send verification email');
+        setAdminCredentialsMessage(data.message || 'Failed to send approval email');
       }
     } catch (error) {
-      console.error('Error sending email verification:', error);
+      console.error('Error sending email change approval:', error);
       setAdminCredentialsMessage('Network error. Please try again.');
     } finally {
       setEmailVerificationLoading(false);
@@ -857,7 +872,23 @@ const Dashboard = ({ user, onLogout }) => {
       return;
     }
     
-    if (!adminApprovalCode || adminApprovalCode.length !== 6) {
+    // Check if this is an email-only change (already approved via link)
+    const isEmailOnlyChange = pendingCredentials && pendingCredentials.email && 
+                              pendingCredentials.email !== adminEmail &&
+                              (!pendingCredentials.newUsername || pendingCredentials.newUsername === null) && 
+                              (!pendingCredentials.newPassword || pendingCredentials.newPassword === null);
+    
+    console.log('Email verification debug:', {
+      pendingCredentials,
+      adminEmail,
+      isEmailOnlyChange,
+      hasAdminApprovalCode: !!adminApprovalCode
+    });
+    
+    // For email-only changes, skip admin approval requirement
+    if (isEmailOnlyChange) {
+      console.log('Email-only change detected, skipping admin approval requirement');
+    } else if (!adminApprovalCode || adminApprovalCode.length !== 6) {
       setEmailVerificationMessage('🔑 Admin approval code is required. Please go back and complete admin approval first.');
       return;
     }
@@ -868,9 +899,13 @@ const Dashboard = ({ user, onLogout }) => {
       
       const credentialsToUpdate = {
         ...pendingCredentials,
-        otp: emailVerificationCode,
-        adminApprovalOtp: adminApprovalCode
+        otp: emailVerificationCode
       };
+      
+      // Only add admin approval OTP if it's not an email-only change
+      if (!isEmailOnlyChange) {
+        credentialsToUpdate.adminApprovalOtp = adminApprovalCode;
+      }
       
       const response = await fetch('/api/admin/credentials', {
         method: 'PATCH',
@@ -965,7 +1000,14 @@ const Dashboard = ({ user, onLogout }) => {
   const handleUpdateAdminCredentials = async (e) => {
     e.preventDefault();
     
-    // ALWAYS require admin approval for ANY credential update
+    // Check if email is being changed
+    if (adminCredentials.email && adminCredentials.email !== adminEmail) {
+      // Email is being changed, use two-step email change approval process
+      handleSendEmailChangeApproval();
+      return;
+    }
+    
+    // No email change, use regular admin approval process
     handleSendAdminApproval();
   };
 
@@ -973,13 +1015,6 @@ const Dashboard = ({ user, onLogout }) => {
   const handleProceedAfterAdminApproval = async () => {
     if (!adminApprovalCode || adminApprovalCode.length !== 6) {
       setAdminApprovalMessage('⚠️ Please enter the complete 6-digit admin approval code from your email.');
-      return;
-    }
-
-    // Check if email is being changed
-    if (pendingCredentials.email && pendingCredentials.email !== adminEmail) {
-      // Email is being changed, need email verification too
-      handleSendEmailVerification();
       return;
     }
     
@@ -2390,7 +2425,7 @@ const Dashboard = ({ user, onLogout }) => {
                     Enter Verification Code
                   </h4>
                   <p style={{color: '#666', fontSize: '14px', marginBottom: '20px'}}>
-                    We've sent a 6-digit verification code to <strong>ket***@gmail.com</strong>
+                    {emailVerificationMessage}
                   </p>
                   
                   <div className="form-group">
@@ -2582,6 +2617,24 @@ const Dashboard = ({ user, onLogout }) => {
                   >
                     Cancel
                   </button>
+                  
+                  {/* Show verification code button if email change is pending */}
+                  {pendingCredentials && pendingCredentials.email && pendingCredentials.email !== adminEmail && (
+                    <button 
+                      type="button" 
+                      className="btn-secondary"
+                      onClick={() => {
+                        setShowAdminCredentialsModal(false);
+                        setShowEmailVerification(true);
+                        setEmailVerificationMessage(`📧 Enter the 6-digit verification code sent to ${pendingCredentials.email}`);
+                      }}
+                      style={{ marginRight: '10px' }}
+                    >
+                      <i className="fas fa-key"></i>
+                      Enter Verification Code
+                    </button>
+                  )}
+                  
                   <button 
                     type="submit" 
                     className="btn-register"
