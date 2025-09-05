@@ -5,6 +5,8 @@ const {
   updateAdminCredentials,
   sendEmailChangeApprovalLink,
   verifyEmailChangeApproval,
+  verifyEmailChangeCode,
+  resendEmailChangeCode,
   sendAdminApprovalOTP,
   checkAdminCredentials,
   sendAdminOTP,
@@ -40,6 +42,12 @@ router.post('/send-email-change-approval', requireAdmin, sendEmailChangeApproval
 
 // Verify email change approval link (no auth required as it's accessed via email link)
 router.get('/verify-email-change/:token', verifyEmailChangeApproval);
+
+// Verify email change code (no auth required)
+router.post('/verify-email-change-code', verifyEmailChangeCode);
+
+// Resend email change verification code (no auth required)
+router.post('/resend-email-change-code', resendEmailChangeCode);
 
 // Update admin credentials
 router.patch('/credentials', requireAdmin, updateAdminCredentials);

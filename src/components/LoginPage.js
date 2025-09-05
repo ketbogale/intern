@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Modal, Navbar, InputGroup } from 'react-bootstrap';
+import VerificationCodeInput from './VerificationCodeInput';
 import './LoginPage-Bootstrap.css';
 
 // Constants
@@ -122,8 +123,10 @@ const LoginPage = ({ onLogin }) => {
       });
 
       if (adminResponse.ok && adminData.success) {
-        setMessage('✅ Admin credentials verified! Please enter your email address to receive a verification code.');
-        setShowEmailModal(true);
+        setMessage('✅ Admin credentials verified! Redirecting to email verification...');
+        setTimeout(() => {
+          window.location.pathname = '/admin-email-verification';
+        }, 1000);
       } else {
         // Try regular staff login
         const { response, data } = await apiCall('/api/login', {
@@ -333,52 +336,130 @@ const LoginPage = ({ onLogin }) => {
         onHide={() => setShowEmailModal(false)}
         backdrop="static"
         centered
+        size="sm"
       >
-        <Modal.Header closeButton>
-          <Modal.Title>Admin Email Verification</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleEmailVerification}>
-            <p className="text-muted mb-3">
+        <Modal.Body className="p-0">
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '40px 32px',
+            textAlign: 'center',
+            position: 'relative'
+          }}>
+            <button
+              onClick={() => setShowEmailModal(false)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: 'none',
+                border: 'none',
+                fontSize: '20px',
+                color: '#9ca3af',
+                cursor: 'pointer'
+              }}
+            >
+              ×
+            </button>
+            
+            <h4 style={{
+              color: '#2d3748',
+              fontWeight: '600',
+              fontSize: '20px',
+              marginBottom: '8px'
+            }}>
+              Admin Email Verification
+            </h4>
+            
+            <p style={{
+              color: '#6b7280',
+              fontSize: '14px',
+              marginBottom: '32px',
+              lineHeight: '1.5'
+            }}>
               Please enter the email address associated with your admin account to receive a verification code
             </p>
             
-            <Form.Group className="mb-3">
-              <Form.Label>Email Address</Form.Label>
-              <Form.Control
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{
+                display: 'block',
+                color: '#374151',
+                fontSize: '14px',
+                fontWeight: '500',
+                marginBottom: '8px',
+                textAlign: 'left'
+              }}>
+                Email Address
+              </label>
+              <input
                 type="email"
                 value={adminEmail}
                 onChange={(e) => setAdminEmail(e.target.value)}
                 placeholder="Enter your admin email"
                 required
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  transition: 'border-color 0.2s',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
               />
-            </Form.Group>
+            </div>
             
             {emailMessage && (
-              <Alert variant={emailMessage.includes('sent') ? 'info' : 'warning'} className="mb-3">
+              <div style={{
+                padding: '12px 16px',
+                borderRadius: '8px',
+                backgroundColor: emailMessage.includes('sent') ? '#dbeafe' : '#fef3c7',
+                color: emailMessage.includes('sent') ? '#1e40af' : '#92400e',
+                fontSize: '14px',
+                marginBottom: '24px'
+              }}>
                 {emailMessage}
-              </Alert>
+              </div>
             )}
             
-            <div className="d-flex justify-content-end gap-2">
-              <Button
-                variant="outline-secondary"
-                onClick={() => setShowEmailModal(false)}
-                disabled={emailLoading}
-              >
-                Cancel
-              </Button>
-              <LoadingButton
-                type="submit"
-                variant="success"
-                loading={emailLoading}
-                loadingText="Verifying..."
-                disabled={!adminEmail}
-              >
-                Send Verification Code
-              </LoadingButton>
-            </div>
-          </Form>
+            <button
+              onClick={handleEmailVerification}
+              disabled={emailLoading || !adminEmail}
+              style={{
+                width: '100%',
+                padding: '12px 24px',
+                backgroundColor: emailLoading || !adminEmail ? '#d1d5db' : '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: emailLoading || !adminEmail ? 'not-allowed' : 'pointer',
+                transition: 'background-color 0.2s',
+                marginBottom: '16px'
+              }}
+            >
+              {emailLoading ? 'Sending...' : 'Send Verification Code'}
+            </button>
+            
+            <button
+              onClick={() => setShowEmailModal(false)}
+              disabled={emailLoading}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#6b7280',
+                fontSize: '14px',
+                cursor: 'pointer',
+                textDecoration: 'none'
+              }}
+            >
+              ← Back to Sign in
+            </button>
+          </div>
         </Modal.Body>
       </Modal>
 
@@ -393,29 +474,28 @@ const LoginPage = ({ onLogin }) => {
           <Modal.Title>Admin Verification</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form onSubmit={handleVerifyOTP}>
-            <p className="text-muted mb-3">
-              We've sent a 6-digit verification code to <strong>{maskedEmail}</strong>. Please check your email and enter the code below.
+          <div className="text-center">
+            <h4 className="mb-2" style={{color: '#2d3748', fontWeight: '600'}}>Check your inbox</h4>
+            <p className="text-muted mb-4" style={{fontSize: '14px'}}>
+              Enter the verification code sent to<br/>
+              <strong>{maskedEmail}</strong>
             </p>
             
-            <Form.Group className="mb-3">
-              <Form.Label>Verification Code</Form.Label>
-              <Form.Control
-                type="text"
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="Enter 6-digit code"
-                maxLength="6"
-                className={!validateOTP(otpCode) && otpCode.length > 0 ? 'is-invalid' : ''}
-                required
-                aria-describedby="otp-help"
-              />
-              <Form.Text id="otp-help" className="text-muted">
-                Enter the 6-digit verification code sent to your email
-              </Form.Text>
-            </Form.Group>
+            <VerificationCodeInput
+              value={otpCode}
+              onCodeChange={setOtpCode}
+              onComplete={(code) => {
+                setOtpCode(code);
+                // Auto-submit when complete
+                if (validateOTP(code)) {
+                  handleVerifyOTP({ preventDefault: () => {} });
+                }
+              }}
+              error={!validateOTP(otpCode) && otpCode.length > 0}
+              disabled={otpLoading}
+            />
             
-            <div className="d-flex justify-content-between align-items-center mb-3">
+            <div className="d-flex justify-content-between align-items-center mt-4 mb-3">
               <small className="text-muted">
                 {otpCountdown > 0 ? (
                   <>⏰ Expires in: <strong>{formatTime(otpCountdown)}</strong></>
@@ -441,25 +521,18 @@ const LoginPage = ({ onLogin }) => {
               </Alert>
             )}
             
-            <div className="d-flex justify-content-end gap-2">
+            <div className="d-flex justify-content-center mt-3">
               <Button
-                variant="outline-secondary"
+                variant="link"
+                size="sm"
                 onClick={() => setShowOTPModal(false)}
                 disabled={otpLoading}
+                style={{color: '#718096'}}
               >
-                Cancel
+                ← Back to Sign up
               </Button>
-              <LoadingButton
-                type="submit"
-                variant="success"
-                loading={otpLoading}
-                loadingText="Verifying..."
-                disabled={!validateOTP(otpCode) || otpCountdown === 0}
-              >
-                🔐 Verify & Login
-              </LoadingButton>
             </div>
-          </Form>
+          </div>
         </Modal.Body>
       </Modal>
     </div>

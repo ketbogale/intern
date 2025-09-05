@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import VerificationCodeInput from './VerificationCodeInput';
 import './Dashboard.css';
 import './Dashboard-light.css';
 import './DatabaseReset.css';
@@ -2418,86 +2419,69 @@ const Dashboard = ({ user, onLogout }) => {
                 </div>
               )}
               
-              <form onSubmit={handleVerifyOTP} className="settings-form">
-                <div className="settings-section">
-                  <h4>
-                    <i className="fas fa-envelope"></i>
-                    Enter Verification Code
-                  </h4>
-                  <p style={{color: '#666', fontSize: '14px', marginBottom: '20px'}}>
-                    {emailVerificationMessage}
-                  </p>
-                  
-                  <div className="form-group">
-                    <label>Verification Code</label>
-                    <input
-                      type="text"
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="Enter 6-digit code"
-                      maxLength="6"
-                      style={{
-                        textAlign: 'center',
-                        fontSize: '18px',
-                        letterSpacing: '4px',
-                        fontFamily: 'monospace'
-                      }}
-                      required
-                    />
-                  </div>
-                  
-                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px'}}>
-                    <div style={{fontSize: '13px', color: '#666'}}>
-                      {otpCountdown > 0 ? (
-                        <>⏰ Code expires in: <strong>{formatTime(otpCountdown)}</strong></>
-                      ) : (
-                        <span style={{color: '#e53e3e'}}>⚠️ Code expired</span>
-                      )}
-                    </div>
-                    
-                    <button
-                      type="button"
-                      onClick={handleResendOTP}
-                      disabled={!canResendOTP || otpLoading}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: canResendOTP ? '#3182ce' : '#a0aec0',
-                        cursor: canResendOTP ? 'pointer' : 'not-allowed',
-                        fontSize: '13px',
-                        textDecoration: 'underline'
-                      }}
-                    >
-                      {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : 'Resend Code'}
-                    </button>
-                  </div>
-                </div>
+              <div className="settings-form" style={{textAlign: 'center', padding: '40px 20px'}}>
+                <h4 className="mb-2" style={{color: '#2d3748', fontWeight: '600'}}>Check your inbox</h4>
+                <p style={{color: '#666', fontSize: '14px', marginBottom: '30px'}}>
+                  {emailVerificationMessage}
+                </p>
                 
-                <div className="form-actions">
+                <VerificationCodeInput
+                  value={otpCode}
+                  onCodeChange={setOtpCode}
+                  onComplete={(code) => {
+                    setOtpCode(code);
+                    // Auto-submit when complete
+                    if (code.length === 6) {
+                      handleVerifyOTP({ preventDefault: () => {} });
+                    }
+                  }}
+                  error={otpCode.length > 0 && otpCode.length < 6}
+                  disabled={otpLoading}
+                />
+                
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '30px', marginBottom: '20px'}}>
+                  <div style={{fontSize: '13px', color: '#666'}}>
+                    {otpCountdown > 0 ? (
+                      <>⏰ Code expires in: <strong>{formatTime(otpCountdown)}</strong></>
+                    ) : (
+                      <span style={{color: '#e53e3e'}}>⚠️ Code expired</span>
+                    )}
+                  </div>
+                  
                   <button
                     type="button"
-                    className="btn-secondary"
-                    onClick={() => setShowOTPModal(false)}
-                    disabled={otpLoading}
+                    onClick={handleResendOTP}
+                    disabled={!canResendOTP || otpLoading}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: canResendOTP ? '#3182ce' : '#a0aec0',
+                      cursor: canResendOTP ? 'pointer' : 'not-allowed',
+                      fontSize: '13px',
+                      textDecoration: 'underline'
+                    }}
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn-primary"
-                    disabled={otpLoading || otpCode.length !== 6 || otpCountdown === 0}
-                  >
-                    {otpLoading ? (
-                      <>
-                        <i className="fas fa-spinner fa-spin"></i>
-                        Verifying...
-                      </>
-                    ) : (
-                      'Verify & Login'
-                    )}
+                    {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : 'Resend Code'}
                   </button>
                 </div>
-              </form>
+                
+                <div className="d-flex justify-content-center">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowOTPModal(false)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#718096',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    ← Back to Settings
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -3143,24 +3127,20 @@ const Dashboard = ({ user, onLogout }) => {
                   </div>
                   
                   {databaseConfig.gdprCompliance && (
-                    <div className="gdpr-actions">
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        onClick={handleGDPRExport}
-                        disabled={databaseConfigLoading}
+                    <div className="d-flex justify-content-center mt-4">
+                      <button 
+                        type="button" 
+                        onClick={() => setShowEmailVerification(false)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#718096',
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                          textDecoration: 'none'
+                        }}
                       >
-                        <i className="fas fa-download"></i>
-                        Export All Data
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-danger"
-                        onClick={handleGDPRPurge}
-                        disabled={databaseConfigLoading}
-                      >
-                        <i className="fas fa-trash"></i>
-                        Purge Old Data
+                        ← Back to Settings
                       </button>
                     </div>
                   )}

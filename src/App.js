@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import './App.css';
 import LoginPage from './components/LoginPage';
 import AttendancePage from './components/AttendancePage';
 import Dashboard from './components/Dashboard';
 import EmailChangeVerification from './components/EmailChangeVerification';
+import AdminEmailVerification from './components/AdminEmailVerification';
+import AdminOTPVerification from './components/AdminOTPVerification';
+import EmailVerificationCode from './components/EmailVerificationCode';
 
-function App() {
+const AppContent = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const location = useLocation();
 
   // Check authentication status on app load and when tab becomes visible
   useEffect(() => {
@@ -45,13 +50,20 @@ function App() {
         const data = await response.json();
         console.log('📋 Auth data:', data);
         
+        console.log('🔍 Auth data details:', {
+          isAuthenticated: data.isAuthenticated,
+          hasUser: !!data.user,
+          userRole: data.user?.role,
+          fullData: data
+        });
+        
         if (data.isAuthenticated && data.user && data.user.role) {
           console.log('✅ Setting user with role:', data.user.role);
           console.log('✅ Full user data:', data.user);
           setIsLoggedIn(true);
           setUser(data.user);
         } else {
-          console.log('❌ No valid auth data');
+          console.log('❌ No valid auth data - isAuthenticated:', data.isAuthenticated, 'user:', data.user);
           setIsLoggedIn(false);
           setUser(null);
         }
@@ -132,11 +144,11 @@ function App() {
     );
   }
 
-  // Check if current URL is for email verification
-  const currentPath = window.location.pathname;
+  // Check current URL for special routes
+  const currentPath = location.pathname;
   const isEmailVerificationRoute = currentPath.startsWith('/admin/verify-email-change/');
   
-  // If it's email verification route, show that component
+  // Handle special routes
   if (isEmailVerificationRoute) {
     const token = currentPath.split('/admin/verify-email-change/')[1];
     return (
@@ -148,12 +160,28 @@ function App() {
 
   return (
     <div className="App">
-      {!isLoggedIn ? (
-        <LoginPage onLogin={handleLogin} />
-      ) : (
-        renderUserInterface()
-      )}
+      <Routes>
+        <Route path="/admin-email-verification" element={<AdminEmailVerification />} />
+        <Route path="/admin-otp-verification" element={<AdminOTPVerification />} />
+        <Route path="/email-verification" element={<EmailVerificationCode />} />
+        <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+        <Route path="/" element={
+          !isLoggedIn ? (
+            <LoginPage onLogin={handleLogin} />
+          ) : (
+            renderUserInterface()
+          )
+        } />
+      </Routes>
     </div>
+  );
+};
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
   );
 }
 

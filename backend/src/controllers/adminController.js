@@ -623,36 +623,19 @@ const checkAdminCredentials = async (req, res) => {
 // Send OTP for admin login
 const sendAdminOTP = async (req, res) => {
   try {
-    const { username, password, email } = req.body;
+    const { email } = req.body;
     
     // Validate required fields
-    if (!username || !password || !email) {
+    if (!email) {
       return res.status(400).json({
         success: false,
-        message: 'Username, password, and email are required'
+        message: 'Email is required'
       });
     }
 
-    // Find admin user in database
-    const adminUser = await Staff.findOne({ username, role: 'admin' });
+    // Find admin user by email
+    const adminUser = await Staff.findOne({ email, role: 'admin' });
     if (!adminUser) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
-
-    // Verify password
-    const isPasswordValid = await adminUser.comparePassword(password);
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
-
-    // Verify email matches database
-    if (adminUser.email !== email) {
       return res.status(401).json({
         success: false,
         message: 'Invalid email address'
@@ -847,11 +830,162 @@ const resendAdminOTP = async (req, res) => {
   }
 };
 
+// Verify email change code (for new email verification)
+const verifyEmailChangeCode = async (req, res) => {
+  try {
+    const { otp, newEmail } = req.body;
+    
+    if (!otp || !newEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification code and email are required'
+      });
+    }
+    
+    // Find OTP record for the new email
+    const otpRecord = await OTP.findOne({
+      email: newEmail,
+      otp: otp,
+      purpose: 'credential_update'
+    });
+    
+    if (!otpRecord) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired verification code'
+      });
+    }
+    
+    // Check attempts limit
+    if (otpRecord.attempts >= 3) {
+      await OTP.deleteOne({ _id: otpRecord._id });
+      return res.status(429).json({
+        success: false,
+        message: 'Too many failed attempts. Please request a new code.'
+      });
+    }
+    
+    // Update admin email in database
+    const adminId = otpRecord.adminId;
+    const adminUser = await Staff.findById(adminId);
+    
+    if (!adminUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Admin user not found'
+      });
+    }
+    
+    // Update admin email
+    adminUser.email = newEmail;
+    await adminUser.save();
+    
+    // Create admin session after successful email verification
+    req.session.user = {
+      id: adminUser._id,
+      username: adminUser.username,
+      role: adminUser.role,
+      email: adminUser.email
+    };
+    
+    // Clean up OTP records
+    await OTP.deleteMany({ 
+      $or: [
+        { _id: otpRecord._id },
+        { adminId: adminId, purpose: 'email_change_approval' }
+      ]
+    });
+    
+    res.json({
+      success: true,
+      message: 'Email verification successful! Your email has been updated.'
+    });
+    
+  } catch (error) {
+    console.error('Error verifying email change code:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while verifying code'
+    });
+  }
+};
+
+// Resend email change verification code
+const resendEmailChangeCode = async (req, res) => {
+  try {
+    const { newEmail } = req.body;
+    
+    if (!newEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email address is required'
+      });
+    }
+    
+    // Find existing OTP record for this email
+    const existingOTP = await OTP.findOne({
+      email: newEmail,
+      purpose: 'credential_update'
+    });
+    
+    if (!existingOTP) {
+      return res.status(400).json({
+        success: false,
+        message: 'No verification request found for this email'
+      });
+    }
+    
+    // Check if there's a recent OTP (less than 60 seconds old)
+    const timeDiff = Date.now() - existingOTP.createdAt.getTime();
+    if (timeDiff < 60000) { // 60 seconds
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${Math.ceil((60000 - timeDiff) / 1000)} seconds before requesting a new code`
+      });
+    }
+    
+    // Generate new OTP
+    const { generateOTP } = require('../services/emailService');
+    const otp = generateOTP();
+    
+    // Update existing OTP record
+    existingOTP.otp = otp;
+    existingOTP.attempts = 0;
+    existingOTP.createdAt = new Date();
+    await existingOTP.save();
+    
+    // Send new OTP
+    const { sendOTPEmail } = require('../services/emailService');
+    const emailSent = await sendOTPEmail(newEmail, otp, 'Email Change Verification');
+    
+    if (!emailSent) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send verification code'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'New verification code sent'
+    });
+    
+  } catch (error) {
+    console.error('Error resending email change code:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while resending code'
+    });
+  }
+};
+
 module.exports = {
   getAdminProfile,
   updateAdminCredentials,
   sendEmailChangeApprovalLink,
   verifyEmailChangeApproval,
+  verifyEmailChangeCode,
+  resendEmailChangeCode,
   sendAdminApprovalOTP,
   checkAdminCredentials,
   sendAdminOTP,

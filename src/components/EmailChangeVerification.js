@@ -31,9 +31,9 @@ const EmailChangeVerification = ({ token }) => {
         setNewEmail(data.newEmail);
         setMessage(data.message);
         
-        // Redirect to dashboard immediately with verification modal trigger
+        // Redirect to email verification code page
         setTimeout(() => {
-          window.location.href = '/?showEmailVerification=true&newEmail=' + encodeURIComponent(data.newEmail);
+          window.location.href = '/email-verification?newEmail=' + encodeURIComponent(data.newEmail);
         }, 2000);
       } else {
         setSuccess(false);
@@ -82,25 +82,15 @@ const EmailChangeVerification = ({ token }) => {
                 
                 {success && newEmail && (
                   <div className="success-details">
-                    <p><strong>Next Step:</strong></p>
-                    <p>A verification code has been sent to <strong>{newEmail}</strong></p>
-                    <p>Please check your new email and enter the verification code in the dashboard settings to complete the email change.</p>
+                    <p>Verification code sent to <strong>{newEmail}</strong></p>
                   </div>
                 )}
               </div>
               
-              <div className="action-buttons">
-                <button 
-                  onClick={handleReturnToDashboard}
-                  className="return-button"
-                >
-                  Return to Dashboard
-                </button>
-              </div>
               
               {success && (
                 <div className="auto-redirect">
-                  <p>You will be automatically redirected to the dashboard in 2 seconds to enter the verification code...</p>
+                  <p>Redirecting to verification page...</p>
                 </div>
               )}
             </div>
