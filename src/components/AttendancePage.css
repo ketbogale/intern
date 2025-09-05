@@ -1,405 +1,228 @@
-/* AttendancePage Styles */
+/* Minimal AttendancePage Styles - Most styling now handled by React Bootstrap */
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css');
 
-/* Meal Window Warning Styles */
-.meal-window-warning {
-  background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
-  color: #2d3436;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  font-weight: 500;
-  border-left: 4px solid #e17055;
-}
+/* Only keep essential custom styles that Bootstrap doesn't handle */
 
-.countdown-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
-}
-
-.countdown-timer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 5px;
-}
-
-.countdown-number {
-  background: rgba(45, 52, 54, 0.1);
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-weight: bold;
-  font-size: 1.1em;
-  color: green;
-  min-width: 60px;
-  text-align: center;
-  border: 2px solid rgba(45, 52, 54, 0.2);
-}
-
-.countdown-label {
-  font-size: 0.9em;
-  opacity: 0.8;
-  font-weight: normal;
-}
-
-.meal-window-warning i {
-  font-size: 18px;
-  color: #2d3436;
-  color: white;
-}
-
-.meal-window-warning span {
-  font-weight: 600;
-  font-size: 16px;
-}
-
-.attendance-container {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #0f1419;
-  margin: 0;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.attendance-header {
-  background: rgba(30, 42, 58, 0.95);
+/* ===== Navbar ===== */
+.attendance-navbar {
+  padding: 0.5rem 1.5rem !important;
+  background: rgba(30, 42, 58, 0.95) !important;
   backdrop-filter: blur(10px);
-  color: #ecf0f1;
-  padding: 16px 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.2);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
+  min-height: 60px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  margin-bottom: 1.13rem;
+}
+
+.navbar-brand-custom {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.navbar-brand-custom img {
+  width: 50px;
+  height: 50px;
+}
+
+.navbar-title {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #ecf0f1 !important;
+  margin: 0;
+}
+
+.logout-button {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #ecf0f1 !important;
+  padding: 7px 1.4rem !important;
+  font-size: 0.85rem !important;
+  border-radius: 13px !important;
+  transition: all 0.2s ease !important;
+}
+
+.logout-button:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #f56565 !important;
+  border-color: rgba(245, 101, 101, 0.3) !important;
+}
+
+/* ===== Cards ===== */
+.attendance-card{
+  background: rgba(30, 41, 59, 0.85);
+  border: none;
+  border-radius: 1.2rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  color: #f8fafc;
+  padding: 1rem;
+}
+.student-card {
+  background: rgba(30, 41, 59, 0.85);
+  border: none;
+  border-radius: 1.2rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  color: #f8fafc;
+  padding: 1.2rem;
+}
+
+
+
+/* ===== Alerts & Messages ===== */
+.alert {
+  border-radius: 0.75rem;
+  font-size: 0.95rem;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(8px);
+}
+
+.alert-success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(34, 197, 94, 0.15));
+  border-left: 4px solid #10b981;
+  color: #d1fae5;
+  font-weight: 600;
+}
+
+.alert-danger {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(220, 38, 38, 0.15));
+  border-left: 4px solid #ef4444;
+  color: #fee2e2;
+  font-weight: 600;
+}
+
+.alert-warning {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.25), rgba(245, 158, 11, 0.15));
+  border-left: 4px solid #fbbf24;
+  color: #fef9c3;
+  font-weight: 600;
+}
+
+/* ===== Message Animations ===== */
+.message-fade-in {
+  animation: messageSlideIn 0.4s ease-out;
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-15px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ===== Card Containers ===== */
+.attendance-input-card {
+  background: rgba(52, 73, 94, 0.85);
+  backdrop-filter: blur(15px);
+  min-height: auto;
+  height: fit-content !important;
+  border-radius: 70px;
+}
+
+.attendance-input-card .card-body {
+  padding: 0.5rem;
+  padding-bottom: 0.25rem;
+}
+
+.attendance-input-card .alert {
+  margin-bottom: 0.5rem;
+}
+
+.attendance-input-card .form-group {
+  margin-bottom: 0.5rem;
+}
+
+.attendance-input-card .btn {
+  margin-bottom: 0.5rem;
+}
+
+.attendance-input-card .alert:last-child {
   margin-bottom: 0;
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.header-left h1 {
-  color: #ecf0f1;
-  font-size: 1.5rem;
-  font-weight: 500;
-  margin: 0;
-}
-
-.header-left img {
-  width: 50px;
-  height: 50px;
-  border-radius: 0;
-  object-fit: contain;
-}
-
-.logo-section {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.logo-section img {
-  width: 50px;
-  height: 50px;
-  border-radius: 0;
-  padding: 0;
-  margin: 0 12px 0 0;
-  border: none;
-}
-
-.brand-name {
-  font-size: 24px;
-  font-weight: 600;
-  color: white;
-  margin: 0;
-}
-
-.logout-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  color: white;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-  font-size: 14px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.logout-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.attendance-content {
-  flex: 1;
-  padding: 32px;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: calc(100vh - 80px);
-}
-
-.attendance-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 40px;
-  width: 100%;
-  max-width: 1200px;
-  align-items: start;
-}
-
-.input-section {
-  display: flex;
-  flex-direction: column;
-}
-
-.input-card {
+.student-info-card {
   background: rgba(52, 73, 94, 0.85);
   backdrop-filter: blur(15px);
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(149, 165, 166, 0.2);
+  min-height: auto;
+  height: fit-content;
 }
 
-.input-card label {
-  font-size: 16px;
-  color: #bdc3c7;
-  margin-bottom: 12px;
-  font-weight: 500;
-  display: block;
-}
-
-.input-card input {
-  width: 100%;
-  padding: 16px;
-  border-radius: 10px;
-  border: 1px solid rgba(149, 165, 166, 0.3);
-  font-size: 16px;
-  margin-bottom: 20px;
-  outline: none;
-  transition: all 0.3s ease;
-  box-sizing: border-box;
-  background: rgba(44, 62, 80, 0.6);
-  color: #ecf0f1;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.input-card input:focus {
-  border-color: #74b9ff;
-  box-shadow: 0 0 0 3px rgba(116, 185, 255, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.1);
-  background: rgba(44, 62, 80, 0.8);
-}
-
-.check-btn {
-  background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  padding: 16px 24px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  width: 100%;
-  transition: all 0.3s ease;
-  box-shadow: 0 6px 20px rgba(116, 185, 255, 0.25);
-}
-
-.check-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #0984e3 0%, #74b9ff 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(116, 185, 255, 0.35);
-}
-
-.check-btn:disabled {
-  background: #bdc3c7;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.attendance-message {
-  margin-top: 16px;
-  padding: 16px;
-  border-radius: 8px;
-  font-size: 1.1rem;
-  font-weight: 500;
+/* ===== Status Messages ===== */
+.status-message-enhanced {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: bold;
   text-align: center;
-  animation: fadeIn 0.3s ease-in;
-}
-
-.attendance-message.allowed {
-  background: rgba(39, 174, 96, 0.15);
-  border: 1px solid rgba(39, 174, 96, 0.4);
-  border-left: 4px solid #27ae60;
-  color: #2ecc71;
-}
-
-.attendance-message.already_used {
-  background: #fef2f2;
-  border: 1px solid #ef4444;
-  border-left: 4px solid #ef4444;
-  color: #991b1b;
-}
-
-.attendance-message.invalid {
-  background: #fef2f2;
-  border: 1px solid #ef4444;
-  border-left: 4px solid #ef4444;
-  color: #991b1b;
-}
-
-.attendance-message.not-allowed {
-  background: rgba(231, 76, 60, 0.15);
-  border: 1px solid rgba(231, 76, 60, 0.4);
-  border-left: 4px solid #e74c3c;
-  color: #e74c3c;
-}
-
-.result-section {
-  display: flex;
-  flex-direction: column;
-}
-
-.student-card {
-  background: rgba(52, 73, 94, 0.85);
-  backdrop-filter: blur(15px);
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(149, 165, 166, 0.2);
-  animation: fadeIn 0.3s ease-in;
-}
-
-.status-message {
-  font-size: 1.4rem;
-  font-weight: 500;
-  text-align: center;
-  padding: 16px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-}
-
-.status-message.allowed {
-  background: rgba(39, 174, 96, 0.15);
-  border: 1px solid rgba(39, 174, 96, 0.4);
-  border-left: 4px solid #27ae60;
-  color: #2ecc71;
-}
-
-.status-message.already_used {
-  background: #fef2f2;
-  border: 1px solid #ef4444;
-  border-left: 4px solid #ef4444;
-  color: #991b1b;
-}
-
-.status-message.invalid {
-  background: #fef2f2;
-  border: 1px solid #ef4444;
-  border-left: 4px solid #ef4444;
-  color: #991b1b;
-}
-
-.status-message.not-allowed {
-  background: rgba(231, 76, 60, 0.15);
-  border: 1px solid rgba(231, 76, 60, 0.4);
-  border-left: 4px solid #e74c3c;
-  color: #e74c3c;
-}
-
-.student-info-row {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-}
-
-.student-details {
-  flex: 1;
-  color: #bdc3c7;
-}
-
-.student-info h3 {
-  margin: 0 0 8px 0;
-  color: #ecf0f1;
-  font-size: 1.5rem;
-  font-weight: 500;
-}
-
-.student-info p {
-  margin: 4px 0;
-  color: #bdc3c7;
   font-size: 1rem;
-  font-weight: 500;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(8px);
+  border: none;
+  animation: messageSlideIn 0.4s ease-out;
+  margin-bottom: 1rem;
 }
 
-.student-details strong {
-  color: #74b9ff;
-  margin-right: 8px;
+.status-allowed {
+  background: rgba(39, 174, 96, 0.15);
+  border: 1px solid rgba(39, 174, 96, 0.4);
+  border-left: 4px solid #27ae60;
 }
 
+.status-denied {
+  background: #fef2f2;
+  border: 1px solid #ef4444;
+  border-left: 4px solid #ef4444;
+  color: #991b1b;
+}
+
+.status-already-used {
+  background: #fef2f2;
+  border: 1px solid #ef4444;
+  border-left: 4px solid #ef4444;
+  color: #991b1b;
+}
+
+/* ===== Student Card ===== */
 .student-photo {
-  flex-shrink: 0;
-}
-
-.student-photo img {
   width: 200px;
-  height: 200px;
-  border-radius: 12px;
+  height: 2000px;
+  border-radius: 50%;
+  border: 3px solid #22d3ee;
   object-fit: cover;
-  border: 3px solid #74b9ff;
-  box-shadow: 0 6px 20px rgba(116, 185, 255, 0.3);
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  box-shadow: 0 5px 15px rgba(34, 211, 238, 0.4);
 }
 
 
-/* Responsive Design */
+/* ===== Card Spacing ===== */
+.card-spacing-left {
+  margin-right: 2rem;
+  margin-left: 2rem;
+}
+
+.card-spacing-right {
+  margin-left: 2rem;
+}
+
+/* ===== Responsive ===== */
 @media (max-width: 768px) {
-  .attendance-layout {
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
-  
-  .attendance-content {
-    padding: 16px;
-  }
-  
-  .input-card,
+  .attendance-card,
   .student-card {
-    padding: 20px;
+    margin-bottom: 1rem;
+  }
+
+  .student-photo {
+    width: 90px;
+    height: 90px;
   }
   
-  .student-info-row {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 16px;
-  }
-  
-  .student-photo img {
-    width: 150px;
-    height: 150px;
-  }
-  
-  .brand-name {
-    font-size: 18px;
+  .card-spacing-left,
+  .card-spacing-right {
+    margin-left: 0;
+    margin-right: 0;
   }
 }

@@ -67,34 +67,11 @@ const requireAuth = (req, res, next) => {
   }
 };
 
-// Serve static files with authentication check for attendance.html
-app.use(
-  express.static(path.join(__dirname, "../../front-end"), {
-    setHeaders: (res, path) => {
-      if (path.endsWith("attendance.html")) {
-        res.setHeader("Cache-Control", "no-cache");
-      }
-    },
-  }),
-);
 app.use("/public", express.static(path.join(__dirname, "../public")));
 
-// Protect attendance.html route
-app.get("/html/attendance.html", (req, res) => {
-  if (req.session && req.session.user) {
-    res.sendFile(path.join(__dirname, "../../front-end/html/attendance.html"));
-  } else {
-    res.redirect("/html/login.html");
-  }
-});
-
-// Root route redirect
+// Root route - redirect to React app
 app.get("/", (req, res) => {
-  if (req.session && req.session.user) {
-    res.redirect("/html/attendance.html");
-  } else {
-    res.redirect("/html/login.html");
-  }
+  res.sendFile(path.join(__dirname, "../../public/index.html"));
 });
 
 app.use("/api", loginRoutes);

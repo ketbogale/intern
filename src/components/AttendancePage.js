@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Container, Row, Col, Card, Form, Button, Alert, Navbar, Badge } from 'react-bootstrap';
 import './AttendancePage.css';
 
 const AttendancePage = ({ user, onLogout }) => {
@@ -15,10 +16,13 @@ const AttendancePage = ({ user, onLogout }) => {
   const successAudioRef = useRef(null);
   const errorAudioRef = useRef(null);
 
+  // API base URL from environment or fallback
+  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+
   // Fetch meal windows from server
   const fetchMealWindows = async () => {
     try {
-      const response = await fetch('/api/meal-windows');
+      const response = await fetch(`${API_BASE_URL}/api/meal-windows`);
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.mealWindows) {
@@ -143,14 +147,20 @@ const AttendancePage = ({ user, onLogout }) => {
     fetchMealWindows();
   }, []);
 
-  // Re-check whenever meal windows change
+  // Re-check whenever meal windows change with more responsive timing
   useEffect(() => {
     if (Object.keys(mealWindows).length > 0) {
       checkMealWindow();
-      const interval = setInterval(checkMealWindow, 60000);
+      const interval = setInterval(checkMealWindow, 15000); // Check every 15 seconds
       return () => clearInterval(interval);
     }
   }, [mealWindows, checkMealWindow]);
+
+  // Periodic refresh of meal windows (every 5 minutes)
+  useEffect(() => {
+    const refreshInterval = setInterval(fetchMealWindows, 300000); // 5 minutes
+    return () => clearInterval(refreshInterval);
+  }, []);
 
   // Countdown timer in seconds
   useEffect(() => {
@@ -162,15 +172,27 @@ const AttendancePage = ({ user, onLogout }) => {
     }
   }, [countdownSeconds]);
 
-  const playSound = (isSuccess) => {
+  const playSound = (isSuccess, retryCount = 0) => {
     try {
-      if (isSuccess && successAudioRef.current) {
-        successAudioRef.current.play();
-      } else if (!isSuccess && errorAudioRef.current) {
-        errorAudioRef.current.play();
+      const audio = isSuccess ? successAudioRef.current : errorAudioRef.current;
+      if (audio) {
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.log('Audio playback failed:', error);
+            // Retry once after a short delay
+            if (retryCount < 1) {
+              setTimeout(() => playSound(isSuccess, retryCount + 1), 500);
+            }
+          });
+        }
       }
     } catch (error) {
       console.log('Audio playback failed:', error);
+      // Retry once after a short delay
+      if (retryCount < 1) {
+        setTimeout(() => playSound(isSuccess, retryCount + 1), 500);
+      }
     }
   };
 
@@ -189,7 +211,7 @@ const AttendancePage = ({ user, onLogout }) => {
     setStudent(null);
 
     try {
-      const response = await fetch('/api/attendance', {
+      const response = await fetch(`${API_BASE_URL}/api/attendance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId: studentId.trim() }),
@@ -246,7 +268,7 @@ const AttendancePage = ({ user, onLogout }) => {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/logout', { method: 'POST' });
+      await fetch(`${API_BASE_URL}/api/logout`, { method: 'POST' });
       onLogout();
     } catch (error) {
       console.error('Logout error:', error);
@@ -255,99 +277,156 @@ const AttendancePage = ({ user, onLogout }) => {
   };
 
   return (
-    <div className="attendance-container">
-      <div className="attendance-header">
-        <div className="header-left">
-          <img src="/images/salale_university_logo.png" alt="Salale University" />
-          <h1>Salale University</h1>
-        </div>
-        <button onClick={handleLogout} className="logout-btn">
+    <div className="min-vh-100" style={{background: 'linear-gradient(135deg, #0f1419 0%, #1e2a3a 100%)'}}>
+      {/* Header */}
+      <Navbar className="attendance-navbar">
+        <Navbar.Brand className="navbar-brand-custom">
+          <img 
+            src="/images/salale_university_logo.png" 
+            alt="Salale University"
+          />
+          <h1 className="navbar-title">Salale University</h1>
+        </Navbar.Brand>
+        <Button 
+          onClick={handleLogout}
+          className="logout-button ms-auto d-flex align-items-center gap-1"
+        >
           <i className="fas fa-sign-out-alt"></i>
           Logout
-        </button>
-      </div>
+        </Button>
+      </Navbar>
 
-      <div className="attendance-content">
-        <div className="attendance-layout">
-          {/* Left side: Input form */}
-          <div className="input-section">
-            <div className="input-card">
-              {mealWindowBlocked && nextMealInfo && (
-                <div className="meal-window-warning">
-                  <i className="fas fa-clock"></i>
-                  <div className="countdown-info">
-                    <span>{nextMealInfo}</span>
-                    {countdownSeconds > 0 && (
-                      <div className="countdown-timer">
-                        <span className="countdown-number">
+      {/* Main Content */}
+      <Container fluid className="py-2">
+        <Row className="">
+          <Col lg={5} className="mb-2 card-spacing-left">
+            <Card className="shadow border-0 attendance-input-card">
+              <Card.Body>
+                {/* Meal Window Warning */}
+                {mealWindowBlocked && nextMealInfo && (
+                  <Alert variant="warning" className="d-flex align-items-center mb-2 py-1">
+                    <i className="fas fa-clock me-2 small"></i>
+                    <div className="flex-grow-1">
+                      <div className="fw-semibold" style={{fontSize: '0.8rem'}}>{nextMealInfo}</div>
+                      {countdownSeconds > 0 && (
+                        <Badge bg="success" className="px-2 py-1 mt-1" style={{fontSize: '0.7rem'}}>
                           {countdownSeconds >= 3600
                             ? `${Math.floor(countdownSeconds / 3600)}h ${Math.floor((countdownSeconds % 3600) / 60)}m`
                             : countdownSeconds >= 60
                             ? `${Math.floor(countdownSeconds / 60)}m ${countdownSeconds % 60}s`
                             : `${countdownSeconds}s`}
-                        </span>
-                        <span className="countdown-label">remaining</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              <form onSubmit={handleSubmit}>
-                <label htmlFor="studentId">Student ID (Manual or Scan Barcode):</label>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  id="studentId"
-                  value={studentId}
-                  onChange={(e) => setStudentId(e.target.value)}
-                  placeholder={mealWindowBlocked ? "Meal window closed" : "Enter ID"}
-                  autoComplete="off"
-                  disabled={mealWindowBlocked}
-                  required
-                />
-                <button type="submit" className="check-btn" disabled={isLoading || mealWindowBlocked}>
-                  {mealWindowBlocked ? 'Meal Window Closed' : isLoading ? 'Checking...' : 'Check Attendance'}
-                </button>
-              </form>
+                        </Badge>
+                      )}
+                    </div>
+                  </Alert>
+                )}
 
-              {message && (
-                <div className={`attendance-message ${status}`}>
-                  {message}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right side: Student information */}
-          <div className="result-section">
-            {student && (
-              <div className="student-card">
-                <div className={`status-message ${status}`}>
-                  {status === 'allowed' ? '✅ ALLOWED' :
-                   status === 'already_used' ? '❌ ALREADY USED' :
-                   '❌ DENIED'}
-                </div>
-                <div className="student-info-row">
-                  <div className="student-details">
-                    <div><strong>Name:</strong> {student.name}</div>
-                    <div><strong>ID Number:</strong> {student.id}</div>
-                    <div><strong>Program:</strong> {student.department}</div>
-                  </div>
-                  <div className="student-photo">
-                    <img
-                      src={student.photoUrl || '/images/default-student.png'}
-                      alt="Student Photo"
-                      onError={(e) => {
-                        e.target.src = '/images/default-student.png';
+                {/* Input Form */}
+                <Form onSubmit={handleSubmit}>
+                  <Form.Group className="mb-1">
+                    <Form.Label className="text-light fw-semibold" style={{fontSize: '0.85rem', marginBottom: '0.25rem'}}>Student ID (Manual or Scan Barcode):</Form.Label>
+                    <Form.Control
+                      ref={inputRef}
+                      type="text"
+                      value={studentId}
+                      onChange={(e) => setStudentId(e.target.value)}
+                      placeholder={mealWindowBlocked ? "Meal window closed" : "Enter ID"}
+                      autoComplete="off"
+                      disabled={mealWindowBlocked}
+                      required
+                      style={{
+                        background: 'rgba(44, 62, 80, 0.6)',
+                        border: '1px solid rgba(149, 165, 166, 0.3)',
+                        color: '#ecf0f1',
+                        padding: '0.4rem 0.75rem',
+                        fontSize: '0.9rem'
                       }}
                     />
+                  </Form.Group>
+                  <Button 
+                    type="submit" 
+                    variant="primary" 
+                    className="w-100"
+                    disabled={isLoading || mealWindowBlocked}
+                    style={{
+                      background: mealWindowBlocked ? '#bdc3c7' : 'linear-gradient(135deg, #74b9ff 0%, #0984e3 100%)',
+                      border: 'none',
+                      padding: '0.5rem',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    {mealWindowBlocked ? 'Meal Window Closed' : isLoading ? 'Checking...' : 'Check Attendance'}
+                  </Button>
+                </Form>
+
+                {/* Message */}
+                {message && (
+                  <Alert 
+                    variant={status === 'allowed' ? 'success' : 'danger'} 
+                    className="mt-3 text-center fw-semibold py-3 message-fade-in mb-0"
+                    style={{fontSize: '0.8rem'}}
+                  >
+                    {message}
+                  </Alert>
+                )}
+              </Card.Body>
+            </Card>
+          </Col>
+
+          {/* Student Information */}
+          <Col lg={5} className="card-spacing-right">
+            {student && (
+              <Card className="shadow border-0 student-info-card">
+                <Card.Body className="p-2">
+                  <div 
+                    className={`status-message-enhanced message-fade-in ${
+                      status === 'allowed' ? 'status-allowed' :
+                      status === 'already_used' ? 'status-already-used' :
+                      'status-denied'
+                    }`}
+                  >
+                    {status === 'allowed' ? '✅ ALLOWED' :
+                     status === 'already_used' ? '⚠️ ALREADY USED' :
+                     '❌ DENIED'}
                   </div>
-                </div>
-              </div>
+                  
+                  <Row>
+                    <Col md={5}>
+                      <div className="text-light">
+                        <div className="mb-1" style={{fontSize: '0.8rem'}}>
+                          <strong className="text-info">Name:</strong> {student.name}
+                        </div>
+                        <div className="mb-1" style={{fontSize: '0.8rem'}}>
+                          <strong className="text-info">ID:</strong> {student.id}
+                        </div>
+                        <div className="mb-1" style={{fontSize: '0.8rem'}}>
+                          <strong className="text-info">Program:</strong> {student.department}
+                        </div>
+                      </div>
+                    </Col>
+                    <Col md={7} className="text-center">
+                      <img
+                        src={student.photoUrl || '/images/default-student.png'}
+                        alt="Student Photo"
+                        className="img-fluid rounded"
+                        style={{
+                          width: '180px',
+                          height: '180px',
+                          objectFit: 'cover',
+                          border: '2px solid #74b9ff'
+                        }}
+                        onError={(e) => {
+                          e.target.src = '/images/default-student.png';
+                        }}
+                      />
+                    </Col>
+                  </Row>
+                </Card.Body>
+              </Card>
             )}
-          </div>
-        </div>
-      </div>
+          </Col>
+        </Row>
+      </Container>
 
       {/* Audio elements */}
       <audio ref={successAudioRef} preload="auto">
