@@ -3,8 +3,8 @@ import { Container, Row, Col, Card, Form, Button, Alert, Modal, Navbar, InputGro
 import VerificationCodeInput from './VerificationCodeInput';
 import './LoginPage.css';
 
-// Constants
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+// Constants - use relative URLs for security
+const API_BASE_URL = '';
 const MESSAGES = {
   NETWORK_ERROR: '🌐 Network error occurred. Please check your internet connection and try again.',
   LOGIN_SUCCESS_WARNING: 'Login successful! Note: If you have other tabs open, they will be logged out automatically.',

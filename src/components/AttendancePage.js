@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Navbar, Badge } from 'react-bootstrap';
+import BarcodeScanner from './BarcodeScanner';
 import './AttendancePage.css';
 
 const AttendancePage = ({ user, onLogout }) => {
@@ -12,12 +13,14 @@ const AttendancePage = ({ user, onLogout }) => {
   const [nextMealInfo, setNextMealInfo] = useState('');
   const [countdownSeconds, setCountdownSeconds] = useState(0);
   const [mealWindows, setMealWindows] = useState({});
+  const [barcodeScanningEnabled, setBarcodeScanningEnabled] = useState(true);
+  const [targetTime, setTargetTime] = useState(null);
   const inputRef = useRef(null);
   const successAudioRef = useRef(null);
   const errorAudioRef = useRef(null);
 
-  // API base URL from environment or fallback
-  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+  // API base URL - use relative URLs for security
+  const API_BASE_URL = '';
 
   // Fetch meal windows from database
   const fetchMealWindows = useCallback(async () => {
@@ -97,26 +100,19 @@ const AttendancePage = ({ user, onLogout }) => {
     setMealWindowBlocked(!isInMealWindow);
 
     if (timeUntilOpen) {
-      setCountdownSeconds(timeUntilOpen * 60);
-
-      const hours = Math.floor(timeUntilOpen / 60);
-      const minutes = timeUntilOpen % 60;
-
+      // Calculate the exact target time when the window opens
       const nextWindowTime = new Date();
       nextWindowTime.setMinutes(nextWindowTime.getMinutes() + timeUntilOpen);
+      setTargetTime(nextWindowTime);
+      
       const timeString = nextWindowTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      let timeText;
-      if (hours > 0) {
-        timeText = `${hours}h ${minutes}m (${timeString})`;
-      } else {
-        timeText = `${minutes}m (${timeString})`;
-      }
-
+      // Set the meal info without time duration (countdown badge will show the time)
       setNextMealInfo(
-        `${nextMealType.charAt(0).toUpperCase() + nextMealType.slice(1)} window opens in ${timeText}`
+        `${nextMealType.charAt(0).toUpperCase() + nextMealType.slice(1)} window opens at ${timeString}`
       );
     } else {
+      setTargetTime(null);
       setCountdownSeconds(0);
       setNextMealInfo('');
     }
@@ -161,17 +157,34 @@ const AttendancePage = ({ user, onLogout }) => {
     return () => clearInterval(refreshInterval);
   }, [fetchMealWindows]);
 
-  // Countdown timer in seconds
+  // Stable countdown timer based on target time
   useEffect(() => {
-    if (countdownSeconds > 0) {
-      const interval = setInterval(() => {
-        setCountdownSeconds(prev => Math.max(0, prev - 1));
-      }, 1000);
-      return () => clearInterval(interval);
+    if (!targetTime) {
+      setCountdownSeconds(0);
+      return;
     }
-  }, [countdownSeconds]);
 
-  const playSound = (isSuccess, retryCount = 0) => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const timeDiff = targetTime.getTime() - now.getTime();
+      
+      if (timeDiff <= 0) {
+        setCountdownSeconds(0);
+        setTargetTime(null);
+      } else {
+        setCountdownSeconds(Math.ceil(timeDiff / 1000));
+      }
+    };
+
+    // Update immediately
+    updateCountdown();
+
+    // Then update every second
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [targetTime]);
+
+  const playSound = useCallback((isSuccess, retryCount = 0) => {
     try {
       const audio = isSuccess ? successAudioRef.current : errorAudioRef.current;
       if (audio) {
@@ -193,12 +206,10 @@ const AttendancePage = ({ user, onLogout }) => {
         setTimeout(() => playSound(isSuccess, retryCount + 1), 500);
       }
     }
-  };
+  }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!studentId.trim()) return;
-
+  // Extract attendance processing logic for reuse
+  const processAttendance = useCallback(async (idToProcess) => {
     if (mealWindowBlocked) {
       setMessage(`❌ Attendance blocked: ${nextMealInfo || 'Meal window closed'}`);
       playSound(false);
@@ -213,7 +224,7 @@ const AttendancePage = ({ user, onLogout }) => {
       const response = await fetch(`${API_BASE_URL}/api/attendance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId: studentId.trim() }),
+        body: JSON.stringify({ studentId: idToProcess }),
       });
 
       const data = await response.json();
@@ -227,10 +238,7 @@ const AttendancePage = ({ user, onLogout }) => {
             setMessage('✅ Attendance recorded successfully!');
             playSound(true);
             setStudentId('');
-            // Clear message after 2.5 seconds
-            setTimeout(() => {
-              setMessage('');
-            }, 2500);
+            setTimeout(() => setMessage(''), 2500);
             break;
           case 'already_used':
             setMessage('❌ Meal already used for this period');
@@ -276,6 +284,106 @@ const AttendancePage = ({ user, onLogout }) => {
     } finally {
       setIsLoading(false);
     }
+  }, [mealWindowBlocked, nextMealInfo, API_BASE_URL, playSound]);
+
+  // Handle barcode scan - automatically process scanned student ID
+  const handleBarcodeScan = useCallback(async (scannedId) => {
+    if (!scannedId.trim() || isLoading) return;
+
+    // Disable barcode scanning temporarily to prevent duplicate scans
+    setBarcodeScanningEnabled(false);
+
+    // Set the scanned ID in the input field
+    setStudentId(scannedId.trim());
+
+    // Auto-submit the form with scanned ID
+    if (mealWindowBlocked) {
+      setMessage(`❌ Attendance blocked: ${nextMealInfo || 'Meal window closed'}`);
+      playSound(false);
+      setBarcodeScanningEnabled(true);
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage('');
+    setStudent(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/attendance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: scannedId.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setStudent(data.student);
+        setStatus(data.status);
+
+        switch (data.status) {
+          case 'allowed':
+            setMessage('✅ Attendance recorded successfully!');
+            playSound(true);
+            setStudentId('');
+            setTimeout(() => setMessage(''), 2500);
+            break;
+          case 'already_used':
+            setMessage('❌ Meal already used for this period');
+            playSound(false);
+            setStudentId('');
+            setTimeout(() => setMessage(''), 2500);
+            break;
+          case 'invalid':
+            setMessage('❌ Student ID not found');
+            playSound(false);
+            setStudentId('');
+            setTimeout(() => setMessage(''), 2500);
+            break;
+          case 'blocked':
+            setMessage(`❌ ${data.message || 'Meal window is closed'}`);
+            playSound(false);
+            setStudentId('');
+            setTimeout(() => setMessage(''), 2500);
+            break;
+          case 'error':
+            setMessage(`❌ ${data.message || 'System error occurred'}`);
+            playSound(false);
+            setStudentId('');
+            setTimeout(() => setMessage(''), 2500);
+            break;
+          default:
+            setMessage('❌ Unknown status');
+            playSound(false);
+            setStudentId('');
+            setTimeout(() => setMessage(''), 2500);
+        }
+      } else {
+        setMessage('❌ System error. Please try again.');
+        playSound(false);
+        setStudentId('');
+        setTimeout(() => setMessage(''), 2500);
+      }
+    } catch (error) {
+      setMessage('❌ Network error. Please check connection.');
+      playSound(false);
+      setStudentId('');
+      setTimeout(() => setMessage(''), 2500);
+    } finally {
+      setIsLoading(false);
+      // Re-enable barcode scanning after processing
+      setTimeout(() => {
+        setBarcodeScanningEnabled(true);
+      }, 1000);
+    }
+  }, [isLoading, mealWindowBlocked, nextMealInfo, API_BASE_URL, playSound]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!studentId.trim()) return;
+
+    // Use the extracted processAttendance function
+    await processAttendance(studentId.trim());
   };
 
   const handleLogout = async () => {
@@ -332,16 +440,29 @@ const AttendancePage = ({ user, onLogout }) => {
                       <div className="meal-window-text">{nextMealInfo}</div>
                       {countdownSeconds > 0 && (
                         <div className="d-flex align-items-center mt-2">
-                          <Badge className="countdown-badge me-2">
+                          <Badge className="countdown-badge me-2" style={{fontSize: '14px', padding: '8px 12px'}}>
                             {countdownSeconds >= 3600
                               ? `${Math.floor(countdownSeconds / 3600)}h ${Math.floor((countdownSeconds % 3600) / 60)}m`
                               : countdownSeconds >= 60
-                              ? `${Math.floor(countdownSeconds / 60)}m ${countdownSeconds % 60}s`
-                              : `${countdownSeconds}s`}
+                              ? `${Math.floor(countdownSeconds / 60)}m`
+                              : `< 1m`}
                           </Badge>
                           <span className="text-muted fw-semibold">remaining</span>
                         </div>
                       )}
+                    </div>
+                  </Alert>
+                )}
+
+                {/* Barcode Scanner Status */}
+                {barcodeScanningEnabled && !mealWindowBlocked && (
+                  <Alert variant="info" className="d-flex align-items-center mb-2 py-2">
+                    <i className="fas fa-barcode me-2"></i>
+                    <small>Barcode scanner ready - scan student ID card</small>
+                    <div className="ms-auto">
+                      <span className="badge bg-success">
+                        <i className="fas fa-circle" style={{fontSize: '8px'}}></i> Active
+                      </span>
                     </div>
                   </Alert>
                 )}
@@ -478,6 +599,15 @@ const AttendancePage = ({ user, onLogout }) => {
           </Col>
         </Row>
       </Container>
+
+      {/* Barcode Scanner Component */}
+      <BarcodeScanner
+        onScan={handleBarcodeScan}
+        isEnabled={barcodeScanningEnabled && !mealWindowBlocked && !isLoading}
+        minLength={3}
+        maxLength={20}
+        timeout={300}
+      />
 
       {/* Audio elements */}
       <audio ref={successAudioRef} preload="auto">

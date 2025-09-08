@@ -259,7 +259,7 @@ exports.resetMealDatabase = async (req, res) => {
     res.status(500).json({ 
       success: false,
       error: "Failed to reset meal database",
-      details: error.message 
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message 
     });
   }
 };

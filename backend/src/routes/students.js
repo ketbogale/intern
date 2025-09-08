@@ -1,25 +1,33 @@
 const express = require("express");
 const Student = require("../models/student");
+const { handleError, handleValidationError, handleNotFound, handleUnauthorized } = require('../utils/errorHandler');
 const router = express.Router();
 
+// Authentication middleware
+const requireAuth = (req, res, next) => {
+  if (req.session && req.session.user) {
+    return next();
+  } else {
+    return handleUnauthorized(res);
+  }
+};
+
 // Add a single student
-router.post("/add", async (req, res) => {
+router.post("/add", requireAuth, async (req, res) => {
   try {
     const { id, name, department, photoUrl } = req.body;
 
     // Validate required fields
     if (!id || !name) {
-      return res.status(400).json({
-        error: "Student ID and name are required",
-      });
+      return handleValidationError(res, "Student ID and name are required");
     }
 
     // Check if student already exists
     const existingStudent = await Student.findOne({ id });
     if (existingStudent) {
       return res.status(409).json({
-        error: "Student with this ID already exists",
-        student: existingStudent,
+        success: false,
+        error: "Student with this ID already exists"
       });
     }
 
@@ -47,13 +55,13 @@ router.post("/add", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: "Internal server error",
-      details: error.message,
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
   }
 });
 
 // Add multiple students
-router.post("/add-multiple", async (req, res) => {
+router.post("/add-multiple", requireAuth, async (req, res) => {
   try {
     const { students } = req.body;
 
@@ -127,13 +135,13 @@ router.post("/add-multiple", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: "Internal server error",
-      details: error.message,
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
   }
 });
 
 // Get all students
-router.get("/list", async (req, res) => {
+router.get("/list", requireAuth, async (req, res) => {
   try {
     const students = await Student.find({}).select(
       "id name department photoUrl mealUsed",
@@ -146,13 +154,13 @@ router.get("/list", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: "Internal server error",
-      details: error.message,
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
   }
 });
 
 // Get all students (alternative endpoint for dashboard)
-router.get("/all", async (req, res) => {
+router.get("/all", requireAuth, async (req, res) => {
   try {
     const students = await Student.find({}).select(
       "id name department photoUrl createdAt",
@@ -167,13 +175,13 @@ router.get("/all", async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Internal server error",
-      details: error.message,
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
   }
 });
 
 // Search students by name, ID, or department
-router.get("/search", async (req, res) => {
+router.get("/search", requireAuth, async (req, res) => {
   try {
     const { q } = req.query;
     
@@ -251,13 +259,13 @@ router.get("/search", async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Internal server error",
-      details: error.message,
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
   }
 });
 
 // Get student by ID
-router.get("/:id", async (req, res) => {
+router.get("/:id", requireAuth, async (req, res) => {
   try {
     const student = await Student.findOne({ id: req.params.id });
     if (!student) {
@@ -272,13 +280,13 @@ router.get("/:id", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: "Internal server error",
-      details: error.message,
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
   }
 });
 
 // Update student by MongoDB _id
-router.put("/:id", async (req, res) => {
+router.put("/:id", requireAuth, async (req, res) => {
   try {
     // Update request received
 
@@ -340,13 +348,13 @@ router.put("/:id", async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Internal server error",
-      details: error.message,
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
   }
 });
 
 // Delete student by student ID
-router.delete("/:studentId", async (req, res) => {
+router.delete("/:studentId", requireAuth, async (req, res) => {
   try {
     const deletedStudent = await Student.findOneAndDelete({ 
       id: req.params.studentId 
@@ -371,7 +379,7 @@ router.delete("/:studentId", async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Internal server error",
-      details: error.message,
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
   }
 });

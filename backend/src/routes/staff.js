@@ -43,7 +43,7 @@ router.post("/add", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: "Internal server error",
-      details: error.message,
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
   }
 });
@@ -60,7 +60,7 @@ router.get("/list", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: "Internal server error",
-      details: error.message,
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
   }
 });
@@ -81,7 +81,7 @@ router.get("/:username", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: "Internal server error",
-      details: error.message,
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
   }
 });
