@@ -56,7 +56,6 @@ const EmailVerificationCode = () => {
         setOtp('');
       }
     } catch (error) {
-      console.error('OTP verification error:', error);
       setOtpMessage('❌ Connection error. Please check your internet connection and try again.');
       setOtp('');
     } finally {
@@ -92,7 +91,6 @@ const EmailVerificationCode = () => {
         setOtpMessage('❌ ' + (data.message || 'Unable to resend code. Please try again in a moment.'));
       }
     } catch (error) {
-      console.error('Resend OTP error:', error);
       setOtpMessage('❌ Connection error. Please check your internet connection and try again.');
     } finally {
       setResendLoading(false);
@@ -179,47 +177,6 @@ const EmailVerificationCode = () => {
             </div>
           )}
           
-          <button
-            onClick={() => handleOTPVerification(otp)}
-            disabled={otpLoading || otp.length !== 6}
-            style={{
-              width: '100%',
-              padding: '16px 24px',
-              backgroundColor: otpLoading || otp.length !== 6 ? '#d1d5db' : '#10b981',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: otpLoading || otp.length !== 6 ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s',
-              marginBottom: '24px'
-            }}
-            onMouseEnter={(e) => {
-              if (!otpLoading && otp.length === 6) {
-                e.target.style.backgroundColor = '#059669';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!otpLoading && otp.length === 6) {
-                e.target.style.backgroundColor = '#10b981';
-              }
-            }}
-          >
-            {otpLoading ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                  borderTop: '2px solid white',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }} />
-                Verify Code
-              </div>
-            ) : 'Verify Code'}
-          </button>
           
           <div style={{ marginBottom: '24px' }}>
             <span style={{ color: '#6b7280', fontSize: '14px' }}>
@@ -243,23 +200,29 @@ const EmailVerificationCode = () => {
           </div>
           
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => navigate('/')}
             disabled={otpLoading || resendLoading}
             style={{
-              background: 'none',
+              width: '100%',
+              padding: '16px 24px',
+              backgroundColor: '#10b981',
+              color: 'white',
               border: 'none',
-              color: '#6b7280',
-              fontSize: '14px',
+              borderRadius: '12px',
+              fontSize: '16px',
+              fontWeight: '600',
               cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              margin: '0 auto'
+              transition: 'all 0.2s',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#059669';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = '#10b981';
             }}
           >
-            ← Back to Sign in
+            Back to Dashboard
           </button>
         </div>
       </div>

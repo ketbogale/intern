@@ -5,8 +5,7 @@ const MealWindow = require('../models/MealWindows');
 // POST /api/meal-windows - Save meal windows configuration
 router.post('/', async (req, res) => {
   try {
-    console.log('Meal Windows POST endpoint called');
-    console.log('Request body:', req.body);
+    // Meal Windows POST endpoint called
 
     const { mealWindows } = req.body;
 
@@ -73,7 +72,7 @@ router.post('/', async (req, res) => {
       };
     }
 
-    console.log('Meal windows configuration saved to database:', savedWindows);
+    // Meal windows configuration saved to database
 
     res.status(200).json({
       success: true,
@@ -82,7 +81,6 @@ router.post('/', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error saving meal windows configuration:', error);
     res.status(500).json({ error: 'Internal server error while saving meal windows configuration' });
   }
 });
@@ -90,7 +88,7 @@ router.post('/', async (req, res) => {
 // GET /api/meal-windows - Get meal windows configuration
 router.get('/', async (req, res) => {
   try {
-    console.log('Meal Windows GET endpoint called');
+    // Meal Windows GET endpoint called
 
     // Get all meal windows from database
     const mealWindows = await MealWindow.getAllAsObject();
@@ -111,7 +109,6 @@ router.get('/', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching meal windows configuration:', error);
     res.status(500).json({ error: 'Internal server error while fetching meal windows configuration' });
   }
 });

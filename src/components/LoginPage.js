@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Modal, Navbar, InputGroup } from 'react-bootstrap';
 import VerificationCodeInput from './VerificationCodeInput';
-import './LoginPage-Bootstrap.css';
+import './LoginPage.css';
 
 // Constants
 const API_BASE_URL = process.env.REACT_APP_API_URL || '';
@@ -14,8 +14,6 @@ const MESSAGES = {
 };
 
 // Utility functions
-const getMessageClassName = (message) => 
-  `modal-message ${message.includes('successful') || message.includes('sent') ? 'success' : 'error'}`;
 
 const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60);
@@ -139,10 +137,12 @@ const LoginPage = ({ onLogin }) => {
           setTimeout(() => onLogin(data.user), 1000);
         } else {
           setMessage(data.error || 'Login failed');
+          setTimeout(() => setMessage(''), 2500);
         }
       }
     } catch (error) {
       setMessage(error.message || MESSAGES.NETWORK_ERROR);
+      setTimeout(() => setMessage(''), 2500);
     } finally {
       setIsLoading(false);
     }
@@ -161,24 +161,34 @@ const LoginPage = ({ onLogin }) => {
       setOtpLoading(true);
       setOtpMessage('');
       
-      const { response, data } = await apiCall('/api/admin/verify-otp', {
+      const response = await fetch('/api/admin/verify-otp', {
         method: 'POST',
-        body: JSON.stringify({ otp: otpCode })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: adminEmail,
+          otp: otpCode
+        })
       });
       
+      const data = await response.json();
+      
       if (data.success) {
-        setOtpMessage('🎉 Login successful! Redirecting to your dashboard...');
+        setMessage('✅ Login successful! Redirecting...');
         setTimeout(() => {
-          setShowOTPModal(false);
-          setOtpCode('');
-          setOtpMessage('');
-          onLogin(data.user);
+          window.location.href = '/';
         }, 1500);
+        setOtpCode('');
+        setOtpMessage('');
+        onLogin(data.user);
       } else {
         setOtpMessage('❌ ' + (data.message || 'Invalid verification code. Please check the code and try again.'));
+        setTimeout(() => setOtpMessage(''), 2500);
       }
     } catch (error) {
       setOtpMessage(error.message || MESSAGES.NETWORK_ERROR);
+      setTimeout(() => setOtpMessage(''), 2500);
     } finally {
       setOtpLoading(false);
     }
@@ -197,10 +207,15 @@ const LoginPage = ({ onLogin }) => {
       setEmailLoading(true);
       setEmailMessage('');
       
-      const { response, data } = await apiCall('/api/admin/send-otp', {
+      const response = await fetch('/api/admin/send-otp', {
         method: 'POST',
-        body: JSON.stringify({ username, password, email: adminEmail })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: adminEmail })
       });
+      
+      const data = await response.json();
       
       if (data.success) {
         setEmailMessage('✅ Verification code sent to your email. Please check your inbox.');
@@ -226,7 +241,7 @@ const LoginPage = ({ onLogin }) => {
       setOtpLoading(true);
       setOtpMessage('');
       
-      const { response, data } = await apiCall('/api/admin/resend-otp', {
+      const { data } = await apiCall('/api/admin/resend-otp', {
         method: 'POST'
       });
       
@@ -302,7 +317,7 @@ const LoginPage = ({ onLogin }) => {
                         aria-label={showPassword ? 'Hide password' : 'Show password'}
                         style={{border: '1px solid rgba(255,255,255,0.2)'}}
                       >
-                        <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                        {showPassword ? '🙈' : '👁️'}
                       </Button>
                     </InputGroup>
                   </Form.Group>
@@ -529,7 +544,7 @@ const LoginPage = ({ onLogin }) => {
                 disabled={otpLoading}
                 style={{color: '#718096'}}
               >
-                ← Back to Sign up
+                ← Back to Sign in
               </Button>
             </div>
           </div>

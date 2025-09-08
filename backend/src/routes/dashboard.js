@@ -17,4 +17,5 @@ router.get('/dashboard/export', dashboardController.exportCurrentAttendance);
 // POST /api/dashboard/reset-meals - Manual meal database reset
 router.post('/dashboard/reset-meals', dashboardController.resetMealDatabase);
 
+
 module.exports = router;

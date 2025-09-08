@@ -91,7 +91,8 @@ const AdminEmailVerification = () => {
       }}>
         <div style={{
           background: 'white',
-          borderRadius: '16px',
+          borderRadius: '0',
+          border: '1px solid #4a5568',
           padding: '48px 40px',
           textAlign: 'center',
           maxWidth: '480px',

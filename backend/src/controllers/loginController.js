@@ -57,7 +57,6 @@ exports.login = async (req, res) => {
             return res.status(500).json({ error: "Session save error" });
           }
           
-          console.log(`Successful login for user: ${username} with role: ${staff.role} from IP: ${clientIP}`);
           
           // Return user data including role for frontend routing
           res.json({ 

@@ -1,15 +1,12 @@
 const Student = require("../models/student");
 const MealCurrent = require("../models/mealCurrent");
 const MealWindow = require("../models/MealWindows");
+const os = require('os');
 
 exports.getDashboardStats = async (req, res) => {
   try {
-    console.log('Dashboard stats endpoint called');
-    console.log('User session:', req.session.user);
-    
     // Get total students count
     const totalStudents = await Student.countDocuments();
-    console.log('Total students:', totalStudents);
 
     // Get today's attendance (unique students only)
     const today = new Date();
@@ -24,27 +21,13 @@ exports.getDashboardStats = async (req, res) => {
       ]
     });
     const todayAttendance = todayUniqueAttendees.length;
-    console.log('Today attendance (unique students):', todayAttendance);
 
-    // Get this week's attendance (unique students only)
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay());
-    
-    const weeklyUniqueAttendees = await MealCurrent.distinct('studentId', {
-      $or: [
-        { date: { $gte: weekStart, $lt: tomorrow } },
-        { createdAt: { $gte: weekStart, $lt: tomorrow } }
-      ]
-    });
-    const weeklyAttendance = weeklyUniqueAttendees.length;
-    console.log('Weekly attendance (unique students):', weeklyAttendance);
 
     // Get recent attendance records (last 50) with student details
     const recentAttendance = await MealCurrent.find()
       .sort({ createdAt: -1 })
       .limit(50)
       .lean();
-    console.log('Recent attendance records found:', recentAttendance.length);
 
     // Get meal windows for determining meal type
     const mealWindows = await MealWindow.getAllAsObject();
@@ -111,24 +94,16 @@ exports.getDashboardStats = async (req, res) => {
         currentPercentage: attendancePercentage,
         missingStudents: totalStudents - todayAttendance
       };
-      console.log('🚨 Low attendance alert triggered:', lowAttendanceAlert);
+      // Low attendance alert triggered
     }
 
-    console.log('Sending response with stats:', {
-      totalStudents,
-      todayAttendance,
-      weeklyAttendance,
-      attendancePercentage,
-      lowAttendanceAlert: lowAttendanceAlert?.isActive || false,
-      recentRecords: formattedAttendance.length
-    });
+    // Sending response with dashboard stats
 
     res.json({
       success: true,
       stats: {
         totalStudents,
         todayAttendance,
-        weeklyAttendance,
         attendancePercentage
       },
       lowAttendanceAlert,
@@ -136,7 +111,6 @@ exports.getDashboardStats = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Dashboard stats error:', error);
     res.status(500).json({ error: "Failed to fetch dashboard data" });
   }
 };
@@ -156,12 +130,7 @@ exports.getCurrentAnalytics = async (req, res) => {
       attendanceRate = Math.round((attendedStudents / totalStudents) * 100);
     }
     
-    console.log('Analytics calculation:', {
-      totalStudents,
-      attendedStudents,
-      uniqueAttendees,
-      attendanceRate
-    });
+    // Analytics calculation completed
 
     res.json({
       success: true,
@@ -174,7 +143,6 @@ exports.getCurrentAnalytics = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Analytics error:', error);
     res.status(500).json({ error: "Failed to fetch current analytics" });
   }
 };
@@ -226,7 +194,6 @@ exports.searchStudents = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Student search error:', error);
     res.status(500).json({ error: "Failed to search students" });
   }
 };
@@ -258,7 +225,6 @@ exports.exportCurrentAttendance = async (req, res) => {
     res.send(csvContent);
 
   } catch (error) {
-    console.error('Export error:', error);
     res.status(500).json({ error: "Failed to export current attendance data" });
   }
 };
@@ -266,8 +232,6 @@ exports.exportCurrentAttendance = async (req, res) => {
 // Manual meal database reset
 exports.resetMealDatabase = async (req, res) => {
   try {
-    console.log('Manual meal database reset requested');
-    
     // Get current time in EAT
     const eatTime = new Date().toLocaleString("en-US", {
       timeZone: "Africa/Addis_Ababa",
@@ -279,13 +243,10 @@ exports.resetMealDatabase = async (req, res) => {
       second: "2-digit",
     });
 
-    console.log(`[${eatTime} EAT] Starting manual meal database reset`);
-
     // Delete all meal attendance records
     const result = await MealCurrent.deleteMany({});
 
-    console.log(`[${eatTime} EAT] Manual database reset completed`);
-    console.log(`Deleted ${result.deletedCount} meal attendance records`);
+    // Manual database reset completed
 
     res.json({
       success: true,
@@ -295,7 +256,6 @@ exports.resetMealDatabase = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Manual reset error:', error);
     res.status(500).json({ 
       success: false,
       error: "Failed to reset meal database",
@@ -303,3 +263,4 @@ exports.resetMealDatabase = async (req, res) => {
     });
   }
 };
+

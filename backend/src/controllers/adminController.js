@@ -23,7 +23,6 @@ const getAdminProfile = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error fetching admin profile:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -113,7 +112,6 @@ const sendEmailChangeApprovalLink = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error sending email change approval link:', error);
     res.status(500).json({
       success: false,
       message: 'Server error while sending verification link'
@@ -126,7 +124,7 @@ const verifyEmailChangeApproval = async (req, res) => {
   try {
     const { token } = req.params;
     
-    console.log('Verifying email change token:', token);
+    // Verifying email change token
     
     if (!token) {
       return res.status(400).json({
@@ -141,12 +139,9 @@ const verifyEmailChangeApproval = async (req, res) => {
       purpose: 'email_change_approval'
     });
     
-    console.log('Email change request found:', emailChangeRequest);
-    
     if (!emailChangeRequest) {
       // Check if there are any email_change_approval records
       const allApprovalRequests = await OTP.find({ purpose: 'email_change_approval' });
-      console.log('All email change approval requests:', allApprovalRequests);
       
       return res.status(400).json({
         success: false,
@@ -176,15 +171,7 @@ const verifyEmailChangeApproval = async (req, res) => {
       adminId: adminId
     });
     
-    console.log('Creating OTP record with:', {
-      email: newEmail,
-      otp: otp,
-      purpose: 'credential_update',
-      adminId: adminId
-    });
-    
     await otpRecord.save();
-    console.log('OTP record saved successfully:', otpRecord);
     
     // Send OTP to new email
     const { sendOTPEmail } = require('../services/emailService');
@@ -207,7 +194,6 @@ const verifyEmailChangeApproval = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error verifying email change approval:', error);
     res.status(500).json({
       success: false,
       message: 'Server error while processing email change approval'
@@ -282,7 +268,6 @@ const sendAdminApprovalOTP = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error sending admin approval OTP:', error);
     res.status(500).json({
       success: false,
       message: 'Server error while sending verification code'

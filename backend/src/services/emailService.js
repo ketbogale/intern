@@ -76,10 +76,8 @@ const sendOTPEmail = async (email, otp, purpose = 'Admin Login Verification Code
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`OTP sent successfully to ${email}`);
     return true;
   } catch (error) {
-    console.error('Error sending OTP email:', error);
     return false;
   }
 };
@@ -88,10 +86,8 @@ const sendOTPEmail = async (email, otp, purpose = 'Admin Login Verification Code
 const verifyEmailService = async () => {
   try {
     await transporter.verify();
-    console.log('Email service is ready');
     return true;
   } catch (error) {
-    console.error('Email service configuration error:', error);
     return false;
   }
 };
@@ -165,10 +161,8 @@ const sendEmailChangeApprovalEmail = async (currentEmail, verificationToken, new
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`Email change approval link sent to ${currentEmail}`);
     return true;
   } catch (error) {
-    console.error('Error sending email change approval email:', error);
     return false;
   }
 };

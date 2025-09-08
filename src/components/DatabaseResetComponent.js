@@ -22,7 +22,6 @@ const DatabaseResetComponent = ({ fetchDashboardData }) => {
           calculateResetSchedule(data.mealWindows);
         }
       } catch (error) {
-        console.error('Error fetching meal windows:', error);
         // Fallback to calculated schedule based on default meal times if API fails
         const fallbackWindows = {
           breakfast: { startTime: '06:00', enabled: true },
@@ -39,14 +38,11 @@ const DatabaseResetComponent = ({ fetchDashboardData }) => {
 
   // Calculate reset times (30 minutes before each meal start)
   const calculateResetSchedule = (mealWindowsObj) => {
-    console.log('Calculating reset schedule from database:', mealWindowsObj);
-    
     const schedule = Object.entries(mealWindowsObj)
       .filter(([mealType, window]) => window.enabled)
       .map(([mealType, window]) => {
         // Validate startTime format
         if (!window.startTime || !window.startTime.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
-          console.error(`Invalid startTime format for ${mealType}:`, window.startTime);
           return null;
         }
 
@@ -65,8 +61,6 @@ const DatabaseResetComponent = ({ fetchDashboardData }) => {
         } else {
           resetTime = `${resetDate.getHours().toString().padStart(2, '0')}:${resetDate.getMinutes().toString().padStart(2, '0')}`;
         }
-        
-        console.log(`${mealType}: Start ${window.startTime} → Reset ${resetTime}`);
         
         // Format meal type display name
         let displayName = mealType;
@@ -87,7 +81,6 @@ const DatabaseResetComponent = ({ fetchDashboardData }) => {
       .filter(item => item !== null) // Remove invalid entries
       .sort((a, b) => a.time.localeCompare(b.time));
     
-    console.log('Final schedule for all meal types:', schedule);
     setDynamicResetSchedule(schedule);
   };
 
@@ -138,33 +131,12 @@ const DatabaseResetComponent = ({ fetchDashboardData }) => {
         showResetStatus(`❌ Reset failed: ${data.error}`, 'error');
       }
     } catch (error) {
-      console.error('Reset error:', error);
       showResetStatus('❌ Network error. Please check if the backend server is running.', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Perform test reset
-  const performTestReset = async () => {
-    if (isLoading) return;
-    
-    try {
-      setIsLoading(true);
-      showResetStatus('Running test reset...', 'info');
-      
-      // Simulate test reset - in real implementation, this would call a test endpoint
-      setTimeout(() => {
-        showResetStatus('✅ Test reset completed successfully. No actual data was modified.', 'success');
-        setIsLoading(false);
-      }, 2000);
-      
-    } catch (error) {
-      console.error('Test reset error:', error);
-      showResetStatus('❌ Test reset failed.', 'error');
-      setIsLoading(false);
-    }
-  };
 
   // Toggle automatic reset schedule
   const toggleAutomaticReset = async () => {
@@ -182,7 +154,6 @@ const DatabaseResetComponent = ({ fetchDashboardData }) => {
       );
       
     } catch (error) {
-      console.error('Error toggling automatic reset:', error);
       showResetStatus('❌ Failed to toggle automatic reset schedule', 'error');
     } finally {
       setIsLoading(false);
@@ -300,14 +271,6 @@ const DatabaseResetComponent = ({ fetchDashboardData }) => {
             Reset Database Now
           </button>
 
-          <button 
-            className="reset-btn secondary test-reset-btn"
-            onClick={performTestReset}
-            disabled={isLoading}
-          >
-            <i className="fas fa-vial"></i>
-            Test Reset
-          </button>
         </div>
 
         {resetStatus.message && (

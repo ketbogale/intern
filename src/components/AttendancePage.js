@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Navbar, Badge } from 'react-bootstrap';
 import './AttendancePage.css';
 
@@ -19,43 +19,34 @@ const AttendancePage = ({ user, onLogout }) => {
   // API base URL from environment or fallback
   const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
-  // Fetch meal windows from server
-  const fetchMealWindows = async () => {
+  // Fetch meal windows from database
+  const fetchMealWindows = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/meal-windows`);
+      const response = await fetch('/api/meal-windows');
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.mealWindows) {
           setMealWindows(data.mealWindows);
-        } else {
-          console.error('Invalid API response structure:', data);
         }
-      } else {
-        console.error('API request failed:', response.status, response.statusText);
       }
     } catch (error) {
-      console.error('Error fetching meal windows:', error);
+      // Error fetching meal windows - fail silently
     }
-  };
+  }, []);
 
   // Meal window timing logic (strict start → end only)
   const checkMealWindow = useCallback(() => {
-    console.log('🔄 Checking meal window status...');
-    console.log('📊 Meal windows from database:', mealWindows);
     
     if (Object.keys(mealWindows).length === 0) {
-      console.log('⏳ No meal windows loaded - blocking input');
       setMealWindowBlocked(true);
       return;
     }
 
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    console.log(`🕐 Current time: ${Math.floor(currentMinutes/60)}:${(currentMinutes%60).toString().padStart(2,'0')} (${currentMinutes} minutes)`);
 
     const mealWindowsInMinutes = {};
     Object.entries(mealWindows).forEach(([mealType, config]) => {
-      console.log(`📋 Processing ${mealType}:`, config);
       if (config.enabled) {
         const [startHour, startMinute] = config.startTime.split(':').map(Number);
         const [endHour, endMinute] = config.endTime.split(':').map(Number);
@@ -67,10 +58,6 @@ const AttendancePage = ({ user, onLogout }) => {
           start: startTime,
           end: endTime
         };
-        
-        console.log(`📋 ${mealType}: ${config.startTime}-${config.endTime} → ${startTime}-${endTime} minutes`);
-      } else {
-        console.log(`❌ ${mealType} is disabled`);
       }
     });
 
@@ -79,16 +66,12 @@ const AttendancePage = ({ user, onLogout }) => {
     let timeUntilOpen = null;
 
     // Check if in any valid meal window
-    for (const [mealType, window] of Object.entries(mealWindowsInMinutes)) {
-      console.log(`🔍 Checking ${mealType}: current=${currentMinutes}, start=${window.start}, end=${window.end}`);
+    for (const [, window] of Object.entries(mealWindowsInMinutes)) {
       if (currentMinutes >= window.start && currentMinutes <= window.end) {
         isInMealWindow = true;
-        console.log(`✅ Currently in ${mealType} window - INPUT ENABLED`);
         break;
       }
     }
-    
-    console.log(`📊 Final result: isInMealWindow=${isInMealWindow}, will block input=${!isInMealWindow}`);
 
     if (!isInMealWindow) {
       // Find next meal window
@@ -139,19 +122,35 @@ const AttendancePage = ({ user, onLogout }) => {
     }
   }, [mealWindows]);
 
-  // Initial load
+  // Initial load and focus management
   useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
     fetchMealWindows();
-  }, []);
+  }, [fetchMealWindows]);
+
+  // Auto-focus input when component mounts or becomes visible
+  useEffect(() => {
+    const focusInput = () => {
+      if (inputRef.current && !mealWindowBlocked) {
+        inputRef.current.focus();
+      }
+    };
+
+    // Focus immediately
+    focusInput();
+
+    // Also focus when window regains focus (coming from another page)
+    window.addEventListener('focus', focusInput);
+    
+    return () => {
+      window.removeEventListener('focus', focusInput);
+    };
+  }, [mealWindowBlocked]);
 
   // Re-check whenever meal windows change with more responsive timing
   useEffect(() => {
     if (Object.keys(mealWindows).length > 0) {
-      checkMealWindow();
-      const interval = setInterval(checkMealWindow, 15000); // Check every 15 seconds
+      // Check meal window status every second
+      const interval = setInterval(checkMealWindow, 1000);
       return () => clearInterval(interval);
     }
   }, [mealWindows, checkMealWindow]);
@@ -160,7 +159,7 @@ const AttendancePage = ({ user, onLogout }) => {
   useEffect(() => {
     const refreshInterval = setInterval(fetchMealWindows, 300000); // 5 minutes
     return () => clearInterval(refreshInterval);
-  }, []);
+  }, [fetchMealWindows]);
 
   // Countdown timer in seconds
   useEffect(() => {
@@ -225,44 +224,57 @@ const AttendancePage = ({ user, onLogout }) => {
 
         switch (data.status) {
           case 'allowed':
-            setMessage('✅ Meal allowed! Welcome!');
+            setMessage('✅ Attendance recorded successfully!');
             playSound(true);
+            setStudentId('');
+            // Clear message after 2.5 seconds
+            setTimeout(() => {
+              setMessage('');
+            }, 2500);
             break;
           case 'already_used':
             setMessage('❌ Meal already used for this period');
             playSound(false);
+            setStudentId('');
+            setTimeout(() => setMessage(''), 2500);
             break;
           case 'invalid':
             setMessage('❌ Student ID not found');
             playSound(false);
+            setStudentId('');
+            setTimeout(() => setMessage(''), 2500);
             break;
           case 'blocked':
             setMessage(`❌ ${data.message || 'Meal window is closed'}`);
             playSound(false);
+            setStudentId('');
+            setTimeout(() => setMessage(''), 2500);
             break;
           case 'error':
             setMessage(`❌ ${data.message || 'System error occurred'}`);
             playSound(false);
+            setStudentId('');
+            setTimeout(() => setMessage(''), 2500);
             break;
           default:
             setMessage('❌ Unknown status');
             playSound(false);
+            setStudentId('');
+            setTimeout(() => setMessage(''), 2500);
         }
       } else {
         setMessage('❌ System error. Please try again.');
         playSound(false);
+        setStudentId('');
+        setTimeout(() => setMessage(''), 2500);
       }
     } catch (error) {
       setMessage('❌ Network error. Please check connection.');
       playSound(false);
+      setStudentId('');
+      setTimeout(() => setMessage(''), 2500);
     } finally {
       setIsLoading(false);
-      setStudentId('');
-      setTimeout(() => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
-      }, 100);
     }
   };
 
@@ -279,19 +291,29 @@ const AttendancePage = ({ user, onLogout }) => {
   return (
     <div className="min-vh-100" style={{background: 'linear-gradient(135deg, #0f1419 0%, #1e2a3a 100%)'}}>
       {/* Header */}
-      <Navbar className="attendance-navbar">
-        <Navbar.Brand className="navbar-brand-custom">
+      <Navbar bg="dark" variant="dark" className="px-4 shadow-sm" style={{background: 'rgba(30, 42, 58, 0.95) !important', backdropFilter: 'blur(10px)'}}>
+        <Navbar.Brand className="d-flex align-items-center">
           <img 
             src="/images/salale_university_logo.png" 
+            width="50" 
+            height="50" 
+            className="me-3" 
             alt="Salale University"
           />
-          <h1 className="navbar-title">Salale University</h1>
+          <h1 className="h4 mb-0 text-light">Salale University</h1>
         </Navbar.Brand>
         <Button 
           onClick={handleLogout}
-          className="logout-button ms-auto d-flex align-items-center gap-1"
+          variant="outline-light"
+          size="sm"
+          className="ms-auto py-1 px-2"
+          style={{
+            '--bs-btn-hover-bg': 'rgba(220, 53, 69, 0.2)',
+            '--bs-btn-hover-border-color': 'rgba(220, 53, 69, 0.5)',
+            transition: 'all 0.3s ease'
+          }}
         >
-          <i className="fas fa-sign-out-alt"></i>
+          <i className="fas fa-sign-out-alt me-1"></i>
           Logout
         </Button>
       </Navbar>
@@ -300,7 +322,7 @@ const AttendancePage = ({ user, onLogout }) => {
       <Container fluid className="py-2">
         <Row className="">
           <Col lg={5} className="mb-2 card-spacing-left">
-            <Card className="shadow border-0 attendance-input-card">
+            <Card className="shadow-lg border-0 bg-gradient" style={{background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)', borderRadius: '1rem', height: 'fit-content'}}>
               <Card.Body>
                 {/* Meal Window Warning */}
                 {mealWindowBlocked && nextMealInfo && (
@@ -309,13 +331,16 @@ const AttendancePage = ({ user, onLogout }) => {
                     <div className="flex-grow-1">
                       <div className="meal-window-text">{nextMealInfo}</div>
                       {countdownSeconds > 0 && (
-                        <Badge className="countdown-badge mt-2">
-                          {countdownSeconds >= 3600
-                            ? `${Math.floor(countdownSeconds / 3600)}h ${Math.floor((countdownSeconds % 3600) / 60)}m`
-                            : countdownSeconds >= 60
-                            ? `${Math.floor(countdownSeconds / 60)}m ${countdownSeconds % 60}s`
-                            : `${countdownSeconds}s`}
-                        </Badge>
+                        <div className="d-flex align-items-center mt-2">
+                          <Badge className="countdown-badge me-2">
+                            {countdownSeconds >= 3600
+                              ? `${Math.floor(countdownSeconds / 3600)}h ${Math.floor((countdownSeconds % 3600) / 60)}m`
+                              : countdownSeconds >= 60
+                              ? `${Math.floor(countdownSeconds / 60)}m ${countdownSeconds % 60}s`
+                              : `${countdownSeconds}s`}
+                          </Badge>
+                          <span className="text-muted fw-semibold">remaining</span>
+                        </div>
                       )}
                     </div>
                   </Alert>
@@ -324,7 +349,7 @@ const AttendancePage = ({ user, onLogout }) => {
                 {/* Input Form */}
                 <Form onSubmit={handleSubmit}>
                   <Form.Group className="mb-1">
-                    <Form.Label className="text-light fw-semibold" style={{fontSize: '0.85rem', marginBottom: '0.25rem'}}>Student ID (Manual or Scan Barcode):</Form.Label>
+                    <Form.Label className="text-light fw-semibold mb-2">Student ID (Manual or Scan Barcode):</Form.Label>
                     <Form.Control
                       ref={inputRef}
                       type="text"
@@ -334,13 +359,6 @@ const AttendancePage = ({ user, onLogout }) => {
                       autoComplete="off"
                       disabled={mealWindowBlocked}
                       required
-                      style={{
-                        background: 'rgba(44, 62, 80, 0.6)',
-                        border: '1px solid rgba(149, 165, 166, 0.3)',
-                        color: '#ecf0f1',
-                        padding: '0.4rem 0.75rem',
-                        fontSize: '0.9rem'
-                      }}
                     />
                   </Form.Group>
                   <Button 
@@ -376,7 +394,7 @@ const AttendancePage = ({ user, onLogout }) => {
           {/* Student Information */}
           <Col lg={5} className="card-spacing-right">
             {student && (
-              <Card className="shadow border-0 student-info-card">
+              <Card className="shadow-lg border-0 bg-gradient" style={{background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)', borderRadius: '1rem', minHeight: '400px'}}>
                 <Card.Body className="p-2">
                   <div 
                     className={`status-message-enhanced message-fade-in ${
@@ -391,34 +409,67 @@ const AttendancePage = ({ user, onLogout }) => {
                   </div>
                   
                   <Row>
-                    <Col md={5}>
+                    <Col md={4} className="text-center mb-3">
+                      {student.photoUrl ? (
+                        <>
+                          <img 
+                            src={student.photoUrl} 
+                            alt={student.name}
+                            className="student-photo"
+                            style={{
+                              width: '200px',
+                              height: '220px',
+                              objectFit: 'cover',
+                              borderRadius: '0',
+                              boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                            }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextElementSibling.style.display = 'flex';
+                            }}
+                          />
+                          <div 
+                            className="student-photo-placeholder rounded-circle border border-light align-items-center justify-content-center"
+                            style={{
+                              width: '120px',
+                              height: '120px',
+                              backgroundColor: 'rgba(255,255,255,0.1)',
+                              display: 'none',
+                              boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                            }}
+                          >
+                            <i className="fas fa-user text-light" style={{fontSize: '3rem', opacity: 0.7}}></i>
+                          </div>
+                        </>
+                      ) : (
+                        <div 
+                          className="student-photo-placeholder rounded-circle border border-light d-flex align-items-center justify-content-center"
+                          style={{
+                            width: '120px',
+                            height: '120px',
+                            backgroundColor: 'rgba(255,255,255,0.1)',
+                            boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                          }}
+                        >
+                          <i className="fas fa-user text-light" style={{fontSize: '3rem', opacity: 0.7}}></i>
+                        </div>
+                      )}
+                    </Col>
+                    <Col md={8}>
                       <div className="text-light">
-                        <div className="mb-1" style={{fontSize: '0.8rem'}}>
-                          <strong className="text-info">Name:</strong> {student.name}
+                        <div className="student-info-text mb-3">
+                          <span className="student-info-label">Name:</span>
+                          <span className="student-info-value">{student.name}</span>
                         </div>
-                        <div className="mb-1" style={{fontSize: '0.8rem'}}>
-                          <strong className="text-info">ID:</strong> {student.id}
+                        <div className="student-info-text mb-3">
+                          <span className="student-info-label">ID:</span>
+                          <span className="student-info-value">{student.id}</span>
                         </div>
-                        <div className="mb-1" style={{fontSize: '0.8rem'}}>
-                          <strong className="text-info">Program:</strong> {student.department}
+                        <div className="student-info-text mb-3">
+                          <span className="student-info-label">Program:</span>
+                          <span className="student-info-value">{student.department}</span>
                         </div>
                       </div>
-                    </Col>
-                    <Col md={7} className="text-center">
-                      <img
-                        src={student.photoUrl || '/images/default-student.png'}
-                        alt="Student Photo"
-                        className="img-fluid rounded"
-                        style={{
-                          width: '180px',
-                          height: '180px',
-                          objectFit: 'cover',
-                          border: '2px solid #74b9ff'
-                        }}
-                        onError={(e) => {
-                          e.target.src = '/images/default-student.png';
-                        }}
-                      />
                     </Col>
                   </Row>
                 </Card.Body>

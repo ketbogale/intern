@@ -14,33 +14,21 @@ const EmailChangeVerification = ({ token }) => {
     try {
       setLoading(true);
       hasVerifiedRef.current = true; // Mark as verified to prevent duplicate calls
-      console.log('Verifying token:', token);
-      console.log('Making request to:', `/api/admin/verify-email-change/${token}`);
-      
       const response = await fetch(`/api/admin/verify-email-change/${token}`);
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-      
       const data = await response.json();
-      console.log('Response data:', data);
-      console.log('Data success value:', data.success);
-      console.log('Data success type:', typeof data.success);
       
       if (response.ok && data.success) {
         setSuccess(true);
         setNewEmail(data.newEmail);
         setMessage(data.message);
         
-        // Redirect to email verification code page
-        setTimeout(() => {
-          window.location.href = '/email-verification?newEmail=' + encodeURIComponent(data.newEmail);
-        }, 2000);
+        // Redirect immediately to email verification code page
+        window.location.href = '/email-verification?newEmail=' + encodeURIComponent(data.newEmail);
       } else {
         setSuccess(false);
         setMessage(data.message || 'Invalid or expired verification link');
       }
     } catch (error) {
-      console.error('Error verifying email change approval:', error);
       setSuccess(false);
       setMessage('Network error occurred. Please try again.');
     } finally {
@@ -62,7 +50,7 @@ const EmailChangeVerification = ({ token }) => {
     <div className="email-verification-container">
       <div className="email-verification-card">
         <div className="email-verification-header">
-          <h1>🔐 Email Change Verification</h1>
+          <h1>Email Verification Required</h1>
         </div>
         
         <div className="email-verification-content">
@@ -72,28 +60,91 @@ const EmailChangeVerification = ({ token }) => {
               <p>Verifying email change approval...</p>
             </div>
           ) : (
-            <div className={`result-section ${success ? 'success' : 'error'}`}>
-              <div className="result-icon">
-                {success ? '✅' : '❌'}
-              </div>
-              
-              <div className="result-message">
-                <p>{message}</p>
-                
-                {success && newEmail && (
-                  <div className="success-details">
-                    <p>Verification code sent to <strong>{newEmail}</strong></p>
-                  </div>
-                )}
-              </div>
-              
-              
-              {success && (
-                <div className="auto-redirect">
-                  <p>Redirecting to verification page...</p>
+            <>
+              <div className="result-section" style={{ marginBottom: '24px' }}>
+                <div className="result-message">
+                  <p style={{ 
+                    color: '#6b7280', 
+                    fontSize: '16px', 
+                    margin: '0',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                  }}>{success ? 'Email change approval sent successfully!' : ''}</p>
                 </div>
+              </div>
+              
+              {!success && (
+              <div style={{
+                padding: '12px 16px',
+                borderRadius: '12px',
+                backgroundColor: '#fef2f2',
+                border: '1px solid #fecaca',
+                marginBottom: '32px',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <div style={{ color: '#dc2626', fontSize: '20px' }}></div>
+                <p style={{ 
+                  margin: '0', 
+                  color: '#dc2626',
+                  fontSize: '16px',
+                  lineHeight: '1.6',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                }}>{message}</p>
+              </div>
+            )}
+            
+            {success && newEmail && (
+              <div style={{
+                padding: '24px',
+                borderRadius: '12px',
+                backgroundColor: '#dcfce7',
+                border: '1px solid #bbf7d0',
+                marginBottom: '32px',
+                textAlign: 'left'
+              }}>
+                <p style={{ 
+                  margin: '0', 
+                  color: '#166534',
+                  fontSize: '16px',
+                  lineHeight: '1.6',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                }}>Check your current email for the approval link and then click on the link to verify your email, then enter the verification code sent to</p>
+                <p style={{ 
+                  margin: '8px 0 0 0', 
+                  color: '#166534',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                }}>{newEmail}</p>
+              </div>
               )}
-            </div>
+              
+              <div className="form-actions" style={{ justifyContent: 'center' }}>
+                <button 
+                  type="button" 
+                  onClick={handleReturnToDashboard}
+                  style={{
+                    width: '100%',
+                    padding: '16px 24px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
+                >
+                  Back to Dashboard
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>

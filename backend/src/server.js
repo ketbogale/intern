@@ -1,6 +1,10 @@
 const express = require("express");
 const path = require("path");
+// Suppress dotenv console output
+const originalConsoleLog = console.log;
+console.log = () => {};
 require('dotenv').config();
+console.log = originalConsoleLog;
 const session = require("express-session");
 const loginRoutes = require("./routes/login");
 const attendanceRoutes = require("./routes/attendance");
@@ -9,7 +13,6 @@ const studentRoutes = require('./routes/students');
 const staffRoutes = require('./routes/staff');
 const adminRoutes = require('./routes/adminRoutes');
 const mealWindowsRoutes = require('./routes/mealWindows');
-const databaseRoutes = require('./routes/databaseRoutes');
 const mongoose = require("mongoose");
 const SchedulerService = require("./services/scheduler");
 const { verifyEmailService } = require('./services/emailService');
@@ -21,25 +24,26 @@ const MONGO_URI =
 mongoose
   .connect(MONGO_URI)
   .then(async () => {
-    console.log("MongoDB connected");
+    // MongoDB connected
     
     // Initialize meal windows defaults only if none exist
     const existingWindows = await MealWindow.countDocuments();
     if (existingWindows === 0) {
       await MealWindow.initializeDefaults();
-      console.log("Default meal windows initialized");
-    } else {
-      console.log("Meal windows already exist in database");
+      // Default meal windows initialized
     }
+    // Meal windows already exist in database
     
     // Start the scheduler service
     try {
       await SchedulerService.startScheduler();
     } catch (error) {
-      console.error("Scheduler startup error:", error);
+      // Scheduler startup error - continuing without scheduler
     }
   })
-  .catch((err) => console.error("MongoDB connection error:", err));
+  .catch((err) => {
+    // MongoDB connection error - server will not function properly
+  });
 const app = express();
 app.use(express.json());
 
@@ -81,21 +85,18 @@ app.use('/api/students', studentRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/meal-windows', mealWindowsRoutes);
-app.use('/api/database', databaseRoutes);
 
 // Logout route is now handled in login.js routes
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
+  // Server running on port ${PORT}
 
   // Verify email service configuration
   const emailReady = await verifyEmailService();
-  if (emailReady) {
-    console.log('✅ Email service configured and ready for admin 2FA');
-  } else {
-    console.log('⚠️  Email service not configured. Admin 2FA will not work.');
-    console.log('   Please set GMAIL_USER and GMAIL_APP_PASSWORD in your .env file');
+  if (!emailReady) {
+    // Email service not configured - Admin 2FA will not work
+    // Please set GMAIL_USER and GMAIL_APP_PASSWORD in your .env file
   }
 
   // Start the automatic meal database scheduler for EAT timezone

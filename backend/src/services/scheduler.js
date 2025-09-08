@@ -4,7 +4,7 @@ const MealWindow = require("../models/MealWindows");
 
 class SchedulerService {
   static async startScheduler() {
-    console.log("Starting dynamic meal database scheduler for East Africa Time (EAT)");
+    // Starting dynamic meal database scheduler for East Africa Time (EAT)
 
     // Initialize meal windows and set up dynamic scheduling
     await this.initializeDynamicScheduler();
@@ -16,8 +16,8 @@ class SchedulerService {
       timezone: "Africa/Addis_Ababa",
     });
 
-    console.log("Dynamic meal database scheduler started successfully");
-    console.log("Timezone: Africa/Addis_Ababa (EAT UTC+3)");
+    // Dynamic meal database scheduler started successfully
+    // Timezone: Africa/Addis_Ababa (EAT UTC+3)
   }
 
   static async initializeDynamicScheduler() {
@@ -56,7 +56,7 @@ class SchedulerService {
           
           const mealDisplayName = window.mealType === 'lateNight' ? 'Late Night' : 
                                 window.mealType.charAt(0).toUpperCase() + window.mealType.slice(1);
-          console.log(`✓ Scheduled reset for ${mealDisplayName}: ${resetTime.displayTime} EAT (30 min before ${resetTime.mealStartTime} start)`);
+          // Scheduled reset for meal window
         }
       }
       
@@ -64,7 +64,7 @@ class SchedulerService {
       this.currentConfigHash = this.generateConfigHash(mealWindows);
       
     } catch (error) {
-      console.error("Error initializing dynamic scheduler:", error);
+      // Error initializing dynamic scheduler - using fallback
       // Fallback to default schedule
       this.startFallbackScheduler();
     }
@@ -83,7 +83,7 @@ class SchedulerService {
       const resetHours = resetDate.getHours();
       const resetMinutes = resetDate.getMinutes();
       
-      console.log(`${mealWindow.mealType}: Start time ${mealWindow.startTime} → Reset time ${resetHours.toString().padStart(2, '0')}:${resetMinutes.toString().padStart(2, '0')}`);
+      // Calculated reset time for meal window
       
       return {
         cronExpression: `${resetMinutes} ${resetHours} * * *`,
@@ -91,7 +91,7 @@ class SchedulerService {
         mealStartTime: mealWindow.startTime
       };
     } catch (error) {
-      console.error(`Error calculating reset time for ${mealWindow.mealType}:`, error);
+      // Error calculating reset time for meal window
       return null;
     }
   }
@@ -107,16 +107,16 @@ class SchedulerService {
       const newConfigHash = this.generateConfigHash(currentWindows);
       
       if (newConfigHash !== this.currentConfigHash) {
-        console.log("Meal window configuration changed, updating scheduler...");
+        // Meal window configuration changed, updating scheduler
         await this.initializeDynamicScheduler();
       }
     } catch (error) {
-      console.error("Error checking for scheduler updates:", error);
+      // Error checking for scheduler updates
     }
   }
 
   static startFallbackScheduler() {
-    console.log("Starting fallback scheduler with default times");
+    // Starting fallback scheduler with default times
     
     // Fallback to original hardcoded schedule
     const fallbackSchedules = [
@@ -147,16 +147,12 @@ class SchedulerService {
         second: "2-digit",
       });
 
-      console.log(
-        `[${eatTime} EAT] Starting scheduled meal database reset at ${timeLabel}`,
-      );
+      // Starting scheduled meal database reset
 
       // Hard delete: Remove all meal attendance records
       const result = await MealCurrent.deleteMany({});
 
-      console.log(`[${eatTime} EAT] Database reset completed at ${timeLabel}`);
-      console.log(`Deleted ${result.deletedCount} meal attendance records`);
-      console.log("Students can now use their meals again");
+      // Database reset completed successfully
 
       // Optional: Log to a file or send notification
       // You can add additional logging or notification logic here
@@ -164,48 +160,13 @@ class SchedulerService {
       const eatTime = new Date().toLocaleString("en-US", {
         timeZone: "Africa/Addis_Ababa",
       });
-      console.error(
-        `[${eatTime} EAT] Error during database reset at ${timeLabel}:`,
-        error,
-      );
+      // Error during database reset
 
       // Optional: Send error notification or alert
       // You can add error handling/notification logic here
     }
   }
 
-  // Test function to verify soft reset works (for immediate testing)
-  static async testReset() {
-    try {
-      console.log(
-        `[${new Date().toISOString()}] TEST: Starting immediate soft reset test`,
-      );
-
-      // Soft reset: Update all active records to 'reset' status
-      const result = await MealCurrent.updateMany(
-        { status: "active" },
-        {
-          status: "reset",
-          resetTime: new Date(),
-        },
-      );
-
-      console.log(
-        `[${new Date().toISOString()}] TEST: Soft reset test completed`,
-      );
-      console.log(
-        `TEST: Reset ${result.modifiedCount} meal attendance records (preserved for audit)`,
-      );
-
-      return { success: true, resetCount: result.modifiedCount };
-    } catch (error) {
-      console.error(
-        `[${new Date().toISOString()}] TEST: Error during soft reset test:`,
-        error,
-      );
-      return { success: false, error: error.message };
-    }
-  }
 }
 
 module.exports = SchedulerService;

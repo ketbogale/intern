@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import VerificationCodeInput from './VerificationCodeInput';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './Dashboard.css';
 import './Dashboard-light.css';
 import './DatabaseReset.css';
@@ -11,7 +10,6 @@ const Dashboard = ({ user, onLogout }) => {
   const [stats, setStats] = useState({
     totalStudents: 0,
     todayAttendance: 0,
-    weeklyAttendance: 0,
     attendancePercentage: 0
   });
   const [lowAttendanceAlert, setLowAttendanceAlert] = useState(null);
@@ -21,51 +19,15 @@ const Dashboard = ({ user, onLogout }) => {
   const [lastUpdated, setLastUpdated] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [analyticsData, setAnalyticsData] = useState(null);
-  const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchMessage, setSearchMessage] = useState('');
-  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
-  const [newStudentData, setNewStudentData] = useState({
-    id: '',
-    name: '',
-    department: '',
-    photoUrl: ''
-  });
-  const [addStudentLoading, setAddStudentLoading] = useState(false);
-  const [addStudentMessage, setAddStudentMessage] = useState('');
-  const [showEditStudentModal, setShowEditStudentModal] = useState(false);
-  const [editingStudent, setEditingStudent] = useState(null);
-  const [editStudentData, setEditStudentData] = useState({
-    id: '',
-    name: '',
-    department: '',
-    photoUrl: ''
-  });
-  const [editStudentLoading, setEditStudentLoading] = useState(false);
-  const [editStudentMessage, setEditStudentMessage] = useState('');
+  // Student search functionality moved to dedicated SearchStudent component
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [showAdminCredentialsModal, setShowAdminCredentialsModal] = useState(false);
-  const [adminCredentials, setAdminCredentials] = useState({
-    currentPassword: '',
-    newUsername: '',
-    newPassword: '',
-    confirmPassword: '',
-    email: ''
-  });
-  const [adminCredentialsLoading, setAdminCredentialsLoading] = useState(false);
-  const [adminCredentialsMessage, setAdminCredentialsMessage] = useState('');
   
   // Admin approval states (required for all credential updates)
   const [showAdminApproval, setShowAdminApproval] = useState(false);
   const [adminApprovalCode, setAdminApprovalCode] = useState('');
-  const [adminApprovalLoading, setAdminApprovalLoading] = useState(false);
-  const [adminApprovalMessage, setAdminApprovalMessage] = useState('');
   const [adminApprovalCountdown, setAdminApprovalCountdown] = useState(300); // 5 minutes
-  const [canResendAdminApproval, setCanResendAdminApproval] = useState(false);
   const [resendAdminApprovalCountdown, setResendAdminApprovalCountdown] = useState(0);
 
   // Email verification states for credential update
@@ -78,32 +40,7 @@ const Dashboard = ({ user, onLogout }) => {
   const [resendVerificationCountdown, setResendVerificationCountdown] = useState(0);
   const [pendingCredentials, setPendingCredentials] = useState(null);
   
-  // OTP verification states
-  const [showOTPModal, setShowOTPModal] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [otpMessage, setOtpMessage] = useState('');
-  const [otpCountdown, setOtpCountdown] = useState(300); // 5 minutes
-  const [canResendOTP, setCanResendOTP] = useState(false);
-  const [resendCountdown, setResendCountdown] = useState(0);
 
-  // Database Configuration states
-  const [showDatabaseConfigModal, setShowDatabaseConfigModal] = useState(false);
-  const [databaseConfig, setDatabaseConfig] = useState({
-    connectionString: 'mongodb://localhost:27017/meal_attendance',
-    backupSchedule: 'daily',
-    backupTime: '02:00',
-    dataRetentionMonths: 24,
-    archiveAfterMonths: 12,
-    connectionPoolSize: 10,
-    connectionTimeout: 30,
-    cacheEnabled: true,
-    cacheDurationMinutes: 30,
-    indexOptimization: true,
-    gdprCompliance: true
-  });
-  const [databaseConfigLoading, setDatabaseConfigLoading] = useState(false);
-  const [databaseConfigMessage, setDatabaseConfigMessage] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   
   // Create ref for search input
@@ -113,22 +50,20 @@ const Dashboard = ({ user, onLogout }) => {
   const [mealWindows, setMealWindows] = useState({});
   const [mealWindowsLoading, setMealWindowsLoading] = useState(false);
   const [mealWindowsMessage, setMealWindowsMessage] = useState('');
-  const [showAllStudentsModal, setShowAllStudentsModal] = useState(false);
-  const [allStudents, setAllStudents] = useState([]);
-  const [allStudentsLoading, setAllStudentsLoading] = useState(false);
   const [isLightTheme, setIsLightTheme] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  const [showAddStaffModal, setShowAddStaffModal] = useState(false);
-  const [newStaffData, setNewStaffData] = useState({
-    username: '',
-    password: ''
-  });
-  const [addStaffLoading, setAddStaffLoading] = useState(false);
-  const [addStaffMessage, setAddStaffMessage] = useState('');
 
   // Notification states
   const [notifications, setNotifications] = useState([]);
   const [newStudentRegistrations, setNewStudentRegistrations] = useState([]);
+  
+  // Professional dashboard states
+  const [systemStatus, setSystemStatus] = useState({
+    database: 'connected',
+    mealWindows: 'active',
+    lastBackup: null,
+    uptime: '0h 0m'
+  });
   
   // Meal window states
   const [mealWindowStatus, setMealWindowStatus] = useState({
@@ -137,7 +72,6 @@ const Dashboard = ({ user, onLogout }) => {
     timeUntilOpen: null,
     mealType: 'Dinner'
   });
-  const [attendanceBlocked, setAttendanceBlocked] = useState(false);
 
   // Handle logout
   const handleLogout = () => {
@@ -159,21 +93,17 @@ const Dashboard = ({ user, onLogout }) => {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Admin profile data:', data); // Debug log
         setAdminEmail(data.email || '');
-      } else {
-        console.error('Failed to fetch admin profile:', response.status, response.statusText);
       }
     } catch (error) {
-      console.error('Error fetching admin email:', error);
+      // Error fetching admin email - fail silently
     }
   };
 
   // Meal window timing logic
-  const checkMealWindow = () => {
+  const checkMealWindow = useCallback(() => {
     // Don't process if meal windows haven't been loaded from database yet
     if (Object.keys(mealWindows).length === 0) {
-      console.log('Dashboard: Meal windows not loaded yet, skipping check');
       return;
     }
 
@@ -207,17 +137,19 @@ const Dashboard = ({ user, onLogout }) => {
       }
       
       // Find next meal window if not currently in one
-      if (!isInMealWindow && currentTime < windowStart) {
-        if (!nextMealTime || windowStart < nextMealTime) {
-          nextMealTime = windowStart;
-          nextMealType = mealType;
-          timeUntilOpen = windowStart - currentTime;
+      if (!isInMealWindow) {
+        if (currentTime < windowStart) {
+          if (!nextMealTime || windowStart < nextMealTime) {
+            nextMealType = mealType;
+            timeUntilOpen = windowStart - currentTime;
+            nextMealTime = windowStart;
+          }
         }
       }
     });
     
-    // If no meal found today, next is breakfast tomorrow
-    if (!isInMealWindow && !nextMealType) {
+    // If no next meal found today, check for breakfast tomorrow
+    if (!isInMealWindow && !nextMealTime) {
       const breakfastConfig = mealWindows.breakfast;
       if (breakfastConfig && breakfastConfig.enabled) {
         const [startHour, startMinute] = breakfastConfig.startTime.split(':').map(Number);
@@ -237,10 +169,9 @@ const Dashboard = ({ user, onLogout }) => {
       mealType: isInMealWindow ? currentMeal : nextMealType
     });
     
-    setAttendanceBlocked(!isInMealWindow);
     
     // Notification logic moved to Notification.js to avoid duplicates
-  };
+  }, [mealWindows]);
 
   // Fetch meal windows from database
   const fetchMealWindows = async () => {
@@ -253,7 +184,7 @@ const Dashboard = ({ user, onLogout }) => {
         }
       }
     } catch (error) {
-      console.error('Error fetching meal windows:', error);
+      // Error fetching meal windows - fail silently
     }
   };
 
@@ -261,7 +192,7 @@ const Dashboard = ({ user, onLogout }) => {
     fetchDashboardData();
     fetchAdminEmail();
     fetchMealWindows();
-    checkMealWindow();
+    fetchSystemStatus();
     
     // Check if redirected from email verification link
     const urlParams = new URLSearchParams(window.location.search);
@@ -281,11 +212,29 @@ const Dashboard = ({ user, onLogout }) => {
       // Clean up URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+  }, []);
+
+  // Separate useEffect for meal window checking to avoid dependency loops
+  useEffect(() => {
+    // Initial check
+    checkMealWindow();
     
     // Check meal window every minute
     const mealWindowInterval = setInterval(checkMealWindow, 60000);
     
-    return () => clearInterval(mealWindowInterval);
+    return () => {
+      clearInterval(mealWindowInterval);
+    };
+  }, [checkMealWindow]);
+
+  // Separate useEffect for system status updates
+  useEffect(() => {
+    // Update system status every 30 seconds
+    const statusInterval = setInterval(fetchSystemStatus, 30000);
+    
+    return () => {
+      clearInterval(statusInterval);
+    };
   }, []);
 
   // Focus search input when switching to students section
@@ -298,39 +247,6 @@ const Dashboard = ({ user, onLogout }) => {
     }
   }, [activeSection]);
 
-  // OTP countdown timer
-  useEffect(() => {
-    let interval;
-    if (showOTPModal && otpCountdown > 0) {
-      interval = setInterval(() => {
-        setOtpCountdown(prev => {
-          if (prev <= 1) {
-            setOtpMessage('Verification code expired. Please request a new one.');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [showOTPModal, otpCountdown]);
-
-  // Resend OTP countdown
-  useEffect(() => {
-    let interval;
-    if (resendCountdown > 0) {
-      interval = setInterval(() => {
-        setResendCountdown(prev => {
-          if (prev <= 1) {
-            setCanResendOTP(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [resendCountdown]);
 
   // Email verification countdown timer
   useEffect(() => {
@@ -356,7 +272,7 @@ const Dashboard = ({ user, onLogout }) => {
       interval = setInterval(() => {
         setAdminApprovalCountdown(prev => {
           if (prev <= 1) {
-            setAdminApprovalMessage('Admin approval code expired. Please request a new one.');
+            // Admin approval code expired
             return 0;
           }
           return prev - 1;
@@ -373,7 +289,7 @@ const Dashboard = ({ user, onLogout }) => {
       interval = setInterval(() => {
         setResendAdminApprovalCountdown(prev => {
           if (prev <= 1) {
-            setCanResendAdminApproval(true);
+            // Can resend admin approval
             return 0;
           }
           return prev - 1;
@@ -404,18 +320,13 @@ const Dashboard = ({ user, onLogout }) => {
     try {
       setIsLoading(true);
       setRefreshMessage('');
-      console.log('Fetching dashboard data...');
       const response = await fetch('/api/dashboard/stats');
-      console.log('Response status:', response.status);
-      
       const data = await response.json();
-      console.log('Response data:', data);
       
       if (response.ok && data.success) {
         setStats({
           totalStudents: data.stats.totalStudents || 0,
           todayAttendance: data.stats.todayAttendance || 0,
-          weeklyAttendance: data.stats.weeklyAttendance || 0,
           attendancePercentage: data.stats.attendancePercentage || 0
         });
         setLowAttendanceAlert(data.lowAttendanceAlert);
@@ -438,11 +349,9 @@ const Dashboard = ({ user, onLogout }) => {
           setRefreshMessage('');
         }, 3000);
       } else {
-        console.error('API error:', data.error || 'Unknown error');
         setStats({
           totalStudents: 0,
-          todayAttendance: 0,
-          weeklyAttendance: 0
+          todayAttendance: 0
         });
         setAttendanceData([]);
         setIsLoading(false);
@@ -453,66 +362,12 @@ const Dashboard = ({ user, onLogout }) => {
         }, 3000);
       }
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
       setIsLoading(false);
       setRefreshMessage('❌ Failed to refresh data. Please check your connection and try again.');
-      
-      // Clear error message after 3 seconds
     }
   };
 
-  const handleStudentSearch = async (query) => {
-    if (!query || query.trim() === '') {
-      setSearchResults([]);
-      setSearchMessage('');
-      return;
-    }
-
-    try {
-      setSearchLoading(true);
-      setSearchMessage('');
-      
-      console.log('Searching for:', query);
-      const response = await fetch(`/api/dashboard/search?query=${encodeURIComponent(query.trim())}`);
-      console.log('Search response status:', response.status);
-      
-      const data = await response.json();
-      console.log('Search response data:', data);
-      
-      if (response.ok && data.success) {
-        setSearchResults(data.students);
-        if (data.students.length === 0) {
-          setSearchMessage('🔍 No students found matching your search. Try different keywords or check spelling.');
-        } else {
-          setSearchMessage(`✅ Found ${data.students.length} student(s) matching your search.`);
-        }
-      } else {
-        setSearchResults([]);
-        setSearchMessage('❌ ' + (data.error || 'Error searching students. Please try again.'));
-      }
-    } catch (error) {
-      console.error('Search error:', error);
-      setSearchResults([]);
-      setSearchMessage('🌐 Network error occurred. Please check your internet connection and try again.');
-    } finally {
-      setSearchLoading(false);
-    }
-  };
-
-  // Handle search input change with debouncing
-  const handleSearchInputChange = (e) => {
-    const value = e.target.value;
-    setSearchQuery(value);
-    
-    // Debounce search - wait 500ms after user stops typing
-    if (window.searchTimeout) {
-      clearTimeout(window.searchTimeout);
-    }
-    
-    window.searchTimeout = setTimeout(() => {
-      handleStudentSearch(value);
-    }, 500);
-  };
+  // Student search functionality moved to dedicated SearchStudent component
 
   // Handle export functionality
   const handleExport = async () => {
@@ -540,16 +395,14 @@ const Dashboard = ({ user, onLogout }) => {
         setTimeout(() => setRefreshMessage(''), 3000);
       }
     } catch (error) {
-      console.error('Export error:', error);
       setRefreshMessage('❌ Error exporting CSV file. Please try again.');
       setTimeout(() => setRefreshMessage(''), 3000);
     }
   };
 
   // Fetch analytics data
-  const fetchAnalyticsData = async () => {
+  const fetchAnalyticsData = useCallback(async () => {
     try {
-      setAnalyticsLoading(true);
       const response = await fetch('/api/dashboard/analytics');
       
       if (response.ok) {
@@ -559,18 +412,16 @@ const Dashboard = ({ user, onLogout }) => {
         }
       }
     } catch (error) {
-      console.error('Error fetching analytics data:', error);
-    } finally {
-      setAnalyticsLoading(false);
+      // Error fetching analytics data - fail silently
     }
-  };
+  }, []);
 
   // Load analytics data when reports section is opened
   React.useEffect(() => {
     if (activeSection === 'reports' && !analyticsData) {
       fetchAnalyticsData();
     }
-  }, [activeSection]);
+  }, [activeSection, analyticsData, fetchAnalyticsData]);
 
   // Auto-refresh analytics data every 30 seconds when on reports page
   React.useEffect(() => {
@@ -583,122 +434,7 @@ const Dashboard = ({ user, onLogout }) => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [activeSection]);
-
-  // Handle adding new student
-  const handleAddStudent = async (e) => {
-    e.preventDefault();
-    
-    if (!newStudentData.id.trim() || !newStudentData.name.trim()) {
-      setAddStudentMessage('📝 Please fill in both Student ID and Name - these fields are required.');
-      return;
-    }
-
-    try {
-      setAddStudentLoading(true);
-      setAddStudentMessage('');
-      
-      const response = await fetch('/api/students/add', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newStudentData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setAddStudentMessage('🎉 Student registered successfully! You can now add another student or close this window.');
-        
-        // Track new student registration for notifications
-        trackNewStudentRegistration(newStudentData);
-        
-        // Reset form data
-        setNewStudentData({
-          id: '',
-          name: '',
-          department: '',
-          photoUrl: ''
-        });
-        // Refresh dashboard stats
-        fetchDashboardData();
-        // Clear success message after 3 seconds but keep modal open
-        setTimeout(() => {
-          setAddStudentMessage('');
-        }, 2500);
-      } else {
-        setAddStudentMessage('❌ ' + (data.error || 'Failed to register student. Please check the information and try again.'));
-      }
-    } catch (error) {
-      console.error('Error adding student:', error);
-      setAddStudentMessage('🌐 Network error occurred. Please check your internet connection and try again.');
-    } finally {
-      setAddStudentLoading(false);
-    }
-  };
-
-  // Handle editing student
-  const handleEditStudent = (student) => {
-    setEditingStudent(student);
-    setEditStudentData({
-      id: student.id,
-      name: student.name,
-      department: student.department,
-      photoUrl: student.photoUrl || ''
-    });
-    setShowEditStudentModal(true);
-  };
-
-  // Handle updating student
-  const handleUpdateStudent = async (e) => {
-    e.preventDefault();
-    
-    if (!editStudentData.id.trim() || !editStudentData.name.trim()) {
-      setEditStudentMessage('📝 Please fill in both Student ID and Name - these fields are required.');
-      return;
-    }
-
-    try {
-      setEditStudentLoading(true);
-      setEditStudentMessage('');
-      
-      const response = await fetch(`/api/students/update/${editingStudent._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(editStudentData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setEditStudentMessage('✅ Student information updated successfully!');
-        // Refresh search results
-        handleStudentSearch(searchQuery);
-        // Close modal after 2 seconds
-        setTimeout(() => {
-          setShowEditStudentModal(false);
-          setEditStudentMessage('');
-          setEditingStudent(null);
-        }, 2000);
-      } else {
-        setEditStudentMessage('❌ ' + (data.error || 'Failed to update student. Please check the information and try again.'));
-      }
-    } catch (error) {
-      console.error('Error updating student:', error);
-      setEditStudentMessage('🌐 Network error occurred. Please check your internet connection and try again.');
-    } finally {
-      setEditStudentLoading(false);
-    }
-  };
-
-  // Handle deleting student
-  const handleDeleteStudent = (studentId) => {
-    setStudentToDelete(studentId);
-    setShowDeleteConfirmModal(true);
-  };
+  }, [activeSection, fetchAnalyticsData]);
 
   // Confirm delete student
   const confirmDeleteStudent = async () => {
@@ -716,8 +452,7 @@ const Dashboard = ({ user, onLogout }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Refresh search results and dashboard stats
-        handleStudentSearch(searchQuery);
+        // Refresh dashboard stats
         fetchDashboardData();
         setRefreshMessage('🗑️ Student deleted successfully!');
         setTimeout(() => setRefreshMessage(''), 3000);
@@ -743,81 +478,6 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
 
-  // Handle OTP verification
-  const handleVerifyOTP = async (e) => {
-    e.preventDefault();
-    
-    if (!otpCode || otpCode.length !== 6) {
-      setOtpMessage('⚠️ Please enter the complete 6-digit verification code from your email.');
-      return;
-    }
-    
-    try {
-      setOtpLoading(true);
-      setOtpMessage('');
-      
-      const response = await fetch('/api/admin/verify-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ otp: otpCode })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setOtpMessage('🎉 Login successful! Redirecting to your dashboard...');
-        
-        // Close OTP modal and redirect to dashboard
-        setTimeout(() => {
-          setShowOTPModal(false);
-          setOtpCode('');
-          setOtpMessage('');
-          // Refresh the page to load admin dashboard
-          window.location.reload();
-        }, 1500);
-      } else {
-        setOtpMessage('❌ ' + (data.message || 'Invalid verification code. Please check the code and try again.'));
-      }
-    } catch (error) {
-      console.error('Error verifying OTP:', error);
-      setOtpMessage('🌐 Network error occurred. Please check your connection and try again.');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  // Handle resend OTP
-  const handleResendOTP = async () => {
-    try {
-      setOtpLoading(true);
-      setOtpMessage('');
-      
-      const response = await fetch('/api/admin/resend-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setOtpMessage('📧 New verification code sent to your email. Please check your inbox.');
-        setOtpCountdown(300); // Reset to 5 minutes
-        setCanResendOTP(false);
-        setResendCountdown(60); // 60 seconds before next resend
-      } else {
-        setOtpMessage('❌ ' + (data.message || 'Failed to resend verification code. Please try again in a moment.'));
-      }
-    } catch (error) {
-      console.error('Error resending OTP:', error);
-      setOtpMessage('🌐 Network error occurred. Please check your connection and try again.');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
 
   // Format countdown time
   const formatTime = (seconds) => {
@@ -826,43 +486,6 @@ const Dashboard = ({ user, onLogout }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Send email change approval link to current admin email
-  const handleSendEmailChangeApproval = async () => {
-    if (!adminCredentials.email || !adminCredentials.currentPassword) {
-      setAdminCredentialsMessage('Please enter current password and new email address.');
-      return;
-    }
-
-    try {
-      setEmailVerificationLoading(true);
-      setEmailVerificationMessage('');
-      
-      const response = await fetch('/api/admin/send-email-change-approval', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          currentPassword: adminCredentials.currentPassword,
-          newEmail: adminCredentials.email
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setAdminCredentialsMessage(`📧 Email change approval link sent to ${data.currentEmail}. Please check your current email and click the approval link. After clicking, return here to enter the verification code.`);
-        setPendingCredentials(adminCredentials);
-      } else {
-        setAdminCredentialsMessage(data.message || 'Failed to send approval email');
-      }
-    } catch (error) {
-      console.error('Error sending email change approval:', error);
-      setAdminCredentialsMessage('Network error. Please try again.');
-    } finally {
-      setEmailVerificationLoading(false);
-    }
-  };
 
   // Verify email and update credentials (includes admin approval)
   const handleVerifyEmailAndUpdateCredentials = async (e) => {
@@ -922,13 +545,6 @@ const Dashboard = ({ user, onLogout }) => {
         setEmailVerificationMessage('🎉 Your credentials have been updated successfully!');
         
         // Reset all states
-        setAdminCredentials({
-          currentPassword: '',
-          newUsername: '',
-          newPassword: '',
-          confirmPassword: '',
-          email: ''
-        });
         setEmailVerificationCode('');
         setAdminApprovalCode('');
         setPendingCredentials(null);
@@ -940,10 +556,8 @@ const Dashboard = ({ user, onLogout }) => {
         setTimeout(() => {
           setShowEmailVerification(false);
           setShowAdminApproval(false);
-          setShowAdminCredentialsModal(false);
           setEmailVerificationMessage('');
-          setAdminApprovalMessage('');
-          setAdminCredentialsMessage('');
+          // Clear admin approval message
         }, 2000);
       } else {
         setEmailVerificationMessage('❌ ' + (data.message || 'Invalid verification code. Please check the code and try again.'));
@@ -956,156 +570,9 @@ const Dashboard = ({ user, onLogout }) => {
     }
   };
 
-  // Send admin approval OTP (required for all credential updates)
-  const handleSendAdminApproval = async () => {
-    if (!adminCredentials.currentPassword) {
-      setAdminCredentialsMessage('🔒 Please enter your current password to verify your identity before making any changes.');
-      return;
-    }
 
-    try {
-      setAdminApprovalLoading(true);
-      setAdminApprovalMessage('');
-      
-      const response = await fetch('/api/admin/send-admin-approval-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          currentPassword: adminCredentials.currentPassword
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setShowAdminApproval(true);
-        setAdminApprovalCountdown(300); // Reset to 5 minutes
-        setCanResendAdminApproval(false);
-        setResendAdminApprovalCountdown(60); // 60 seconds before next resend
-        setAdminApprovalMessage(`✅ Admin verification code sent to ${data.email}. Please check your email and enter the 6-digit code below.`);
-        setPendingCredentials(adminCredentials);
-      } else {
-        setAdminCredentialsMessage('❌ ' + (data.message || 'Failed to send admin approval code. Please check your current password and try again.'));
-      }
-    } catch (error) {
-      console.error('Error sending admin approval:', error);
-      setAdminCredentialsMessage('🌐 Network error occurred. Please check your internet connection and try again.');
-    } finally {
-      setAdminApprovalLoading(false);
-    }
-  };
 
-  // Handle admin credentials update - now requires admin approval first
-  const handleUpdateAdminCredentials = async (e) => {
-    e.preventDefault();
-    
-    // Check if email is being changed
-    if (adminCredentials.email && adminCredentials.email !== adminEmail) {
-      // Email is being changed, use two-step email change approval process
-      handleSendEmailChangeApproval();
-      return;
-    }
-    
-    // No email change, use regular admin approval process
-    handleSendAdminApproval();
-  };
 
-  // Proceed with credential update after admin approval
-  const handleProceedAfterAdminApproval = async () => {
-    if (!adminApprovalCode || adminApprovalCode.length !== 6) {
-      setAdminApprovalMessage('⚠️ Please enter the complete 6-digit admin approval code from your email.');
-      return;
-    }
-    
-    // No email change, proceed with credential update
-    try {
-      setAdminApprovalLoading(true);
-      setAdminApprovalMessage('');
-      
-      const credentialsToUpdate = {
-        ...pendingCredentials,
-        adminApprovalOtp: adminApprovalCode
-      };
-      
-      const response = await fetch('/api/admin/credentials', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentialsToUpdate)
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setAdminApprovalMessage('🎉 Your admin credentials have been updated successfully!');
-        
-        // Reset all states
-        setAdminCredentials({
-          currentPassword: '',
-          newUsername: '',
-          newPassword: '',
-          confirmPassword: '',
-          email: ''
-        });
-        setAdminApprovalCode('');
-        setPendingCredentials(null);
-        
-        // Close modals after 2 seconds
-        setTimeout(() => {
-          setShowAdminApproval(false);
-          setShowAdminCredentialsModal(false);
-          setAdminApprovalMessage('');
-          setAdminCredentialsMessage('');
-        }, 2000);
-      } else {
-        setAdminApprovalMessage('❌ ' + (data.message || 'Invalid admin approval code. Please check the code and try again.'));
-      }
-    } catch (error) {
-      console.error('Error updating credentials after admin approval:', error);
-      setAdminApprovalMessage('🌐 Network error occurred. Please check your connection and try again.');
-    } finally {
-      setAdminApprovalLoading(false);
-    }
-  };
-
-  // Resend admin approval OTP
-  const handleResendAdminApproval = async () => {
-    if (!pendingCredentials) return;
-    
-    try {
-      setAdminApprovalLoading(true);
-      setAdminApprovalMessage('');
-      
-      const response = await fetch('/api/admin/send-admin-approval-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          currentPassword: pendingCredentials.currentPassword
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setAdminApprovalMessage('📧 New admin approval code sent to your email. Please check your inbox.');
-        setAdminApprovalCountdown(300); // Reset to 5 minutes
-        setCanResendAdminApproval(false);
-        setResendAdminApprovalCountdown(60); // 60 seconds before next resend
-      } else {
-        setAdminApprovalMessage('❌ ' + (data.message || 'Failed to resend admin approval code. Please try again in a moment.'));
-      }
-    } catch (error) {
-      console.error('Error resending admin approval:', error);
-      setAdminApprovalMessage('🌐 Network error occurred. Please check your connection and try again.');
-    } finally {
-      setAdminApprovalLoading(false);
-    }
-  };
 
   // Resend email verification
   const handleResendEmailVerification = async () => {
@@ -1221,149 +688,25 @@ const Dashboard = ({ user, onLogout }) => {
 
 
 
-  // Handle adding new staff
-  const handleAddStaff = async (e) => {
-    e.preventDefault();
-    
-    if (!newStaffData.username.trim() || !newStaffData.password.trim()) {
-      setAddStaffMessage('📝 Please fill in both Username and Password - these fields are required.');
-      return;
-    }
 
+
+
+
+  // Fetch system status
+  const fetchSystemStatus = async () => {
     try {
-      setAddStaffLoading(true);
-      setAddStaffMessage('');
-      
-      const response = await fetch('/api/staff/add', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newStaffData),
-      });
-
-      const data = await response.json();
-
+      const response = await fetch('/api/dashboard/system-status');
       if (response.ok) {
-        setAddStaffMessage('✅ Staff member registered successfully!');
-        
-        // Track new staff registration for notifications
-        trackNewStudentRegistration({
-          id: newStaffData.username,
-          name: `Staff: ${newStaffData.username}`,
-          department: 'Staff'
-        });
-        
-        // Reset form data
-        setNewStaffData({
-          username: '',
-          password: ''
-        });
-        // Close modal after 2 seconds
-        setTimeout(() => {
-          setShowAddStaffModal(false);
-          setAddStaffMessage('');
-        }, 2000);
-      } else {
-        setAddStaffMessage('❌ ' + (data.error || 'Failed to register staff member. Please check the information and try again.'));
+        const data = await response.json();
+        if (data.success) {
+          setSystemStatus(data.status);
+        }
       }
     } catch (error) {
-      console.error('Error adding staff:', error);
-      setAddStaffMessage('🌐 Network error occurred. Please check your internet connection and try again.');
-    } finally {
-      setAddStaffLoading(false);
+      console.error('Error fetching system status:', error);
     }
   };
 
-  // Handle viewing all students
-  const handleViewAllStudents = async () => {
-    try {
-      setAllStudentsLoading(true);
-      setShowAllStudentsModal(true);
-      
-      const response = await fetch('/api/students/all');
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        setAllStudents(data.students);
-      } else {
-        console.error('Error fetching all students:', data.error);
-        setAllStudents([]);
-      }
-    } catch (error) {
-      console.error('Error fetching all students:', error);
-      setAllStudents([]);
-    } finally {
-      setAllStudentsLoading(false);
-    }
-  };
-
-  // Handle database configuration save
-  const handleSaveDatabaseConfig = async (e) => {
-    e.preventDefault();
-    
-    try {
-      setDatabaseConfigLoading(true);
-      setDatabaseConfigMessage('');
-      
-      const response = await fetch('/api/database/config', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(databaseConfig),
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setDatabaseConfigMessage('✅ Database configuration saved successfully!');
-        setTimeout(() => {
-          setDatabaseConfigMessage('');
-        }, 3000);
-      } else {
-        setDatabaseConfigMessage('❌ ' + (data.error || 'Failed to save database configuration.'));
-      }
-    } catch (error) {
-      console.error('Error saving database config:', error);
-      setDatabaseConfigMessage('❌ Network error: ' + error.message);
-    } finally {
-      setDatabaseConfigLoading(false);
-    }
-  };
-
-  // Handle GDPR data export
-  const handleGDPRExport = async () => {
-    try {
-      setDatabaseConfigLoading(true);
-      setDatabaseConfigMessage('');
-      
-      const response = await fetch('/api/database/gdpr-export', {
-        method: 'GET',
-      });
-      
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `gdpr_data_export_${new Date().toISOString().split('T')[0]}.zip`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        setDatabaseConfigMessage('✅ GDPR data export completed successfully!');
-      } else {
-        setDatabaseConfigMessage('❌ Failed to export GDPR data.');
-      }
-    } catch (error) {
-      console.error('Error exporting GDPR data:', error);
-      setDatabaseConfigMessage('❌ Network error during GDPR export.');
-    } finally {
-      setDatabaseConfigLoading(false);
-    }
-  };
 
   // Handle theme toggle
   const handleThemeToggle = () => {
@@ -1386,57 +729,7 @@ const Dashboard = ({ user, onLogout }) => {
     setNewStudentRegistrations([]);
   };
 
-  // Track new student registrations for notifications
-  const trackNewStudentRegistration = (studentData) => {
-    const newRegistration = {
-      id: studentData.id,
-      name: studentData.name,
-      department: studentData.department,
-      registeredAt: new Date()
-    };
-    
-    setNewStudentRegistrations(prev => {
-      // Keep only last 10 registrations to avoid memory issues
-      const updated = [newRegistration, ...prev].slice(0, 10);
-      return updated;
-    });
-    
-    // Clear the registration after 24 hours
-    setTimeout(() => {
-      setNewStudentRegistrations(prev => 
-        prev.filter(reg => reg.id !== studentData.id)
-      );
-    }, 24 * 60 * 60 * 1000); // 24 hours
-  };
 
-  // Handle data purge (GDPR compliance)
-  const handleGDPRPurge = async () => {
-    if (!window.confirm('Are you sure you want to purge old data according to retention policy? This action cannot be undone.')) {
-      return;
-    }
-    
-    try {
-      setDatabaseConfigLoading(true);
-      setDatabaseConfigMessage('');
-      
-      const response = await fetch('/api/database/gdpr-purge', {
-        method: 'DELETE',
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setDatabaseConfigMessage(`✅ Data purge completed. ${data.deletedRecords} records removed.`);
-      } else {
-        setDatabaseConfigMessage('❌ ' + (data.error || 'Failed to purge old data.'));
-      }
-    } catch (error) {
-      console.error('Error purging data:', error);
-      setDatabaseConfigMessage('❌ Network error during data purge.');
-    } finally {
-      setDatabaseConfigLoading(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -1463,7 +756,6 @@ const Dashboard = ({ user, onLogout }) => {
               lowAttendanceAlert={lowAttendanceAlert}
               mealWindows={mealWindows}
               mealWindowStatus={mealWindowStatus}
-              attendanceBlocked={attendanceBlocked}
               lastUpdated={lastUpdated}
               refreshMessage={refreshMessage}
               newStudentRegistrations={newStudentRegistrations}
@@ -1526,19 +818,13 @@ const Dashboard = ({ user, onLogout }) => {
               <span>Home</span>
             </div>
             <div 
-              className={`nav-item ${activeSection === 'attendance' ? 'active' : ''} ${attendanceBlocked ? 'disabled' : ''}`}
+              className={`nav-item ${activeSection === 'attendance' ? 'active' : ''}`}
               onClick={() => {
-                if (attendanceBlocked) {
-                  const timeText = mealWindowStatus.timeUntilOpen === 1 ? '1 minute' : `${mealWindowStatus.timeUntilOpen} minutes`;
-                  alert(`Attendance is currently blocked. ${mealWindowStatus.mealType.charAt(0).toUpperCase() + mealWindowStatus.mealType.slice(1)} window opens in ${timeText}.`);
-                  return;
-                }
                 setActiveSection('attendance');
               }}
             >
               <i className="fas fa-user-check"></i>
               <span>Attendance</span>
-              {attendanceBlocked && <i className="fas fa-lock" style={{marginLeft: '8px', fontSize: '12px', color: '#f56565'}}></i>}
             </div>
             <div 
               className={`nav-item ${activeSection === 'students' ? 'active' : ''}`}
@@ -1615,43 +901,129 @@ const Dashboard = ({ user, onLogout }) => {
             {activeSection === 'overview' && (
               <>
                 {/* Stats Grid */}
-                <div className="stats-grid">
-                  <div className="stat-card total-students">
-                    <div className="stat-content">
-                      <h3>TOTAL STUDENTS</h3>
-                      <div className="stat-number">{stats.totalStudents}</div>
+                <div className="stats-overview-section">
+                  <h2><i className="fas fa-chart-line"></i> Overview</h2>
+                  <div className="stats-grid">
+                    <div className="metric-card total-students-card">
+                      <div className="metric-icon">
+                        <i className="fas fa-users"></i>
+                      </div>
+                      <div className="metric-content">
+                        <div className="metric-value">{stats.totalStudents}</div>
+                        <div className="metric-label">Total Students</div>
+                        <div className="metric-trend positive">
+                          <i className="fas fa-arrow-up"></i>
+                          Registered
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className={`stat-card today-attendance ${lowAttendanceAlert?.isActive ? 'low-attendance' : ''}`}>
-                    <div className="stat-content">
-                      <h3>TODAY'S ATTENDANCE</h3>
-                      <div className="stat-number">{stats.todayAttendance}</div>
-                      <div className="stat-percentage">{stats.attendancePercentage}%</div>
-                    </div>
-                  </div>
-
-                  <div className="stat-card weekly-attendance">
-                    <div className="stat-content">
-                      <h3>WEEKLY ATTENDANCE</h3>
-                      <div className="stat-number">{stats.weeklyAttendance}</div>
+                    <div className={`metric-card attendance-card ${lowAttendanceAlert?.isActive ? 'low-attendance' : ''}`}>
+                      <div className="metric-icon">
+                        <i className="fas fa-calendar-check"></i>
+                      </div>
+                      <div className="metric-content">
+                        <div className="metric-value">{stats.todayAttendance}</div>
+                        <div className="metric-label">Today's Attendance</div>
+                        <div className={`metric-trend ${stats.attendancePercentage >= 70 ? 'positive' : 'negative'}`}>
+                          <i className={`fas fa-arrow-${stats.attendancePercentage >= 70 ? 'up' : 'down'}`}></i>
+                          {stats.attendancePercentage}%
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Dashboard Summary */}
-                <div className="recent-activity">
-                  <h2>Dashboard Summary</h2>
-                  <div className="activity-summary">
-                    <p>Here you can view overall statistics and recent activity.</p>
-                    <ul>
-                      <li>Monitor daily attendance rates</li>
-                      <li>Track weekly attendance trends</li>
-                      <li>View total registered students</li>
-                      <li>Access detailed reports and analytics</li>
-                    </ul>
+                {/* Quick Actions */}
+                <div className="quick-actions-section">
+                  <h2><i className="fas fa-bolt"></i> Quick Actions</h2>
+                  <div className="quick-actions-grid">
+                    <div className="quick-action-card" onClick={() => setActiveSection('students')}>
+                      <div className="action-icon">
+                        <i className="fas fa-user-plus"></i>
+                      </div>
+                      <div className="action-content">
+                        <h3>Add Student</h3>
+                        <p>Register new student</p>
+                      </div>
+                    </div>
+                    <div className="quick-action-card" onClick={() => setActiveSection('attendance')}>
+                      <div className="action-icon">
+                        <i className="fas fa-clipboard-check"></i>
+                      </div>
+                      <div className="action-content">
+                        <h3>View Attendance</h3>
+                        <p>Check today's records</p>
+                      </div>
+                    </div>
+                    <div className="quick-action-card" onClick={() => setActiveSection('reports')}>
+                      <div className="action-icon">
+                        <i className="fas fa-chart-bar"></i>
+                      </div>
+                      <div className="action-content">
+                        <h3>Generate Report</h3>
+                        <p>Export attendance data</p>
+                      </div>
+                    </div>
+                    <div className="quick-action-card" onClick={() => setActiveSection('meal-windows')}>
+                      <div className="action-icon">
+                        <i className="fas fa-clock"></i>
+                      </div>
+                      <div className="action-content">
+                        <h3>Meal Windows</h3>
+                        <p>Configure meal times</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
+
+                {/* System Status */}
+                <div className="system-status-section">
+                  <h2><i className="fas fa-server"></i> System Status</h2>
+                  <div className="status-grid">
+                    <div className="status-card">
+                      <div className="status-header">
+                        <i className="fas fa-database"></i>
+                        <span>Database</span>
+                      </div>
+                      <div className={`status-indicator ${systemStatus.database}`}>
+                        <span className="status-dot"></span>
+                        {systemStatus.database === 'connected' ? 'Connected' : 'Disconnected'}
+                      </div>
+                    </div>
+                    <div className="status-card">
+                      <div className="status-header">
+                        <i className="fas fa-clock"></i>
+                        <span>Meal Windows</span>
+                      </div>
+                      <div className={`status-indicator ${systemStatus.mealWindows}`}>
+                        <span className="status-dot"></span>
+                        {mealWindowStatus.isOpen ? 'Open' : 'Closed'}
+                      </div>
+                    </div>
+                    <div className="status-card">
+                      <div className="status-header">
+                        <i className="fas fa-shield-alt"></i>
+                        <span>System Uptime</span>
+                      </div>
+                      <div className="status-indicator connected">
+                        <span className="status-dot"></span>
+                        {systemStatus.uptime}
+                      </div>
+                    </div>
+                    <div className="status-card">
+                      <div className="status-header">
+                        <i className="fas fa-users"></i>
+                        <span>Active Sessions</span>
+                      </div>
+                      <div className="status-indicator active">
+                        <span className="status-dot"></span>
+                        {stats.todayAttendance} Students
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </>
             )}
 
@@ -1700,104 +1072,32 @@ const Dashboard = ({ user, onLogout }) => {
               <>
                 <div className="students-section">
                   
-                  {/* Search Section */}
-                  <div className="search-section">
-                    <div className="search-container">
-                      <div className="search-input-wrapper">
-                        <i className="fas fa-search search-icon"></i>
-                        <input
-                          ref={searchInputRef}
-                          type="text"
-                          placeholder="Search Student ID or Name..."
-                          value={searchQuery}
-                          onChange={handleSearchInputChange}
-                          className="search-input"
-                        />
-                        {searchLoading && <i className="fas fa-spinner fa-spin loading-icon"></i>}
-                      </div>
-                      {searchMessage && (
-                        <div className={`search-message ${searchResults.length > 0 ? 'success' : 'info'}`}>
-                          {searchMessage}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="action-buttons">
-                      <button 
-                        className="action-btn add-btn"
-                        onClick={() => setShowAddStudentModal(true)}
-                      >
-                        <i className="fas fa-user-plus"></i>
-                        <span>Add New Student</span>
-                      </button>
-                      <button 
-                        className="action-btn view-btn"
-                        onClick={() => handleViewAllStudents()}
-                      >
+                  {/* Action Buttons */}
+                  <div className="action-buttons">
+                    <button 
+                      className="action-btn search-btn"
+                      onClick={() => window.location.href = '/search-student'}
+                    >
+                      <i className="fas fa-search"></i>
+                      <span>Search Student</span>
+                    </button>
+                    <button 
+                      className="action-btn add-btn"
+                      onClick={() => window.location.href = '/add-student'}
+                    >
+                      <i className="fas fa-user-plus"></i>
+                      <span>Add New Student</span>
+                    </button>
+                    <button 
+                      className="action-btn view-btn"
+                      onClick={() => window.location.href = '/view-all-students'}
+                    >
                         <i className="fas fa-users"></i>
                         <span>View All Students</span>
                       </button>
                     </div>
 
-                    {/* Student Information Display - Positioned Absolutely */}
-                    {searchResults.length > 0 && (
-                      <div className="student-info-panel">
-                        <button 
-                          className="modal-close-btn student-panel-close"
-                          onClick={() => setSearchResults([])}
-                        >
-                          <i className="fas fa-times"></i>
-                        </button>
-                        <h3>Student Information</h3>
-                        {searchResults.map((student) => (
-                          <div key={student._id} className="student-details-card">
-                            <div className="student-header">
-                              {student.photoUrl && (
-                                <div className="student-avatar">
-                                  <img src={student.photoUrl} alt={student.name} />
-                                </div>
-                              )}
-                              <div className="student-basic-info">
-                                <h4>{student.name}</h4>
-                                <p className="student-id-display">{student.id}</p>
-                              </div>
-                            </div>
-                            <div className="student-details">
-                              <div className="detail-row">
-                                <span className="detail-label">ID:</span>
-                                <span className="detail-value">{student.id}</span>
-                              </div>
-                              <div className="detail-row">
-                                <span className="detail-label">Name:</span>
-                                <span className="detail-value">{student.name}</span>
-                              </div>
-                              <div className="detail-row">
-                                <span className="detail-label">Department:</span>
-                                <span className="detail-value">{student.department}</span>
-                              </div>
-                            </div>
-                            <div className="student-actions">
-                              <button 
-                                className="btn-edit"
-                                onClick={() => handleEditStudent(student)}
-                              >
-                                <i className="fas fa-edit"></i>
-                                Edit
-                              </button>
-                              <button 
-                                className="btn-delete"
-                                onClick={() => handleDeleteStudent(student.id)}
-                              >
-                                <i className="fas fa-trash"></i>
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                    {/* Search functionality moved to separate SearchStudent component */}
                 </div>
               </>
             )}
@@ -2045,26 +1345,19 @@ const Dashboard = ({ user, onLogout }) => {
                 <div className="settings-section">
                   <div className="feature-list">
                     
-                    <div className="feature-item clickable" onClick={() => setShowAdminCredentialsModal(true)}>
+                    <div className="feature-item clickable" onClick={() => window.location.href = '/admin-credentials'}>
                       <i className="fas fa-user-shield"></i>
                       <span>Admin Credential</span>
                     </div>
                     
                     <div 
                       className="feature-item clickable"
-                      onClick={() => setShowAddStaffModal(true)}
+                      onClick={() => window.location.href = '/scanner-credentials'}
                     >
                       <i className="fas fa-users-cog"></i>
                       <span>Scanner Credential</span>
                     </div>
                     
-                    <div 
-                      className="feature-item clickable"
-                      onClick={() => setShowDatabaseConfigModal(true)}
-                    >
-                      <i className="fas fa-database"></i>
-                      <span>Database Configuration</span>
-                    </div>
                   </div>
                 </div>
               </>
@@ -2072,274 +1365,7 @@ const Dashboard = ({ user, onLogout }) => {
         </div>
       </div>
 
-      {/* Add Student Modal */}
-      {showAddStudentModal && (
-        <div className="modal-overlay" onClick={() => setShowAddStudentModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Add New Student</h3>
-              <button 
-                className="modal-close-btn"
-                onClick={() => setShowAddStudentModal(false)}
-              >
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              <form onSubmit={handleAddStudent} className="add-student-form">
-                <div className="form-group">
-                  <label htmlFor="studentId">Student ID</label>
-                  <input
-                    type="text"
-                    id="studentId"
-                    value={newStudentData.id}
-                    onChange={(e) => setNewStudentData({...newStudentData, id: e.target.value})}
-                    placeholder="Enter student ID"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="studentName">Name</label>
-                  <input
-                    type="text"
-                    id="studentName"
-                    value={newStudentData.name}
-                    onChange={(e) => setNewStudentData({...newStudentData, name: e.target.value})}
-                    placeholder="Enter student name"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="studentDepartment">Department</label>
-                  <input
-                    type="text"
-                    id="studentDepartment"
-                    value={newStudentData.department}
-                    onChange={(e) => setNewStudentData({...newStudentData, department: e.target.value})}
-                    placeholder="Enter department"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="studentPhotoUrl">Photo Path</label>
-                  <input
-                    type="text"
-                    id="studentPhotoUrl"
-                    value={newStudentData.photoUrl}
-                    onChange={(e) => setNewStudentData({...newStudentData, photoUrl: e.target.value})}
-                    placeholder="e.g., /public/images/student.jpg"
-                  />
-                </div>
-                
-                {addStudentMessage && (
-                  <div className={`modal-message ${addStudentMessage.includes('successfully') ? 'success' : 'error'}`}>
-                    {addStudentMessage}
-                  </div>
-                )}
-                
-                <div className="form-actions">
-                  <button 
-                    type="button" 
-                    className="btn-cancel"
-                    onClick={() => setShowAddStudentModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="btn-register"
-                    disabled={addStudentLoading}
-                  >
-                    {addStudentLoading ? (
-                      <>
-                        <i className="fas fa-spinner fa-spin"></i>
-                        Registering...
-                      </>
-                    ) : (
-                      'Register'
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Add Staff Modal */}
-      {showAddStaffModal && (
-        <div className="modal-overlay" onClick={() => setShowAddStaffModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Add New Staff</h3>
-              <button 
-                className="modal-close-btn"
-                onClick={() => setShowAddStaffModal(false)}
-              >
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              <form onSubmit={handleAddStaff} className="add-staff-form">
-                <div className="form-group">
-                  <label htmlFor="staffUsername">Username</label>
-                  <input
-                    type="text"
-                    id="staffUsername"
-                    value={newStaffData.username}
-                    onChange={(e) => setNewStaffData({...newStaffData, username: e.target.value})}
-                    placeholder="Enter username"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="staffPassword">Password</label>
-                  <input
-                    type="password"
-                    id="staffPassword"
-                    value={newStaffData.password}
-                    onChange={(e) => setNewStaffData({...newStaffData, password: e.target.value})}
-                    placeholder="Enter password"
-                    required
-                  />
-                </div>
-                
-                {addStaffMessage && (
-                  <div className={`modal-message ${addStaffMessage.includes('successfully') ? 'success' : 'error'}`}>
-                    {addStaffMessage}
-                  </div>
-                )}
-                
-                <div className="form-actions">
-                  <button 
-                    type="button" 
-                    className="btn-cancel"
-                    onClick={() => setShowAddStaffModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="btn-register"
-                    disabled={addStaffLoading}
-                  >
-                    {addStaffLoading ? (
-                      <>
-                        <i className="fas fa-spinner fa-spin"></i>
-                        Registering...
-                      </>
-                    ) : (
-                      'Register Staff'
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Student Modal */}
-      {showEditStudentModal && (
-        <div className="modal-overlay" onClick={() => setShowEditStudentModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Edit Student Data</h3>
-              <button 
-                className="modal-close-btn"
-                onClick={() => setShowEditStudentModal(false)}
-              >
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              <form onSubmit={handleUpdateStudent} className="edit-student-form">
-                <div className="form-group">
-                  <label htmlFor="editStudentId">Student ID</label>
-                  <input
-                    type="text"
-                    id="editStudentId"
-                    value={editStudentData.id}
-                    onChange={(e) => setEditStudentData({...editStudentData, id: e.target.value})}
-                    placeholder="Enter student ID"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="editStudentName">Name</label>
-                  <input
-                    type="text"
-                    id="editStudentName"
-                    value={editStudentData.name}
-                    onChange={(e) => setEditStudentData({...editStudentData, name: e.target.value})}
-                    placeholder="Enter student name"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="editStudentDepartment">Department</label>
-                  <input
-                    type="text"
-                    id="editStudentDepartment"
-                    value={editStudentData.department}
-                    onChange={(e) => setEditStudentData({...editStudentData, department: e.target.value})}
-                    placeholder="Enter department"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="editStudentPhotoUrl">Photo Path</label>
-                  <input
-                    type="text"
-                    id="editStudentPhotoUrl"
-                    value={editStudentData.photoUrl}
-                    onChange={(e) => setEditStudentData({...editStudentData, photoUrl: e.target.value})}
-                    placeholder="e.g., /public/images/student.jpg"
-                  />
-                </div>
-                
-                {editStudentMessage && (
-                  <div className={`modal-message ${editStudentMessage.includes('successfully') ? 'success' : 'error'}`}>
-                    {editStudentMessage}
-                  </div>
-                )}
-                
-                <div className="form-actions">
-                  <button 
-                    type="button" 
-                    className="btn-cancel"
-                    onClick={() => setShowEditStudentModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="btn-register"
-                    disabled={editStudentLoading}
-                  >
-                    {editStudentLoading ? (
-                      <>
-                        <i className="fas fa-spinner fa-spin"></i>
-                        Updating...
-                      </>
-                    ) : (
-                      'Update'
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirmModal && (
@@ -2395,369 +1421,8 @@ const Dashboard = ({ user, onLogout }) => {
       )}
 
 
-      {/* OTP Verification Modal */}
-      {showOTPModal && (
-        <div className="modal-overlay" onClick={() => setShowOTPModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>
-                <i className="fas fa-shield-alt"></i>
-                Email Verification
-              </h3>
-              <button 
-                className="modal-close-btn" 
-                onClick={() => setShowOTPModal(false)}
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              {otpMessage && (
-                <div className={`modal-message ${otpMessage.includes('successful') || otpMessage.includes('sent') ? 'success' : 'error'}`}>
-                  {otpMessage}
-                </div>
-              )}
-              
-              <div className="settings-form" style={{textAlign: 'center', padding: '40px 20px'}}>
-                <h4 className="mb-2" style={{color: '#2d3748', fontWeight: '600'}}>Check your inbox</h4>
-                <p style={{color: '#666', fontSize: '14px', marginBottom: '30px'}}>
-                  {emailVerificationMessage}
-                </p>
-                
-                <VerificationCodeInput
-                  value={otpCode}
-                  onCodeChange={setOtpCode}
-                  onComplete={(code) => {
-                    setOtpCode(code);
-                    // Auto-submit when complete
-                    if (code.length === 6) {
-                      handleVerifyOTP({ preventDefault: () => {} });
-                    }
-                  }}
-                  error={otpCode.length > 0 && otpCode.length < 6}
-                  disabled={otpLoading}
-                />
-                
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '30px', marginBottom: '20px'}}>
-                  <div style={{fontSize: '13px', color: '#666'}}>
-                    {otpCountdown > 0 ? (
-                      <>⏰ Code expires in: <strong>{formatTime(otpCountdown)}</strong></>
-                    ) : (
-                      <span style={{color: '#e53e3e'}}>⚠️ Code expired</span>
-                    )}
-                  </div>
-                  
-                  <button
-                    type="button"
-                    onClick={handleResendOTP}
-                    disabled={!canResendOTP || otpLoading}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: canResendOTP ? '#3182ce' : '#a0aec0',
-                      cursor: canResendOTP ? 'pointer' : 'not-allowed',
-                      fontSize: '13px',
-                      textDecoration: 'underline'
-                    }}
-                  >
-                    {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : 'Resend Code'}
-                  </button>
-                </div>
-                
-                <div className="d-flex justify-content-center">
-                  <button 
-                    type="button" 
-                    onClick={() => setShowOTPModal(false)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#718096',
-                      fontSize: '14px',
-                      cursor: 'pointer',
-                      textDecoration: 'none'
-                    }}
-                  >
-                    ← Back to Settings
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Admin Credentials Modal */}
-      {showAdminCredentialsModal && !showAdminApproval && !showEmailVerification && (
-        <div className="modal-overlay" onClick={() => setShowAdminCredentialsModal(false)}>
-          <div className="modal-content settings-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>
-                Admin Credentials
-              </h3>
-              <button 
-                className="modal-close-btn" 
-                onClick={() => setShowAdminCredentialsModal(false)}
-              >
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              {adminCredentialsMessage && (
-                <div className={`modal-message ${adminCredentialsMessage.includes('successfully') ? 'success' : 'error'}`}>
-                  {adminCredentialsMessage}
-                </div>
-              )}
-              
-              <form onSubmit={handleUpdateAdminCredentials} className="settings-form">
-                <div className="settings-section">
-                  <h4>
-                    Change Admin Credentials
-                  </h4>
-                  
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label>Current Password</label>
-                      <input
-                        type="password"
-                        value={adminCredentials.currentPassword}
-                        onChange={(e) => setAdminCredentials(prev => ({
-                          ...prev,
-                          currentPassword: e.target.value
-                        }))}
-                        required
-                        placeholder="Enter current password"
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label>New Username</label>
-                      <input
-                        type="text"
-                        value={adminCredentials.newUsername}
-                        onChange={(e) => setAdminCredentials(prev => ({
-                          ...prev,
-                          newUsername: e.target.value
-                        }))}
-                        placeholder="Leave blank to keep current"
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label>New Password</label>
-                      <input
-                        type="password"
-                        value={adminCredentials.newPassword}
-                        onChange={(e) => setAdminCredentials(prev => ({
-                          ...prev,
-                          newPassword: e.target.value
-                        }))}
-                        placeholder="Leave blank to keep current"
-                        minLength="6"
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label>Confirm New Password</label>
-                      <input
-                        type="password"
-                        value={adminCredentials.confirmPassword}
-                        onChange={(e) => setAdminCredentials(prev => ({
-                          ...prev,
-                          confirmPassword: e.target.value
-                        }))}
-                        placeholder="Confirm new password"
-                        disabled={!adminCredentials.newPassword}
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label>Email Address</label>
-                      <input
-                        type="email"
-                        value={adminCredentials.email}
-                        onChange={(e) => setAdminCredentials(prev => ({
-                          ...prev,
-                          email: e.target.value
-                        }))}
-                        placeholder="Enter admin email address"
-                      />
-                      <small style={{color: '#666', fontSize: '12px', marginTop: '4px'}}>
-                        {adminCredentials.email && adminCredentials.email !== adminEmail ? 
-                          'Email verification will be required for this change' : 
-                          'Leave blank to keep current email'
-                        }
-                      </small>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="modal-actions">
-                  <button 
-                    type="button" 
-                    className="btn-cancel"
-                    onClick={() => setShowAdminCredentialsModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  
-                  {/* Show verification code button if email change is pending */}
-                  {pendingCredentials && pendingCredentials.email && pendingCredentials.email !== adminEmail && (
-                    <button 
-                      type="button" 
-                      className="btn-secondary"
-                      onClick={() => {
-                        setShowAdminCredentialsModal(false);
-                        setShowEmailVerification(true);
-                        setEmailVerificationMessage(`📧 Enter the 6-digit verification code sent to ${pendingCredentials.email}`);
-                      }}
-                      style={{ marginRight: '10px' }}
-                    >
-                      <i className="fas fa-key"></i>
-                      Enter Verification Code
-                    </button>
-                  )}
-                  
-                  <button 
-                    type="submit" 
-                    className="btn-register"
-                    disabled={adminCredentialsLoading || !adminCredentials.currentPassword}
-                  >
-                    {adminCredentialsLoading || adminApprovalLoading ? (
-                      <>
-                        <i className="fas fa-spinner fa-spin"></i>
-                        Sending Admin Approval...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-shield-alt"></i>
-                        Request Admin Approval
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Admin Approval Modal (Required for all credential updates) */}
-      {showAdminApproval && (
-        <div className="modal-overlay" onClick={() => setShowAdminApproval(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>
-                <i className="fas fa-shield-alt"></i>
-                Admin Identity Verification
-              </h3>
-              <button 
-                className="modal-close-btn" 
-                onClick={() => setShowAdminApproval(false)}
-              >
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              {adminApprovalMessage && (
-                <div className={`modal-message ${adminApprovalMessage.includes('successfully') || adminApprovalMessage.includes('sent') ? 'success' : 'error'}`}>
-                  {adminApprovalMessage}
-                </div>
-              )}
-              
-              <form onSubmit={(e) => { e.preventDefault(); handleProceedAfterAdminApproval(); }} className="settings-form">
-                <div className="settings-section">
-                  <h4>
-                    <i className="fas fa-user-shield"></i>
-                    Verify Admin Identity
-                  </h4>
-                  <p style={{color: '#666', fontSize: '14px', marginBottom: '20px'}}>
-                    For security purposes, we need to verify your identity before making any credential changes. 
-                    We've sent a verification code to your current admin email address.
-                  </p>
-                  
-                  <div className="form-group">
-                    <label>Admin Approval Code</label>
-                    <input
-                      type="text"
-                      value={adminApprovalCode}
-                      onChange={(e) => setAdminApprovalCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="Enter 6-digit code"
-                      maxLength="6"
-                      style={{
-                        textAlign: 'center',
-                        fontSize: '18px',
-                        letterSpacing: '4px',
-                        fontFamily: 'monospace'
-                      }}
-                      required
-                    />
-                  </div>
-                  
-                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px'}}>
-                    <div style={{fontSize: '13px', color: '#666'}}>
-                      {adminApprovalCountdown > 0 ? (
-                        <>⏰ Code expires in: <strong>{formatTime(adminApprovalCountdown)}</strong></>
-                      ) : (
-                        <span style={{color: '#e53e3e'}}>⚠️ Code expired</span>
-                      )}
-                    </div>
-                    
-                    <button
-                      type="button"
-                      onClick={handleResendAdminApproval}
-                      disabled={!canResendAdminApproval || adminApprovalLoading}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: canResendAdminApproval ? '#3182ce' : '#a0aec0',
-                        cursor: canResendAdminApproval ? 'pointer' : 'not-allowed',
-                        fontSize: '13px',
-                        textDecoration: 'underline'
-                      }}
-                    >
-                      {resendAdminApprovalCountdown > 0 ? `Resend in ${resendAdminApprovalCountdown}s` : 'Resend Code'}
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="form-actions">
-                  <button
-                    type="button"
-                    className="btn-cancel"
-                    onClick={() => {
-                      setShowAdminApproval(false);
-                      setShowAdminCredentialsModal(true);
-                    }}
-                    disabled={adminApprovalLoading}
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn-register"
-                    disabled={adminApprovalLoading || adminApprovalCode.length !== 6 || adminApprovalCountdown === 0}
-                  >
-                    {adminApprovalLoading ? (
-                      <>
-                        <i className="fas fa-spinner fa-spin"></i>
-                        Verifying...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-check-shield"></i>
-                        Verify & Continue
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Email Verification Modal for Credential Update */}
       {showEmailVerification && (
@@ -2845,7 +1510,6 @@ const Dashboard = ({ user, onLogout }) => {
                     className="btn-cancel"
                     onClick={() => {
                       setShowEmailVerification(false);
-                      setShowAdminCredentialsModal(true);
                     }}
                     disabled={emailVerificationLoading}
                   >
@@ -2875,310 +1539,7 @@ const Dashboard = ({ user, onLogout }) => {
         </div>
       )}
 
-      {/* View All Students Modal */}
-      {showAllStudentsModal && (
-        <div className="modal-overlay" onClick={() => setShowAllStudentsModal(false)}>
-          <div className="modal-content all-students-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>All Students</h2>
-              <button 
-                className="modal-close-btn" 
-                onClick={() => setShowAllStudentsModal(false)}
-              >
-              <i className="fas fa-times"></i>
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              {allStudentsLoading ? (
-                <div className="loading-container">
-                  <i className="fas fa-spinner fa-spin"></i>
-                  <p>Loading students...</p>
-                </div>
-              ) : (
-                <div className="students-table-container">
-                  <div className="students-count">
-                    Total Students: <strong>{allStudents.length}</strong>
-                  </div>
-                  
-                  <div className="students-table-wrapper">
-                    <table className="students-table">
-                      <thead>
-                        <tr>
-                          <th>Student ID</th>
-                          <th>Name</th>
-                          <th>Department</th>
-                          <th>Photo</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allStudents.length > 0 ? (
-                          allStudents.map((student) => (
-                            <tr key={student._id}>
-                              <td>{student.id}</td>
-                              <td>{student.name}</td>
-                              <td>{student.department || 'N/A'}</td>
-                              <td>
-                                {student.photoUrl ? (
-                                  <img 
-                                    src={student.photoUrl} 
-                                    alt={student.name}
-                                    className="student-photo-small"
-                                    onError={(e) => {
-                                      e.target.src = '/images/default-student.png';
-                                    }}
-                                  />
-                                ) : (
-                                  <div className="no-photo">No Photo</div>
-                                )}
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan="4" className="no-data">No students found</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Database Configuration Modal */}
-      {showDatabaseConfigModal && (
-        <div className="modal-overlay" onClick={() => setShowDatabaseConfigModal(false)}>
-          <div className="modal-content database-config-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>
-                <i className="fas fa-database"></i>
-                Database Configuration
-              </h3>
-              <button 
-                className="modal-close-btn" 
-                onClick={() => setShowDatabaseConfigModal(false)}
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              {databaseConfigMessage && (
-                <div className={`modal-message ${databaseConfigMessage.includes('✅') ? 'success' : 'error'}`}>
-                  {databaseConfigMessage}
-                </div>
-              )}
-              
-              <form onSubmit={handleSaveDatabaseConfig} className="database-config-form">
-                {/* Connection Settings */}
-                <div className="config-section">
-                  <h4><i className="fas fa-plug"></i> Connection Settings</h4>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>MongoDB Connection String</label>
-                      <input
-                        type="text"
-                        value={databaseConfig.connectionString}
-                        onChange={(e) => setDatabaseConfig({...databaseConfig, connectionString: e.target.value})}
-                        placeholder="mongodb://localhost:27017/meal_attendance"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Connection Pool Size</label>
-                      <input
-                        type="number"
-                        min="5"
-                        max="50"
-                        value={databaseConfig.connectionPoolSize}
-                        onChange={(e) => setDatabaseConfig({...databaseConfig, connectionPoolSize: parseInt(e.target.value)})}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Connection Timeout (seconds)</label>
-                      <input
-                        type="number"
-                        min="10"
-                        max="120"
-                        value={databaseConfig.connectionTimeout}
-                        onChange={(e) => setDatabaseConfig({...databaseConfig, connectionTimeout: parseInt(e.target.value)})}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Backup Settings */}
-                <div className="config-section">
-                  <h4><i className="fas fa-save"></i> Backup Settings</h4>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Backup Schedule</label>
-                      <select
-                        value={databaseConfig.backupSchedule}
-                        onChange={(e) => setDatabaseConfig({...databaseConfig, backupSchedule: e.target.value})}
-                      >
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Backup Time</label>
-                      <input
-                        type="time"
-                        value={databaseConfig.backupTime}
-                        onChange={(e) => setDatabaseConfig({...databaseConfig, backupTime: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Data Retention & Archive */}
-                <div className="config-section">
-                  <h4><i className="fas fa-archive"></i> Data Retention & Archive</h4>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Data Retention (months)</label>
-                      <input
-                        type="number"
-                        min="6"
-                        max="60"
-                        value={databaseConfig.dataRetentionMonths}
-                        onChange={(e) => setDatabaseConfig({...databaseConfig, dataRetentionMonths: parseInt(e.target.value)})}
-                      />
-                      <small>Keep attendance records for this duration</small>
-                    </div>
-                    <div className="form-group">
-                      <label>Archive After (months)</label>
-                      <input
-                        type="number"
-                        min="3"
-                        max="24"
-                        value={databaseConfig.archiveAfterMonths}
-                        onChange={(e) => setDatabaseConfig({...databaseConfig, archiveAfterMonths: parseInt(e.target.value)})}
-                      />
-                      <small>Move old records to archive storage</small>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Performance Settings */}
-                <div className="config-section">
-                  <h4><i className="fas fa-tachometer-alt"></i> Performance Settings</h4>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={databaseConfig.cacheEnabled}
-                          onChange={(e) => setDatabaseConfig({...databaseConfig, cacheEnabled: e.target.checked})}
-                        />
-                        Enable Caching
-                      </label>
-                    </div>
-                    <div className="form-group">
-                      <label>Cache Duration (minutes)</label>
-                      <input
-                        type="number"
-                        min="5"
-                        max="120"
-                        value={databaseConfig.cacheDurationMinutes}
-                        onChange={(e) => setDatabaseConfig({...databaseConfig, cacheDurationMinutes: parseInt(e.target.value)})}
-                        disabled={!databaseConfig.cacheEnabled}
-                      />
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={databaseConfig.indexOptimization}
-                          onChange={(e) => setDatabaseConfig({...databaseConfig, indexOptimization: e.target.checked})}
-                        />
-                        Enable Index Optimization
-                      </label>
-                      <small>Automatically optimize database queries</small>
-                    </div>
-                  </div>
-                </div>
-
-                {/* GDPR Compliance */}
-                <div className="config-section">
-                  <h4><i className="fas fa-shield-alt"></i> GDPR Compliance</h4>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={databaseConfig.gdprCompliance}
-                          onChange={(e) => setDatabaseConfig({...databaseConfig, gdprCompliance: e.target.checked})}
-                        />
-                        Enable GDPR Compliance Features
-                      </label>
-                      <small>Data export, deletion, and privacy controls</small>
-                    </div>
-                  </div>
-                  
-                  {databaseConfig.gdprCompliance && (
-                    <div className="d-flex justify-content-center mt-4">
-                      <button 
-                        type="button" 
-                        onClick={() => setShowEmailVerification(false)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#718096',
-                          fontSize: '14px',
-                          cursor: 'pointer',
-                          textDecoration: 'none'
-                        }}
-                      >
-                        ← Back to Settings
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Action Buttons */}
-                <div className="modal-actions">
-                  <button
-                    type="button"
-                    className="btn-cancel"
-                    onClick={() => setShowDatabaseConfigModal(false)}
-                  >
-                    <i className="fas fa-times"></i>
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="btn-primary"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <span className="spinner"></span>
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-save"></i>
-                        Save Configuration
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Bottom Taskbar */}
       <div className="taskbar">

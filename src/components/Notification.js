@@ -5,7 +5,6 @@ const Notification = ({
   lowAttendanceAlert, 
   mealWindows, 
   mealWindowStatus,
-  attendanceBlocked,
   lastUpdated, 
   refreshMessage,
   newStudentRegistrations = [],
@@ -136,7 +135,7 @@ const Notification = ({
 
     setNotifications(newNotifications);
     setUnreadCount(newNotifications.filter(n => !n.read).length);
-  }, [lowAttendanceAlert, mealWindows, refreshMessage, lastUpdated, newStudentRegistrations]);
+  }, [lowAttendanceAlert, mealWindows, refreshMessage, lastUpdated, newStudentRegistrations, externalNotifications]);
 
   const handleNotificationClick = (notification) => {
     if (!notification.read && onMarkAsRead) {

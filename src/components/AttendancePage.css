@@ -3,263 +3,266 @@
 
 /* Only keep essential custom styles that Bootstrap doesn't handle */
 
-/* ===== Navbar ===== */
-.attendance-navbar {
-  padding: 0.5rem 1.5rem !important;
-  background: rgba(30, 42, 58, 0.95) !important;
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  min-height: 60px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-  margin-bottom: 1.13rem;
+/* ===== Logout Button Hover ===== */
+.btn-outline-light:hover {
+  background-color: rgba(220, 53, 69, 0.2) !important;
+  border-color: rgba(220, 53, 69, 0.5) !important;
+  color: #ffffff !important;
+  transition: all 0.3s ease;
 }
-
-.navbar-brand-custom {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.navbar-brand-custom img {
-  width: 50px;
-  height: 50px;
-}
-
-.navbar-title {
-  font-size: 1.2rem;
-  font-weight: 500;
-  color: #ecf0f1 !important;
-  margin: 0;
-}
-
-.logout-button {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  color: #ecf0f1 !important;
-  padding: 7px 1.4rem !important;
-  font-size: 0.85rem !important;
-  border-radius: 13px !important;
-  transition: all 0.2s ease !important;
-}
-
-.logout-button:hover {
-  background: rgba(255, 255, 255, 0.2) !important;
-  color: #f56565 !important;
-  border-color: rgba(245, 101, 101, 0.3) !important;
-}
-
-/* ===== Cards ===== */
-.attendance-card{
-  background: rgba(30, 41, 59, 0.85);
-  border: none;
-  border-radius: 1.2rem;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(8px);
-  color: #f8fafc;
-  padding: 1rem;
-}
-.student-card {
-  background: rgba(30, 41, 59, 0.85);
-  border: none;
-  border-radius: 1.2rem;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(8px);
-  color: #f8fafc;
-  padding: 1.2rem;
-}
-
-
 
 /* ===== Alerts & Messages ===== */
 .alert {
-  border-radius: 0.75rem;
-  font-size: 0.95rem;
-  border: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(8px);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  border: 1px solid;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .alert-success {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(34, 197, 94, 0.15));
-  border-left: 4px solid #10b981;
-  color: #d1fae5;
-  font-weight: 600;
+  background-color: #d1fae5;
+  border-color: #10b981;
+  color: #065f46;
 }
 
 .alert-danger {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(220, 38, 38, 0.15));
-  border-left: 4px solid #ef4444;
-  color: #fee2e2;
-  font-weight: 600;
+  background-color: #fee2e2;
+  border-color: #ef4444;
+  color: #991b1b;
 }
 
 .alert-warning {
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.4), rgba(245, 158, 11, 0.25));
-  border-left: 4px solid #fbbf24;
-  color: #ffffff;
-  font-weight: 600;
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  box-shadow: 0 6px 20px rgba(251, 191, 36, 0.2);
+  background-color: #fef3c7;
+  border-color: #f59e0b;
+  color: #92400e;
 }
 
 /* Enhanced meal window notification */
 .meal-window-alert {
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.5), rgba(245, 158, 11, 0.3)) !important;
-  border: none !important;
-  border-radius: 12px !important;
-  backdrop-filter: blur(10px) !important;
-  padding: 1rem !important;
+  background-color: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 0.5rem;
+  padding: 1rem;
 }
 
 .meal-window-alert .fas.fa-clock {
-  font-size: 2rem !important;
-  color: #fbbf24 !important;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  font-size: 1.5rem;
+  color: #f59e0b;
 }
 
 .meal-window-text {
-  font-size: 0.95rem !important;
-  font-weight: 700 !important;
-  color: #ffffff !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  line-height: 1.3;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #92400e;
+  line-height: 1.4;
 }
 
 .countdown-badge {
-  background: linear-gradient(135deg, #10b981, #059669) !important;
-  color: #ffffff !important;
-  font-size: 0.85rem !important;
-  font-weight: 700 !important;
-  padding: 0.4rem 0.8rem !important;
-  border-radius: 8px !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #1f2937;
+  background-color: transparent;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 4px 5px;
+  border: none;
+  display: inline;
+  margin-left: 0.5rem;
+  text-align: center;
 }
 
 /* ===== Message Animations ===== */
 .message-fade-in {
-  animation: messageSlideIn 0.4s ease-out;
+  animation: fadeIn 0.3s ease-in;
 }
 
-@keyframes messageSlideIn {
+@keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(-15px) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
-/* ===== Card Containers ===== */
-.attendance-input-card {
-  background: rgba(52, 73, 94, 0.85);
-  backdrop-filter: blur(15px);
-  min-height: auto;
-  height: fit-content !important;
-  border-radius: 70px;
-}
-
-.attendance-input-card .card-body {
-  padding: 0.5rem;
-  padding-bottom: 0.25rem;
-}
-
-.attendance-input-card .alert {
-  margin-bottom: 0.5rem;
-}
-
-.attendance-input-card .form-group {
-  margin-bottom: 0.5rem;
-}
-
-.attendance-input-card .btn {
-  margin-bottom: 0.5rem;
-}
-
-.attendance-input-card .alert:last-child {
-  margin-bottom: 0;
-}
-
-.student-info-card {
-  background: rgba(52, 73, 94, 0.85);
-  backdrop-filter: blur(15px);
-  min-height: auto;
-  height: fit-content;
-}
+/* ===== Card Containers (Legacy - Replaced by Professional Card Layout) ===== */
 
 /* ===== Status Messages ===== */
 .status-message-enhanced {
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
-  font-weight: bold;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
   text-align: center;
-  font-size: 1rem;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(8px);
-  border: none;
-  animation: messageSlideIn 0.4s ease-out;
+  font-size: 0.875rem;
+  border: 1px solid;
   margin-bottom: 1rem;
 }
 
 .status-allowed {
-  background: rgba(39, 174, 96, 0.15);
-  border: 1px solid rgba(39, 174, 96, 0.4);
-  border-left: 4px solid #27ae60;
+  background-color: #d1fae5;
+  border-color: #10b981;
+  color: #065f46;
 }
 
 .status-denied {
-  background: #fef2f2;
-  border: 1px solid #ef4444;
-  border-left: 4px solid #ef4444;
+  background-color: #fee2e2;
+  border-color: #ef4444;
   color: #991b1b;
 }
 
 .status-already-used {
-  background: #fef2f2;
-  border: 1px solid #ef4444;
-  border-left: 4px solid #ef4444;
+  background-color: #fee2e2;
+  border-color: #ef4444;
   color: #991b1b;
 }
 
-/* ===== Student Card ===== */
-.student-photo {
-  width: 200px;
-  height: 2000px;
-  border-radius: 50%;
-  border: 3px solid #22d3ee;
-  object-fit: cover;
-  box-shadow: 0 5px 15px rgba(34, 211, 238, 0.4);
-}
 
 
-/* ===== Card Spacing ===== */
+/* ===== Professional Card Layout ===== */
 .card-spacing-left {
-  margin-right: 2rem;
-  margin-left: 2rem;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  margin-left: 3rem;
+  margin-right: 1rem;
+  padding: 0;
 }
 
 .card-spacing-right {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
   margin-left: 2rem;
+  padding: 0;
 }
 
-/* ===== Responsive ===== */
-@media (max-width: 768px) {
-  .attendance-card,
-  .student-card {
-    margin-bottom: 1rem;
-  }
+/* Enhanced card styling - Using Bootstrap classes */
 
-  .student-photo {
-    width: 90px;
-    height: 90px;
+/* ===== Student Information Styling ===== */
+.student-info-text {
+  margin-bottom: 1.5rem;
+  display: block;
+}
+
+.student-info-label {
+  font-size: 1rem !important;
+  font-weight: 600;
+  color: #74b9ff !important;
+  display: block;
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.student-info-value {
+  font-size: 1.13rem !important;
+  font-weight: 400;
+  color: #ffffff !important;
+  word-wrap: break-word;
+  line-height: 1.3;
+  display: block;
+}
+
+.student-info-card {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%) !important;
+  border: none;
+  border-radius: 1rem;
+  min-height: 400px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.student-info-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+}
+
+.student-info-card .card-body {
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.student-photo-large {
+  width: 200px !important;
+  height: 200px !important;
+  object-fit: cover;
+  border: 3px solid #74b9ff;
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== Professional Container Spacing ===== */
+.container-fluid {
+  padding: 2rem 1rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ===== Enhanced Photo Styling ===== */
+.student-photo-large {
+  margin-bottom: 2rem;
+  border: 4px solid #74b9ff;
+  border-radius: 1rem;
+  box-shadow: 0 12px 24px rgba(116, 185, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.student-photo-large:hover {
+  transform: scale(1.02);
+  box-shadow: 0 16px 32px rgba(116, 185, 255, 0.4);
+}
+
+/* ===== Status Message Enhancement ===== */
+.status-message-enhanced {
+  padding: 1rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  font-size: 1.1rem;
+  border: 2px solid;
+  margin-bottom: 2rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ===== Responsive Design ===== */
+@media (max-width: 992px) {
+  .container-fluid {
+    padding: 1.5rem 0.5rem;
   }
   
+  .attendance-input-card .card-body,
+  .student-info-card .card-body {
+    padding: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
   .card-spacing-left,
   .card-spacing-right {
-    margin-left: 0;
-    margin-right: 0;
+    margin-bottom: 1.5rem;
+  }
+  
+  .student-info-text {
+    margin-bottom: 1.2rem;
+  }
+  
+  .student-info-label {
+    font-size: 0.9rem !important;
+  }
+  
+  .student-info-value {
+    font-size: 1rem !important;
+  }
+  
+  .student-photo-large {
+    width: 160px !important;
+    height: 160px !important;
+    margin-bottom: 1.5rem;
+  }
+  
+  .attendance-input-card .card-body,
+  .student-info-card .card-body {
+    padding: 1.5rem;
   }
 }

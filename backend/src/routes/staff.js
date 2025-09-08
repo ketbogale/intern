@@ -41,7 +41,6 @@ router.post("/add", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error adding staff:", error);
     res.status(500).json({
       error: "Internal server error",
       details: error.message,
@@ -54,12 +53,11 @@ router.get("/list", async (req, res) => {
   try {
     const staff = await Staff.find({}).select("username role");
     res.json({
-      message: "Staff retrieved successfully",
+      message: "Staff list retrieved",
       count: staff.length,
       staff,
     });
   } catch (error) {
-    console.error("Error retrieving staff:", error);
     res.status(500).json({
       error: "Internal server error",
       details: error.message,
@@ -81,7 +79,6 @@ router.get("/:username", async (req, res) => {
       staff,
     });
   } catch (error) {
-    console.error("Error retrieving staff:", error);
     res.status(500).json({
       error: "Internal server error",
       details: error.message,
