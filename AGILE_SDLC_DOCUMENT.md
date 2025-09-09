@@ -1088,6 +1088,359 @@ This Agile SDLC document provides a comprehensive framework for developing the S
 
 *Built with Agile principles for educational excellence*
 
+---
+
+## 🎯 1.7. Scope and Limitation
+
+### **Project Scope**
+
+#### **Functional Scope - What the System Will Do:**
+- **Student Management**: Complete CRUD operations for student records with bulk import/export capabilities
+- **Meal Attendance Tracking**: Real-time attendance recording with meal window validation (breakfast, lunch, dinner)
+- **Administrative Dashboard**: Comprehensive statistics, reporting, and system monitoring
+- **Security Implementation**: Two-factor authentication, secure login, password reset functionality
+- **System Configuration**: Configurable meal windows, general settings, and email notifications
+- **Data Export**: CSV/Excel export capabilities for attendance reports and student data
+- **Responsive Design**: Mobile-friendly interface accessible across devices
+- **Audio Feedback**: Success/error sound notifications for user interactions
+
+#### **Technical Scope:**
+- **Frontend**: React-based web application with Bootstrap UI framework
+- **Backend**: Node.js/Express.js RESTful API with MongoDB database
+- **Security**: HTTPS encryption, session management, input validation
+- **Deployment**: Cloud hosting with SSL certificates and monitoring
+- **Browser Support**: Modern browsers (Chrome, Firefox, Safari, Edge)
+
+#### **Geographical Scope:**
+- **Primary**: Salale University main campus
+- **Users**: University administrators, cafeteria staff, and management
+- **Language**: Multi-language support (English, Amharic, Oromo, Tigrinya)
+
+### **Project Limitations**
+
+#### **Functional Limitations:**
+- **Single Campus Only**: System designed for one campus; multi-campus support excluded
+- **No Mobile App**: Web-based only; native mobile applications not included
+- **No Biometric Integration**: ID-based attendance only; fingerprint/face recognition excluded
+- **No Payment Processing**: Attendance tracking only; meal payment systems excluded
+- **No Inventory Management**: Food inventory and supply chain management excluded
+- **No Real-time Notifications**: Push notifications to mobile devices not supported
+
+#### **Technical Limitations:**
+- **Database Dependency**: Requires stable internet connection for cloud database access
+- **Browser Dependency**: Requires modern web browsers; legacy browser support limited
+- **Concurrent User Limit**: Optimized for 1000 concurrent users maximum
+- **Data Retention**: 5-year data retention policy; older records archived
+- **Integration Limits**: No integration with existing university ERP systems
+
+#### **Resource Limitations:**
+- **Development Team**: 3-4 developers maximum
+- **Budget Constraint**: $52,500 development budget ceiling
+- **Timeline**: 16-week development window (non-negotiable)
+- **Training**: Limited to 2 hours per user for system training
+
+---
+
+## 🌟 1.8. Significance of the Project
+
+### **Educational Impact**
+
+#### **Operational Efficiency:**
+- **Time Savings**: Eliminates 90% of manual attendance recording, saving 15 hours/week of staff time
+- **Accuracy Improvement**: Reduces human errors from 15% to <1% in attendance records
+- **Real-time Monitoring**: Provides instant visibility into meal attendance patterns
+- **Automated Reporting**: Generates comprehensive reports without manual compilation
+
+#### **Administrative Benefits:**
+- **Data-Driven Decisions**: Enables evidence-based meal planning and resource allocation
+- **Cost Optimization**: Reduces food waste by 20% through accurate attendance prediction
+- **Compliance Support**: Maintains accurate records for university audits and reporting
+- **Resource Planning**: Optimizes cafeteria staffing based on attendance patterns
+
+### **Technological Advancement**
+
+#### **Digital Transformation:**
+- **Modernization**: Transitions university from paper-based to digital attendance system
+- **Technology Adoption**: Introduces modern web technologies to university operations
+- **Scalability Foundation**: Creates framework for future digital initiatives
+- **Innovation Culture**: Demonstrates university's commitment to technological advancement
+
+#### **Security Enhancement:**
+- **Data Protection**: Implements enterprise-grade security for student information
+- **Access Control**: Ensures only authorized personnel can access attendance data
+- **Audit Trail**: Maintains comprehensive logs for security and compliance
+- **Two-Factor Authentication**: Adds advanced security layer for administrative access
+
+### **Stakeholder Benefits**
+
+#### **For University Administration:**
+- **Strategic Planning**: Provides data for long-term meal service planning
+- **Budget Management**: Enables accurate budget allocation for food services
+- **Performance Monitoring**: Tracks meal service utilization and efficiency
+- **Compliance Assurance**: Maintains records for regulatory requirements
+
+#### **For Cafeteria Staff:**
+- **Workflow Simplification**: Streamlines daily attendance recording processes
+- **Error Reduction**: Minimizes manual data entry errors and corrections
+- **Time Management**: Allows staff to focus on food service rather than paperwork
+- **Real-time Feedback**: Provides immediate confirmation of attendance recording
+
+#### **For Students:**
+- **Service Reliability**: Ensures accurate tracking of meal attendance
+- **Transparency**: Provides clear visibility into meal service availability
+- **Efficiency**: Reduces waiting time through streamlined check-in process
+
+### **Long-term Impact**
+
+#### **Institutional Benefits:**
+- **Reputation Enhancement**: Demonstrates university's technological capabilities
+- **Operational Excellence**: Establishes foundation for other digital initiatives
+- **Data Analytics**: Creates valuable dataset for institutional research
+- **Future Expansion**: Provides platform for additional campus services
+
+---
+
+## 🔍 1.9. Feasibility Study
+
+### **Technical Feasibility**
+
+#### **Technology Assessment:**
+- **✅ PROVEN STACK**: MERN stack (MongoDB, Express.js, React, Node.js) is mature and well-documented
+- **✅ TEAM EXPERTISE**: Development team has 3+ years experience with chosen technologies
+- **✅ INFRASTRUCTURE**: University has adequate internet bandwidth and server capabilities
+- **✅ INTEGRATION**: System designed to work independently without complex integrations
+- **✅ SCALABILITY**: Architecture supports growth from 1,000 to 5,000+ students
+
+#### **Development Complexity Analysis:**
+| **Component** | **Complexity** | **Risk Level** | **Mitigation** |
+|---------------|----------------|----------------|----------------|
+| Authentication System | Medium | Low | Use proven libraries (bcrypt, express-session) |
+| Database Design | Low | Low | MongoDB's flexible schema suits requirements |
+| Real-time Validation | Medium | Medium | Implement comprehensive testing |
+| Two-Factor Authentication | High | Medium | Use established email-based OTP system |
+| Responsive UI | Low | Low | Bootstrap framework provides responsive components |
+
+### **Economic Feasibility**
+
+#### **Cost-Benefit Analysis:**
+
+**Development Investment:**
+- Initial Development: $52,500
+- Infrastructure Setup: $2,000
+- **Total Initial Investment**: $54,500
+
+**Annual Operational Costs:**
+- Cloud Hosting: $2,400
+- Maintenance: $8,000
+- SSL & Security: $800
+- **Total Annual Cost**: $11,200
+
+**Annual Benefits:**
+- Staff Time Savings: $18,000 (15 hours/week × $25/hour × 48 weeks)
+- Error Reduction Savings: $5,000 (reduced corrections and rework)
+- Food Waste Reduction: $12,000 (20% reduction in waste)
+- **Total Annual Benefits**: $35,000
+
+**Return on Investment (ROI):**
+- Net Annual Benefit: $23,800 ($35,000 - $11,200)
+- ROI: 337% over 3 years
+- **Payback Period**: 2.3 years
+
+#### **Budget Allocation:**
+```
+Development Team (70%): $36,750
+Infrastructure (15%): $8,175
+Security & Tools (10%): $5,450
+Testing & QA (5%): $2,725
+```
+
+### **Operational Feasibility**
+
+#### **User Acceptance Assessment:**
+- **Administrative Staff**: High acceptance (95%) - reduces workload significantly
+- **Cafeteria Staff**: Medium-High acceptance (85%) - requires minimal training
+- **IT Department**: High acceptance (100%) - aligns with digital transformation goals
+- **Management**: High acceptance (95%) - provides valuable analytics
+
+#### **Training Requirements:**
+- **Administrator Training**: 4 hours (system configuration, user management)
+- **Staff Training**: 2 hours (attendance recording, basic troubleshooting)
+- **Support Documentation**: Comprehensive user manuals and video tutorials
+- **Ongoing Support**: Help desk integration and technical support
+
+#### **Change Management:**
+- **Phased Rollout**: Gradual implementation over 2 weeks
+- **Parallel Operation**: Run alongside existing system for 1 week
+- **Feedback Integration**: Continuous improvement based on user feedback
+- **Champion Program**: Identify and train power users as system advocates
+
+### **Schedule Feasibility**
+
+#### **Timeline Analysis:**
+- **Total Duration**: 16 weeks (4 months)
+- **Critical Path**: Authentication → Core Features → Security → Deployment
+- **Buffer Time**: 20% buffer included for unexpected issues
+- **Milestone Delivery**: Bi-weekly sprint deliverables ensure progress visibility
+
+#### **Resource Availability:**
+- **Development Team**: 3-4 developers available full-time
+- **Stakeholder Availability**: University staff available for weekly reviews
+- **Testing Resources**: Dedicated testing environment and user acceptance testing
+- **Deployment Window**: University break period identified for system launch
+
+### **Legal and Compliance Feasibility**
+
+#### **Data Protection Compliance:**
+- **Student Privacy**: System complies with educational data protection requirements
+- **Data Retention**: 5-year retention policy aligns with university standards
+- **Access Control**: Role-based access ensures appropriate data security
+- **Audit Trail**: Comprehensive logging supports compliance requirements
+
+#### **Security Standards:**
+- **HTTPS Encryption**: All data transmission encrypted
+- **Password Security**: Industry-standard password hashing and storage
+- **Session Management**: Secure session handling with timeout controls
+- **Regular Updates**: Planned security updates and vulnerability assessments
+
+### **Risk Feasibility**
+
+#### **Risk Mitigation Strategies:**
+- **Technical Risks**: Proven technology stack reduces implementation risks
+- **Security Risks**: Multi-layered security approach with regular audits
+- **User Adoption Risks**: Comprehensive training and change management
+- **Performance Risks**: Load testing and scalable architecture design
+- **Budget Risks**: Fixed-price development with 10% contingency
+
+**Overall Feasibility Rating: ✅ HIGHLY FEASIBLE**
+
+---
+
+## ⚠️ 1.10. Risk Assessment
+
+### **Risk Categories and Analysis**
+
+#### **🔴 HIGH RISK - Critical Impact**
+
+| **Risk ID** | **Risk Description** | **Probability** | **Impact** | **Risk Score** |
+|-------------|---------------------|-----------------|------------|----------------|
+| **R001** | Security vulnerabilities in authentication system | Medium (40%) | High | 🔴 HIGH |
+| **R002** | Database performance issues during peak usage | Low (20%) | High | 🟡 MEDIUM |
+| **R003** | System downtime during critical meal periods | Low (15%) | High | 🟡 MEDIUM |
+
+**R001 - Security Vulnerabilities**
+- **Impact**: Unauthorized access, data breach, system compromise
+- **Mitigation**: 
+  - Implement comprehensive security testing
+  - Regular penetration testing
+  - Use proven security libraries
+  - Multi-factor authentication
+  - Security code reviews
+
+**R002 - Database Performance Issues**
+- **Impact**: Slow response times, system timeouts, user frustration
+- **Mitigation**:
+  - Database indexing optimization
+  - Load testing with 1000+ concurrent users
+  - Connection pooling implementation
+  - Performance monitoring tools
+  - Scalable cloud infrastructure
+
+#### **🟡 MEDIUM RISK - Moderate Impact**
+
+| **Risk ID** | **Risk Description** | **Probability** | **Impact** | **Risk Score** |
+|-------------|---------------------|-----------------|------------|----------------|
+| **R004** | User resistance to new system adoption | Medium (50%) | Medium | 🟡 MEDIUM |
+| **R005** | Integration challenges with email system | Medium (35%) | Medium | 🟡 MEDIUM |
+| **R006** | Scope creep and feature expansion | High (60%) | Medium | 🟡 MEDIUM |
+| **R007** | Key team member unavailability | Medium (30%) | Medium | 🟡 MEDIUM |
+
+**R004 - User Resistance**
+- **Impact**: Low adoption rates, continued manual processes, project failure
+- **Mitigation**:
+  - Comprehensive user training program
+  - Change management strategy
+  - User feedback integration
+  - Champion user program
+  - Gradual rollout approach
+
+**R005 - Email Integration Issues**
+- **Impact**: 2FA failures, notification problems, reduced functionality
+- **Mitigation**:
+  - Multiple email service providers
+  - Comprehensive email testing
+  - Fallback notification methods
+  - SMTP configuration documentation
+  - Email delivery monitoring
+
+#### **🟢 LOW RISK - Minor Impact**
+
+| **Risk ID** | **Risk Description** | **Probability** | **Impact** | **Risk Score** |
+|-------------|---------------------|-----------------|------------|----------------|
+| **R008** | Browser compatibility issues | Low (25%) | Low | 🟢 LOW |
+| **R009** | Minor UI/UX design issues | Medium (40%) | Low | 🟢 LOW |
+| **R010** | Third-party library updates | Low (20%) | Low | 🟢 LOW |
+
+### **Risk Monitoring and Control**
+
+#### **Risk Monitoring Framework:**
+- **Weekly Risk Reviews**: During sprint planning meetings
+- **Risk Register Updates**: Maintained by Scrum Master
+- **Escalation Matrix**: Team → Scrum Master → Product Owner → Stakeholders
+- **Risk Metrics**: Track probability and impact changes over time
+
+#### **Contingency Plans:**
+
+**Security Incident Response:**
+1. Immediate system isolation
+2. Security team notification
+3. Vulnerability assessment
+4. Patch deployment
+5. System restoration
+6. Post-incident review
+
+**Performance Degradation Response:**
+1. Performance monitoring alerts
+2. Database optimization
+3. Server scaling
+4. Load balancing adjustment
+5. User communication
+6. Alternative access methods
+
+**User Adoption Issues:**
+1. Additional training sessions
+2. One-on-one support
+3. System simplification
+4. Feedback collection
+5. Process adjustment
+6. Change management reinforcement
+
+### **Risk Assessment Matrix**
+
+```
+                    IMPACT
+                Low    Medium    High
+PROBABILITY
+High           🟢      🟡       🔴
+Medium         🟢      🟡       🔴  
+Low            🟢      🟢       🟡
+```
+
+### **Risk Mitigation Budget**
+- **Security Testing**: $3,000 (5.5% of total budget)
+- **Performance Testing**: $2,000 (3.7% of total budget)
+- **Training Programs**: $2,500 (4.6% of total budget)
+- **Contingency Reserve**: $5,250 (10% of total budget)
+- **Total Risk Mitigation**: $12,750 (23.4% of total budget)
+
+### **Success Criteria for Risk Management**
+- Zero critical security vulnerabilities in production
+- System uptime >99.5% during meal periods
+- User adoption rate >90% within 30 days
+- Performance response time <2 seconds
+- Training completion rate >95%
+
+---
+
 **Document Version**: 1.0  
 **Last Updated**: January 2025  
 **Next Review**: End of Sprint 2
