@@ -25,7 +25,7 @@ const sendOTPEmail = async (email, otp, purpose = 'Admin Login Verification Code
   const isCredentialUpdate = purpose.includes('Credential Update');
   
   const mailOptions = {
-    from: process.env.GMAIL_USER || 'your-email@gmail.com',
+    from: `"Salale University Meal System" <${process.env.EMAIL_USER || process.env.GMAIL_USER || 'your-email@gmail.com'}>`,
     to: email,
     subject: purpose,
     html: `
@@ -52,8 +52,8 @@ const sendOTPEmail = async (email, otp, purpose = 'Admin Login Verification Code
           </div>
           
           <p style="color: #718096; font-size: 14px;">
-            ⏰ This code will expire in <strong>5 minutes</strong><br>
-            🔒 If you didn't request this, please ignore this email
+            This code will expire in <strong>5 minutes</strong><br>
+            If you didn't request this, please ignore this email
           </p>
           
           ${isCredentialUpdate ? `
@@ -97,7 +97,7 @@ const sendEmailChangeApprovalEmail = async (currentEmail, verificationToken, new
   const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/verify-email-change/${verificationToken}`;
   
   const mailOptions = {
-    from: process.env.GMAIL_USER || 'your-email@gmail.com',
+    from: `"Salale University Meal System" <${process.env.EMAIL_USER || process.env.GMAIL_USER || 'your-email@gmail.com'}>`,
     to: currentEmail,
     subject: '🔐 Admin Email Change Approval Required',
     html: `
@@ -134,7 +134,7 @@ const sendEmailChangeApprovalEmail = async (currentEmail, verificationToken, new
                       font-weight: bold; 
                       font-size: 16px;
                       display: inline-block;">
-              ✅ Approve Email Change
+              Approve Email Change
             </a>
           </div>
           
@@ -145,8 +145,8 @@ const sendEmailChangeApprovalEmail = async (currentEmail, verificationToken, new
           </div>
           
           <p style="color: #718096; font-size: 14px;">
-            ⏰ This link will expire in <strong>30 minutes</strong><br>
-            🔒 If you didn't request this change, please ignore this email
+            This link will expire in <strong>30 minutes</strong><br>
+            If you didn't request this change, please ignore this email
           </p>
           
           <div style="border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 30px;">

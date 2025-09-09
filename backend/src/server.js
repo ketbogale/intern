@@ -15,6 +15,7 @@ const studentRoutes = require('./routes/students');
 const staffRoutes = require('./routes/staff');
 const adminRoutes = require('./routes/adminRoutes');
 const mealWindowsRoutes = require('./routes/mealWindows');
+const passwordResetRoutes = require('./routes/passwordReset');
 const mongoose = require("mongoose");
 const SchedulerService = require("./services/scheduler");
 const { verifyEmailService } = require('./services/emailService');
@@ -159,6 +160,7 @@ app.use('/api/students', studentRoutes); // Rate limiting temporarily disabled
 app.use('/api/staff', staffRoutes); // Rate limiting temporarily disabled
 app.use('/api/admin', adminRoutes); // Rate limiting temporarily disabled
 app.use('/api/meal-windows', mealWindowsRoutes);
+app.use('/api/auth', passwordResetRoutes);
 
 // Logout route is now handled in login.js routes
 

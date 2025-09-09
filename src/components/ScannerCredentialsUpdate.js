@@ -43,13 +43,13 @@ const ScannerCredentialsUpdate = () => {
     e.preventDefault();
     
     if (!staffData.username.trim() || !staffData.password.trim()) {
-      setMessage('📝 Please fill in both Username and Password - these fields are required.');
+      setMessage('Please fill in both Username and Password - these fields are required.');
       setSuccess(false);
       return;
     }
 
     if (!isPasswordValid) {
-      setMessage('🔒 Password does not meet security requirements. Please check the requirements below.');
+      setMessage('Password does not meet security requirements. Please check the requirements below.');
       setSuccess(false);
       return;
     }
@@ -70,7 +70,7 @@ const ScannerCredentialsUpdate = () => {
 
       if (response.ok) {
         setSuccess(true);
-        setMessage('✅ Scanner credentials updated successfully!');
+        setMessage('Scanner credentials updated successfully!');
         setTimeout(() => {
           setStaffData({
             username: '',
@@ -81,12 +81,12 @@ const ScannerCredentialsUpdate = () => {
         }, 2500);
       } else {
         setSuccess(false);
-        setMessage('❌ ' + (data.error || 'Failed to register staff member. Please check the information and try again.'));
+        setMessage('Failed to register staff member: ' + (data.error || 'Please check the information and try again.'));
         setTimeout(() => setMessage(''), 2500);
       }
     } catch (error) {
       setSuccess(false);
-      setMessage('🌐 Network error occurred. Please check your internet connection and try again.');
+      setMessage('Network error occurred. Please check your internet connection and try again.');
       setTimeout(() => setMessage(''), 2500);
     } finally {
       setLoading(false);

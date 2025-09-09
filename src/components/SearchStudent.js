@@ -60,12 +60,12 @@ const SearchStudent = () => {
           setTimeout(() => setSearchMessage(''), 2500);
         }
       } else {
-        setSearchMessage('❌ ' + (data.message || 'Search failed'));
+        setSearchMessage('Search failed: ' + (data.message || 'No results found'));
         setSearchResults([]);
         setTimeout(() => setSearchMessage(''), 2500);
       }
     } catch (error) {
-      setSearchMessage('❌ Network error occurred. Please try again.');
+      setSearchMessage('Network error occurred. Please try again.');
       setSearchResults([]);
       setTimeout(() => setSearchMessage(''), 2500);
     } finally {
@@ -109,14 +109,14 @@ const SearchStudent = () => {
       const data = await response.json();
       
       if (data.success) {
-        setEditStudentMessage('✅ Student updated successfully!');
+        setEditStudentMessage('Student updated successfully!');
         setTimeout(() => {
           setEditStudentMessage('');
           setShowEditStudentModal(false);
           handleStudentSearch(searchQuery);
         }, 1500);
       } else {
-        setEditStudentMessage('❌ ' + (data.message || 'Update failed'));
+        setEditStudentMessage('Update failed: ' + (data.message || 'Unknown error'));
         setTimeout(() => setEditStudentMessage(''), 2500);
       }
     } catch (error) {
@@ -124,7 +124,7 @@ const SearchStudent = () => {
       if (error.message.includes('Unexpected token')) {
         setEditStudentMessage('❌ Server error: API endpoint returned HTML instead of JSON. Check backend configuration.');
       } else {
-        setEditStudentMessage('❌ Network error occurred. Please try again.');
+        setEditStudentMessage('Network error occurred. Please try again.');
       }
       setTimeout(() => setEditStudentMessage(''), 2500);
     } finally {
@@ -144,26 +144,26 @@ const SearchStudent = () => {
 
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('text/html')) {
-        alert('❌ Server error: API endpoint not found. Please check if the backend is running.');
+        alert('Server error: API endpoint not found. Please check if the backend is running.');
         return;
       }
 
       const data = await response.json();
       
       if (data.success) {
-        setRefreshMessage('✅ Student deleted successfully!');
+        setRefreshMessage('Student deleted successfully!');
         setTimeout(() => setRefreshMessage(''), 2500);
         handleStudentSearch(searchQuery);
       } else {
-        setRefreshMessage('❌ ' + (data.message || 'Delete failed'));
+        setRefreshMessage('Delete failed: ' + (data.message || 'Unknown error'));
         setTimeout(() => setRefreshMessage(''), 2500);
       }
     } catch (error) {
       console.error('Error deleting student:', error);
       if (error.message.includes('Unexpected token')) {
-        setRefreshMessage('❌ Server error: API endpoint returned HTML instead of JSON. Check backend configuration.');
+        setRefreshMessage('Server error: API endpoint returned HTML instead of JSON. Check backend configuration.');
       } else {
-        setRefreshMessage('❌ Network error occurred. Please try again.');
+        setRefreshMessage('Network error occurred. Please try again.');
       }
       setTimeout(() => setRefreshMessage(''), 2500);
     }
@@ -190,7 +190,7 @@ const SearchStudent = () => {
           )}
 
           {searchMessage && (
-            <div className={`result-section ${searchMessage.includes('❌') ? 'error' : 'success'}`}>
+            <div className={`result-section ${searchMessage.includes('failed') || searchMessage.includes('error') ? 'error' : 'success'}`}>
               <div className="result-message">
                 <p>{searchMessage}</p>
               </div>
@@ -395,7 +395,7 @@ const SearchStudent = () => {
             
             <div className="email-verification-content">
               {editStudentMessage && (
-                <div className={`result-section ${editStudentMessage.includes('❌') ? 'error' : 'success'}`}>
+                <div className={`result-section ${editStudentMessage.includes('failed') || editStudentMessage.includes('error') ? 'error' : 'success'}`}>
                   <div className="result-message">
                     <p>{editStudentMessage}</p>
                   </div>

@@ -33,9 +33,17 @@ router.post('/resend-otp', resendAdminOTP);
 
 // Get admin profile (no auth required for header display)
 router.get('/profile', getAdminProfile);
+router.get('/email', getAdminProfile);
 
 // Send admin approval OTP before any credential update
 router.post('/send-admin-approval-otp', requireAdmin, sendAdminApprovalOTP);
+router.post('/send-approval-otp', requireAdmin, sendAdminApprovalOTP);
+
+// Request admin approval for credential changes
+router.post('/request-approval', requireAdmin, sendAdminApprovalOTP);
+
+// Resend admin approval code
+router.post('/resend-approval', requireAdmin, resendAdminOTP);
 
 // Send email change approval link to current admin email
 router.post('/send-email-change-approval', requireAdmin, sendEmailChangeApprovalLink);
@@ -51,5 +59,6 @@ router.post('/resend-email-change-code', resendEmailChangeCode);
 
 // Update admin credentials
 router.patch('/credentials', requireAdmin, updateAdminCredentials);
+router.post('/update-credentials', requireAdmin, updateAdminCredentials);
 
 module.exports = router;

@@ -98,8 +98,8 @@ npm/yarn              # Package manager
 
 1. **Clone Repository**
    ```bash
-   git clone https://github.com/your-org/salale-meal-attendance.git
-   cd salale-meal-attendance
+   git clone https://github.com/salale-university/meal-tracking-system.git
+   cd meal-tracking-system
    ```
 
 2. **Install Dependencies**

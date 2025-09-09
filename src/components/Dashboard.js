@@ -1480,9 +1480,9 @@ const Dashboard = ({ user, onLogout }) => {
                   <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px'}}>
                     <div style={{fontSize: '13px', color: '#666'}}>
                       {verificationCountdown > 0 ? (
-                        <>⏰ Code expires in: <strong>{formatTime(verificationCountdown)}</strong></>
+                        <>Code expires in: <strong>{formatTime(verificationCountdown)}</strong></>
                       ) : (
-                        <span style={{color: '#e53e3e'}}>⚠️ Code expired</span>
+                        <span style={{color: '#e53e3e'}}>Code expired</span>
                       )}
                     </div>
                     

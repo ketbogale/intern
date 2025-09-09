@@ -50,26 +50,40 @@ const AdminCredentialsUpdate = () => {
       return;
     }
 
-    if (adminCredentials.newPassword && adminCredentials.newPassword !== adminCredentials.confirmPassword) {
-      setMessage('New passwords do not match');
+    // Check if any field has a value to update
+    const hasUsername = adminCredentials.newUsername && adminCredentials.newUsername.trim();
+    const hasPassword = adminCredentials.newPassword && adminCredentials.newPassword.trim();
+    const hasEmail = adminCredentials.email && adminCredentials.email.trim();
+
+    if (!hasUsername && !hasPassword && !hasEmail) {
+      setMessage('Please enter at least one field to update (username, password, or email)');
       setSuccess(false);
       return;
     }
 
-    if (adminCredentials.newPassword && adminCredentials.newPassword.length < 6) {
-      setMessage('New password must be at least 6 characters long');
-      setSuccess(false);
-      return;
+    // Password validation only if password is being changed
+    if (hasPassword) {
+      if (adminCredentials.newPassword !== adminCredentials.confirmPassword) {
+        setMessage('New passwords do not match');
+        setSuccess(false);
+        return;
+      }
+
+      if (adminCredentials.newPassword.length < 6) {
+        setMessage('New password must be at least 6 characters long');
+        setSuccess(false);
+        return;
+      }
     }
 
     // Check if email is being changed
-    if (adminCredentials.email && adminCredentials.email !== adminEmail) {
+    if (hasEmail && adminCredentials.email !== adminEmail) {
       // Email is being changed, use two-step email change approval process
       handleSendEmailChangeApproval();
       return;
     }
     
-    // No email change, use regular admin approval process
+    // No email change or email-only update, use regular admin approval process
     handleSendAdminApproval();
   };
 
@@ -85,9 +99,9 @@ const AdminCredentialsUpdate = () => {
         },
         body: JSON.stringify({
           currentPassword: adminCredentials.currentPassword,
-          newEmail: adminCredentials.email,
-          newUsername: adminCredentials.newUsername || undefined,
-          newPassword: adminCredentials.newPassword || undefined
+          newEmail: adminCredentials.email?.trim(),
+          newUsername: adminCredentials.newUsername?.trim() || undefined,
+          newPassword: adminCredentials.newPassword?.trim() || undefined
         })
       });
       
@@ -129,8 +143,8 @@ const AdminCredentialsUpdate = () => {
         },
         body: JSON.stringify({
           currentPassword: adminCredentials.currentPassword,
-          newUsername: adminCredentials.newUsername || undefined,
-          newPassword: adminCredentials.newPassword || undefined
+          newUsername: adminCredentials.newUsername?.trim() || undefined,
+          newPassword: adminCredentials.newPassword?.trim() || undefined
         })
       });
       
@@ -181,7 +195,7 @@ const AdminCredentialsUpdate = () => {
       
       if (data.success) {
         setSuccess(true);
-        setMessage('🎉 Your admin credentials have been updated successfully!');
+        setMessage('Your admin credentials have been updated successfully!');
         
         // Redirect to dashboard after 2 seconds
         setTimeout(() => {
@@ -221,14 +235,14 @@ const AdminCredentialsUpdate = () => {
       
       if (data.success) {
         setSuccess(true);
-        setMessage('📧 New admin approval code sent to your email!');
+        setMessage('New admin approval code sent to your email!');
       } else {
         setSuccess(false);
         setMessage(data.message || 'Failed to resend approval code');
       }
     } catch (error) {
       setSuccess(false);
-      setMessage('🌐 Network error occurred. Please check your connection and try again.');
+      setMessage('Network error occurred. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -317,7 +331,7 @@ const AdminCredentialsUpdate = () => {
       <div className="email-verification-container">
         <div className="email-verification-card">
           <div className="email-verification-header">
-            <h1>🔐 Admin Approval Required</h1>
+            <h1>Admin Approval Required</h1>
           </div>
           
           <div className="email-verification-content">

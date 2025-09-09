@@ -20,7 +20,7 @@ const AddStudent = () => {
     e.preventDefault();
     
     if (!studentData.id.trim() || !studentData.name.trim()) {
-      setMessage('📝 Please fill in both Student ID and Name - these fields are required.');
+      setMessage('Please fill in both Student ID and Name - these fields are required.');
       setSuccess(false);
       return;
     }

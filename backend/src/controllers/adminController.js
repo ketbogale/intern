@@ -311,6 +311,9 @@ const updateAdminCredentials = async (req, res) => {
       }
     }
     
+    // Initialize adminApprovalRecord variable
+    let adminApprovalRecord = null;
+    
     // Require admin approval OTP for non-email changes
     if (!isEmailOnlyChange) {
       if (!adminApprovalOtp) {
@@ -321,7 +324,7 @@ const updateAdminCredentials = async (req, res) => {
       }
 
       // Verify admin approval OTP
-      const adminApprovalRecord = await OTP.findOne({ 
+      adminApprovalRecord = await OTP.findOne({ 
         email: adminUser.email, 
         purpose: 'admin_approval',
         adminId: adminUser._id

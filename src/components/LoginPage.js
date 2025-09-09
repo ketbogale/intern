@@ -6,11 +6,11 @@ import './LoginPage.css';
 // Constants - use relative URLs for security
 const API_BASE_URL = '';
 const MESSAGES = {
-  NETWORK_ERROR: '🌐 Network error occurred. Please check your internet connection and try again.',
+  NETWORK_ERROR: 'Network error occurred. Please check your internet connection and try again.',
   LOGIN_SUCCESS_WARNING: 'Login successful! Note: If you have other tabs open, they will be logged out automatically.',
-  OTP_EXPIRED: '⏰ Verification code expired. Please request a new one to continue.',
-  INVALID_OTP_LENGTH: '⚠️ Please enter the complete 6-digit verification code from your email.',
-  EMAIL_REQUIRED: '📧 Please enter your admin email address to continue.'
+  OTP_EXPIRED: 'Verification code expired. Please request a new one to continue.',
+  INVALID_OTP_LENGTH: 'Please enter the complete 6-digit verification code from your email.',
+  EMAIL_REQUIRED: 'Please enter your admin email address to continue.'
 };
 
 // Utility functions
@@ -52,27 +52,28 @@ const LoadingButton = ({ loading, loadingText, children, disabled, variant = "pr
 );
 
 const LoginPage = ({ onLogin }) => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Admin email verification states
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [adminEmail, setAdminEmail] = useState('');
-  const [emailLoading, setEmailLoading] = useState(false);
-  const [emailMessage, setEmailMessage] = useState('');
-  
-  // OTP verification states
+  const [showOtpModal, setShowOtpModal] = useState(false);
   const [showOTPModal, setShowOTPModal] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
   const [otpCode, setOtpCode] = useState('');
-  const [otpLoading, setOtpLoading] = useState(false);
   const [otpMessage, setOtpMessage] = useState('');
+  const [isOtpLoading, setIsOtpLoading] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [showCredentialsForm, setShowCredentialsForm] = useState(true);
   const [otpCountdown, setOtpCountdown] = useState(300);
   const [canResendOTP, setCanResendOTP] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
   const [maskedEmail, setMaskedEmail] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [emailMessage, setEmailMessage] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
 
   // OTP countdown timer
   useEffect(() => {
@@ -121,7 +122,7 @@ const LoginPage = ({ onLogin }) => {
       });
 
       if (adminResponse.ok && adminData.success) {
-        setMessage('✅ Admin credentials verified! Redirecting to email verification...');
+        setMessage('Admin credentials verified! Redirecting to email verification...');
         setTimeout(() => {
           window.location.pathname = '/admin-email-verification';
         }, 1000);
@@ -175,15 +176,15 @@ const LoginPage = ({ onLogin }) => {
       const data = await response.json();
       
       if (data.success) {
-        setMessage('✅ Login successful! Redirecting...');
+        setMessage('Login successful! Redirecting...');
         setTimeout(() => {
           window.location.href = '/';
-        }, 1500);
+        }, 1000);
         setOtpCode('');
         setOtpMessage('');
         onLogin(data.user);
       } else {
-        setOtpMessage('❌ ' + (data.message || 'Invalid verification code. Please check the code and try again.'));
+        setOtpMessage('Invalid verification code: ' + (data.message || 'Please check the code and try again.'));
         setTimeout(() => setOtpMessage(''), 2500);
       }
     } catch (error) {
@@ -218,7 +219,7 @@ const LoginPage = ({ onLogin }) => {
       const data = await response.json();
       
       if (data.success) {
-        setEmailMessage('✅ Verification code sent to your email. Please check your inbox.');
+        setEmailMessage('Verification code sent to your email. Please check your inbox.');
         setMaskedEmail(data.email);
         setShowEmailModal(false);
         setShowOTPModal(true);
@@ -226,7 +227,7 @@ const LoginPage = ({ onLogin }) => {
         setCanResendOTP(false);
         setResendCountdown(60);
       } else {
-        setEmailMessage('❌ ' + (data.message || 'Invalid email address. Please check and try again.'));
+        setEmailMessage('Invalid email address: ' + (data.message || 'Please check and try again.'));
       }
     } catch (error) {
       setEmailMessage(error.message || MESSAGES.NETWORK_ERROR);
@@ -246,12 +247,12 @@ const LoginPage = ({ onLogin }) => {
       });
       
       if (data.success) {
-        setOtpMessage('📧 New verification code sent to your email. Please check your inbox.');
+        setOtpMessage('New verification code sent to your email. Please check your inbox.');
         setOtpCountdown(300);
         setCanResendOTP(false);
         setResendCountdown(60);
       } else {
-        setOtpMessage('❌ ' + (data.message || 'Failed to resend verification code. Please try again in a moment.'));
+        setOtpMessage('Failed to resend verification code: ' + (data.message || 'Please try again in a moment.'));
       }
     } catch (error) {
       setOtpMessage(error.message || MESSAGES.NETWORK_ERROR);
@@ -260,6 +261,8 @@ const LoginPage = ({ onLogin }) => {
     }
   };
 
+
+  // Main render
   return (
     <div className="min-vh-100" style={{background: 'linear-gradient(135deg, #0f1419 0%, #1e2a3a 100%)'}}>
       {/* Header */}
@@ -333,6 +336,19 @@ const LoginPage = ({ onLogin }) => {
                     Login
                   </LoadingButton>
                 </Form>
+
+                <div className="text-center">
+                  <Button
+                    variant="link"
+                    className="text-light p-0"
+                    onClick={() => window.location.href = '/forgot-password'}
+                    disabled={isLoading}
+                    style={{textDecoration: 'none', fontSize: '14px'}}
+                  >
+                    <i className="fas fa-key me-2"></i>
+                    Forgot your password?
+                  </Button>
+                </div>
 
                 {message && (
                   <Alert variant={message.includes('successful') || message.includes('sent') ? 'success' : 'danger'} className="mt-3">
@@ -513,9 +529,9 @@ const LoginPage = ({ onLogin }) => {
             <div className="d-flex justify-content-between align-items-center mt-4 mb-3">
               <small className="text-muted">
                 {otpCountdown > 0 ? (
-                  <>⏰ Expires in: <strong>{formatTime(otpCountdown)}</strong></>
+                  <>Expires in: <strong>{formatTime(otpCountdown)}</strong></>
                 ) : (
-                  <span className="text-danger">⚠️ Code expired</span>
+                  <span className="text-danger">Code expired</span>
                 )}
               </small>
               

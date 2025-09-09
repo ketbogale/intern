@@ -13,6 +13,8 @@ import AddStudent from './components/AddStudent';
 import ScannerCredentialsUpdate from './components/ScannerCredentialsUpdate';
 import SearchStudent from './components/SearchStudent';
 import ViewAllStudents from './components/ViewAllStudents';
+import ForgotPasswordPage from './components/ForgotPasswordPage';
+import ResetPasswordPage from './components/ResetPasswordPage';
 
 const AppContent = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -137,6 +139,7 @@ const AppContent = () => {
   }, [isLoggedIn, user, location.pathname, navigate]);
 
 
+
   // Show loading spinner while checking authentication or logging out
   if (isCheckingAuth || isLoggingOut) {
     return (
@@ -191,6 +194,8 @@ const AppContent = () => {
         <Route path="/scanner-credentials" element={<ScannerCredentialsUpdate />} />
         <Route path="/search-student" element={<SearchStudent />} />
         <Route path="/view-all-students" element={<ViewAllStudents />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
         <Route path="/login_meal_attendance" element={<LoginPage onLogin={handleLogin} />} />
         

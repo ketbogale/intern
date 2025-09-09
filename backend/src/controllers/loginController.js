@@ -74,7 +74,6 @@ exports.login = async (req, res) => {
       const currentAttempts = attemptData ? attemptData.count : 0;
       const newAttemptCount = currentAttempts + 1;
 
-      console.log(`Failed login attempt ${newAttemptCount}/${loginAttemptLimit} for user: ${username} from IP: ${clientIP}`);
 
       if (newAttemptCount >= loginAttemptLimit) {
         // Lock the account
@@ -85,7 +84,6 @@ exports.login = async (req, res) => {
           lastAttempt: now
         });
 
-        console.log(`Account locked for user: ${username} from IP: ${clientIP} until ${lockoutUntil}`);
 
         return res.status(429).json({ 
           error: `Too many failed login attempts. Account locked for ${lockoutDurationMinutes} minutes.`,
