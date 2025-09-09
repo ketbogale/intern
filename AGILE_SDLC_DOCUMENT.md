@@ -1,16 +1,16 @@
-# 🔄 Agile SDLC Document
+# 🔄 Software Development Life Cycle (SDLC) Document
 ## Salale University Meal Attendance System
 
 <div align="center">
 
 ![Salale University Logo](public/images/salale_university_logo.png)
 
-**Software Development Life Cycle Documentation**  
-**Methodology: Agile (Scrum Framework)**
+**Comprehensive SDLC Documentation**  
+**Methodology: Hybrid (Traditional SDLC + Agile Scrum)**
 
-[![Agile](https://img.shields.io/badge/Methodology-Agile%20Scrum-blue?logo=agile)](https://agilemanifesto.org/)
-[![Sprint Duration](https://img.shields.io/badge/Sprint-2%20Weeks-green)](https://scrum.org/)
-[![Team Size](https://img.shields.io/badge/Team%20Size-3--5%20Members-orange)](https://scrum.org/)
+[![SDLC](https://img.shields.io/badge/SDLC-6%20Stage%20Framework-blue?logo=process)](https://sdlc.org/)
+[![Agile](https://img.shields.io/badge/Methodology-Agile%20Scrum-green?logo=agile)](https://agilemanifesto.org/)
+[![Duration](https://img.shields.io/badge/Duration-16%20Weeks-orange)](https://scrum.org/)
 
 </div>
 
@@ -18,31 +18,38 @@
 
 ## 📋 Table of Contents
 
-1. [Project Overview](#-project-overview)
-2. [Agile Methodology Selection](#-agile-methodology-selection)
-3. [Project Team Structure](#-project-team-structure)
-4. [Agile Ceremonies](#-agile-ceremonies)
-5. [Sprint Planning](#-sprint-planning)
-6. [Product Backlog](#-product-backlog)
-7. [Development Phases](#-development-phases)
-8. [Quality Assurance](#-quality-assurance)
-9. [Risk Management](#-risk-management)
-10. [Deployment Strategy](#-deployment-strategy)
-11. [Success Metrics](#-success-metrics)
+1. [SDLC Overview](#-sdlc-overview)
+2. [Stage 1: Planning & Requirement Analysis](#-stage-1-planning--requirement-analysis)
+3. [Stage 2: System Design](#-stage-2-system-design)
+4. [Stage 3: Implementation (Coding)](#-stage-3-implementation-coding)
+5. [Stage 4: Testing](#-stage-4-testing)
+6. [Stage 5: Deployment](#-stage-5-deployment)
+7. [Stage 6: Maintenance & Support](#-stage-6-maintenance--support)
+8. [Agile Integration](#-agile-integration)
+9. [Project Management](#-project-management)
+10. [Quality Assurance](#-quality-assurance)
+11. [Risk Management](#-risk-management)
+12. [Success Metrics](#-success-metrics)
 
 ---
 
-## 🎯 Project Overview
+## 🔄 SDLC Overview
 
-### **Project Name**: Salale University Meal Attendance System
-### **Project Type**: Enterprise Web Application
-### **Domain**: Educational Technology (EdTech)
-### **Methodology**: Agile Scrum Framework
+The **Software Development Life Cycle (SDLC)** is a structured process that ensures systematic development, testing, and deployment of the Salale University Meal Attendance System. This document follows the traditional 6-stage SDLC framework integrated with Agile methodology for optimal results.
 
-### **Project Scope**
-- **Primary Goal**: Digitize and automate meal attendance tracking for Salale University
-- **Target Users**: University administrators, students, cafeteria staff
-- **System Type**: Full-stack web application with real-time capabilities
+### **SDLC Framework Benefits**
+- **Systematic Approach**: Ensures all aspects are covered methodically
+- **Quality Assurance**: Built-in checkpoints at each stage
+- **Risk Mitigation**: Early identification and resolution of issues
+- **Stakeholder Alignment**: Clear deliverables and milestones
+- **Maintainability**: Well-documented and structured codebase
+
+### **Project Information**
+- **Project Name**: Salale University Meal Attendance System
+- **Project Type**: Enterprise Web Application
+- **Domain**: Educational Technology (EdTech)
+- **Methodology**: Hybrid (Traditional SDLC + Agile Scrum)
+- **Duration**: 16 weeks (6 SDLC stages + 8 Agile sprints)
 - **Technology Stack**: MERN (MongoDB, Express.js, React, Node.js)
 
 ### **Business Objectives**
@@ -54,17 +61,551 @@
 
 ---
 
-## 🚀 Agile Methodology Selection
+## 📋 Stage 1: Planning & Requirement Analysis
 
-### **Why Agile for This Project?**
+### **Goal**: Understand what the software needs to do and define project scope
 
-| **Agile Advantage** | **Project Alignment** |
-|---------------------|----------------------|
-| **Iterative Development** | Complex features (2FA, meal windows) benefit from incremental delivery |
-| **User Feedback** | University stakeholders can provide continuous feedback |
-| **Changing Requirements** | Educational institutions often have evolving needs |
-| **Risk Mitigation** | Early detection of security and performance issues |
-| **Faster Time-to-Market** | Core features delivered in early sprints |
+### **Duration**: 2 weeks (Weeks 1-2)
+
+### **Key Activities**
+
+#### **1.1 Stakeholder Meetings**
+- **University IT Director**: Technical requirements and infrastructure
+- **Cafeteria Manager**: Operational workflows and meal schedules
+- **Student Representatives**: User experience expectations
+- **Security Officer**: Compliance and security requirements
+- **Finance Department**: Budget constraints and cost analysis
+
+#### **1.2 Requirement Gathering**
+
+**Functional Requirements:**
+- User authentication with 2FA for administrators
+- Student registration and management system
+- Real-time meal attendance tracking
+- Configurable meal windows (breakfast, lunch, dinner)
+- Attendance reporting and analytics
+- System configuration and settings management
+- Email notifications and alerts
+
+**Non-Functional Requirements:**
+- **Performance**: Support 1000+ concurrent users
+- **Security**: HTTPS, data encryption, secure sessions
+- **Availability**: 99.5% uptime during meal hours
+- **Scalability**: Handle 5000+ student records
+- **Usability**: Intuitive interface, <3 clicks for common tasks
+- **Compatibility**: Modern web browsers, mobile responsive
+
+#### **1.3 Software Requirement Specification (SRS)**
+
+**System Overview:**
+The Salale University Meal Attendance System is a web-based application designed to automate and streamline meal attendance tracking for university students. The system replaces manual paper-based processes with a digital solution that provides real-time monitoring, automated reporting, and comprehensive administrative controls.
+
+**User Roles:**
+1. **System Administrator**: Full system access, user management, configuration
+2. **Cafeteria Staff**: Attendance recording, student lookup
+3. **University Management**: Reports viewing, analytics access
+
+**Core Modules:**
+1. **Authentication Module**: Login, 2FA, password management
+2. **Student Management Module**: CRUD operations, import/export
+3. **Attendance Module**: Real-time tracking, meal window validation
+4. **Reporting Module**: Statistics, analytics, data export
+5. **Configuration Module**: System settings, meal windows, notifications
+
+#### **1.4 Project Scope Definition**
+
+**In Scope:**
+- Web-based meal attendance system
+- Admin dashboard with comprehensive controls
+- Student database management
+- Real-time attendance tracking
+- Automated email notifications
+- Reporting and analytics
+- Security implementation (2FA, HTTPS)
+- Mobile-responsive design
+
+**Out of Scope:**
+- Mobile native applications
+- Integration with existing university ERP
+- Biometric authentication
+- Payment processing
+- Inventory management
+- Multi-campus support (Phase 2)
+
+#### **1.5 Risk Assessment**
+
+| **Risk** | **Impact** | **Probability** | **Mitigation** |
+|----------|------------|-----------------|----------------|
+| Security vulnerabilities | High | Medium | Regular security audits, penetration testing |
+| Performance issues during peak hours | High | Low | Load testing, scalable architecture |
+| User adoption resistance | Medium | Medium | Training programs, user feedback integration |
+| Technical complexity of 2FA | Medium | Low | Proof of concept, expert consultation |
+| Data migration challenges | Medium | Low | Comprehensive testing, rollback procedures |
+
+#### **1.6 Cost Analysis**
+
+**Development Costs:**
+- Team salaries (16 weeks): $48,000
+- Infrastructure setup: $2,000
+- Security tools and licenses: $1,500
+- Testing and QA tools: $1,000
+- **Total Development**: $52,500
+
+**Operational Costs (Annual):**
+- Cloud hosting: $2,400
+- SSL certificates: $200
+- Monitoring tools: $600
+- Maintenance: $8,000
+- **Total Annual**: $11,200
+
+### **Deliverables**
+- ✅ Software Requirement Specification (SRS) document
+- ✅ Project scope and timeline
+- ✅ Risk assessment matrix
+- ✅ Cost-benefit analysis
+- ✅ Stakeholder approval and sign-off
+
+---
+
+## 🎨 Stage 2: System Design
+
+### **Goal**: Translate requirements into a blueprint for building the software
+
+### **Duration**: 2 weeks (Weeks 3-4)
+
+### **Key Activities**
+
+#### **2.1 High-Level System Architecture**
+
+**Architecture Pattern**: Model-View-Controller (MVC) with RESTful APIs
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │    Backend      │    │    Database     │
+│   (React)       │◄──►│  (Express.js)   │◄──►│   (MongoDB)     │
+│                 │    │                 │    │                 │
+│ • Components    │    │ • Controllers   │    │ • Collections   │
+│ • Pages         │    │ • Routes        │    │ • Schemas       │
+│ • Services      │    │ • Middleware    │    │ • Indexes       │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+**System Components:**
+1. **Frontend Layer** (React)
+   - User Interface Components
+   - State Management
+   - API Communication
+   - Routing and Navigation
+
+2. **Backend Layer** (Node.js/Express)
+   - RESTful API Endpoints
+   - Authentication Middleware
+   - Business Logic Controllers
+   - Email Service Integration
+
+3. **Database Layer** (MongoDB)
+   - Document Collections
+   - Data Validation Schemas
+   - Indexing for Performance
+   - Backup and Recovery
+
+#### **2.2 Database Design**
+
+**Collections Schema:**
+
+```javascript
+// Users Collection (Administrators)
+const userSchema = {
+  _id: ObjectId,
+  username: String (unique),
+  email: String (unique),
+  password: String (hashed),
+  role: String (enum: ['admin', 'staff']),
+  isActive: Boolean,
+  lastLogin: Date,
+  createdAt: Date,
+  updatedAt: Date
+}
+
+// Students Collection
+const studentSchema = {
+  _id: ObjectId,
+  studentId: String (unique),
+  firstName: String,
+  lastName: String,
+  email: String,
+  phone: String,
+  department: String,
+  year: Number,
+  isActive: Boolean,
+  createdAt: Date,
+  updatedAt: Date
+}
+
+// Attendance Collection
+const attendanceSchema = {
+  _id: ObjectId,
+  studentId: String (ref: Students),
+  mealType: String (enum: ['breakfast', 'lunch', 'dinner']),
+  date: Date,
+  timestamp: Date,
+  recordedBy: String (ref: Users),
+  createdAt: Date
+}
+
+// MealWindows Collection
+const mealWindowSchema = {
+  _id: ObjectId,
+  mealType: String,
+  startTime: String (HH:MM format),
+  endTime: String (HH:MM format),
+  isActive: Boolean,
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+#### **2.3 API Design**
+
+**RESTful Endpoints:**
+
+```
+Authentication:
+POST   /api/auth/login           - Admin login
+POST   /api/auth/verify-otp      - 2FA verification
+POST   /api/auth/logout          - Logout
+GET    /api/auth/status          - Check auth status
+
+Students:
+GET    /api/students             - Get all students
+POST   /api/students             - Add new student
+GET    /api/students/:id         - Get student by ID
+PUT    /api/students/:id         - Update student
+DELETE /api/students/:id         - Delete student
+POST   /api/students/import      - Bulk import students
+
+Attendance:
+POST   /api/attendance           - Record attendance
+GET    /api/attendance/stats     - Get statistics
+GET    /api/attendance/export    - Export data
+
+Settings:
+GET    /api/settings             - Get system settings
+POST   /api/settings             - Update settings
+GET    /api/meal-windows         - Get meal windows
+POST   /api/meal-windows         - Update meal windows
+```
+
+#### **2.4 User Interface Design**
+
+**Design Principles:**
+- **Simplicity**: Clean, uncluttered interface
+- **Consistency**: Uniform styling and behavior
+- **Accessibility**: WCAG 2.1 compliance
+- **Responsiveness**: Mobile-first design approach
+
+**Key UI Components:**
+
+1. **Login Page**
+   - Username/password form
+   - 2FA verification modal
+   - Forgot password link
+   - University branding
+
+2. **Dashboard**
+   - Real-time statistics cards
+   - Quick action buttons
+   - Recent attendance list
+   - Navigation sidebar
+
+3. **Attendance Page**
+   - Student ID input field
+   - Meal window status indicator
+   - Success/error feedback
+   - Audio notifications
+
+4. **Student Management**
+   - Searchable student table
+   - Add/edit student forms
+   - Bulk import interface
+   - Export functionality
+
+#### **2.5 Security Design**
+
+**Security Measures:**
+
+1. **Authentication Security**
+   - bcrypt password hashing (12 rounds)
+   - Session-based authentication
+   - 2FA with email verification
+   - Rate limiting on login attempts
+
+2. **Data Protection**
+   - HTTPS encryption (TLS 1.3)
+   - Secure HTTP headers (Helmet.js)
+   - Input validation and sanitization
+   - SQL injection prevention
+
+3. **Session Management**
+   - Secure session cookies
+   - Session timeout (1 hour)
+   - CSRF protection
+   - Secure session storage
+
+#### **2.6 Technology Stack Decisions**
+
+**Frontend Technologies:**
+- **React 19.1.1**: Modern UI framework with hooks
+- **Bootstrap 5.3.0**: Responsive CSS framework
+- **React Router**: Client-side routing
+- **Axios**: HTTP client for API calls
+
+**Backend Technologies:**
+- **Node.js**: JavaScript runtime environment
+- **Express.js**: Web application framework
+- **MongoDB**: NoSQL database for flexibility
+- **Mongoose**: ODM for MongoDB
+
+**Development Tools:**
+- **Git**: Version control system
+- **VS Code**: Integrated development environment
+- **Postman**: API testing and documentation
+- **Jest**: Testing framework
+
+### **Deliverables**
+- ✅ System architecture diagram
+- ✅ Database schema design
+- ✅ API specification document
+- ✅ UI/UX wireframes and mockups
+- ✅ Security architecture plan
+- ✅ Technology stack documentation
+
+---
+
+## 💻 Stage 3: Implementation (Coding)
+
+### **Goal**: Build the actual software according to design specifications
+
+### **Duration**: 8 weeks (Weeks 5-12) - Integrated with Agile Sprints
+
+### **Key Activities**
+
+#### **3.1 Development Environment Setup**
+- **Version Control**: Git repository with branching strategy
+- **IDE Configuration**: VS Code with extensions
+- **Package Management**: npm for dependency management
+- **Code Standards**: ESLint and Prettier configuration
+
+#### **3.2 Sprint-Based Development**
+
+**Sprint 1 (Weeks 5-6): Foundation**
+- Authentication system implementation
+- Database models and connections
+- Basic project structure setup
+- Initial UI components
+
+**Sprint 2 (Weeks 7-8): Core Features**
+- Student management CRUD operations
+- Basic attendance recording
+- Meal window validation logic
+- Error handling and validation
+
+**Sprint 3 (Weeks 9-10): Advanced Features**
+- Two-factor authentication
+- Real-time dashboard
+- Email notification system
+- Security middleware
+
+**Sprint 4 (Weeks 11-12): Enhancement**
+- UI/UX improvements
+- Performance optimization
+- Bug fixes and refinements
+- Code documentation
+
+#### **3.3 Code Review Process**
+- **Pull Request Reviews**: Minimum 2 approvals required
+- **Code Quality Checks**: Automated linting and formatting
+- **Security Reviews**: Security-focused code analysis
+- **Documentation**: Inline comments and API documentation
+
+### **Deliverables**
+- ✅ Complete source code repository
+- ✅ Functional web application
+- ✅ Code documentation
+- ✅ Unit test coverage >80%
+
+---
+
+## 🧪 Stage 4: Testing
+
+### **Goal**: Ensure software works as expected and is bug-free
+
+### **Duration**: 2 weeks (Weeks 13-14)
+
+### **Testing Types**
+
+#### **4.1 Unit Testing**
+- **Framework**: Jest for JavaScript
+- **Coverage Target**: 80% code coverage
+- **Components**: Individual functions and components
+- **Automation**: Integrated with CI/CD pipeline
+
+#### **4.2 Integration Testing**
+- **API Testing**: Postman collection for all endpoints
+- **Database Testing**: CRUD operations validation
+- **Authentication Flow**: Login, 2FA, session management
+- **Email Integration**: SMTP functionality testing
+
+#### **4.3 System Testing**
+- **End-to-End Testing**: Complete user workflows
+- **Performance Testing**: Load testing with 1000+ concurrent users
+- **Security Testing**: Penetration testing and vulnerability scans
+- **Browser Compatibility**: Cross-browser testing
+
+#### **4.4 User Acceptance Testing (UAT)**
+- **Stakeholder Testing**: University staff validation
+- **Usability Testing**: User experience evaluation
+- **Accessibility Testing**: WCAG compliance verification
+- **Mobile Responsiveness**: Device compatibility testing
+
+### **Deliverables**
+- ✅ Test plans and test cases
+- ✅ Test execution reports
+- ✅ Bug reports and fixes
+- ✅ Performance test results
+- ✅ Security audit report
+
+---
+
+## 🚀 Stage 5: Deployment
+
+### **Goal**: Release software to production for real users
+
+### **Duration**: 1 week (Week 15)
+
+### **Deployment Activities**
+
+#### **5.1 Production Environment Setup**
+- **Server Configuration**: Cloud hosting setup (AWS/DigitalOcean)
+- **SSL Certificates**: HTTPS implementation
+- **Database Setup**: Production MongoDB instance
+- **Monitoring Tools**: Application and server monitoring
+
+#### **5.2 CI/CD Pipeline**
+- **Automated Testing**: Pre-deployment test execution
+- **Build Process**: Production build optimization
+- **Deployment Automation**: Zero-downtime deployment
+- **Rollback Strategy**: Quick rollback procedures
+
+#### **5.3 Go-Live Process**
+- **Data Migration**: Student data import (if applicable)
+- **User Training**: Administrator and staff training
+- **Documentation**: User manuals and admin guides
+- **Support Setup**: Help desk and technical support
+
+### **Deliverables**
+- ✅ Production system deployed
+- ✅ SSL certificates configured
+- ✅ Monitoring systems active
+- ✅ User training completed
+- ✅ Go-live checklist completed
+
+---
+
+## 🔧 Stage 6: Maintenance & Support
+
+### **Goal**: Keep software running smoothly after launch
+
+### **Duration**: Ongoing (Week 16+)
+
+### **Maintenance Activities**
+
+#### **6.1 Bug Fixes & Security Updates**
+- **Issue Tracking**: Bug report management system
+- **Security Patches**: Regular security updates
+- **Performance Monitoring**: System performance tracking
+- **User Feedback**: Continuous improvement based on feedback
+
+#### **6.2 Feature Enhancements**
+- **New Requirements**: Additional functionality requests
+- **System Upgrades**: Technology stack updates
+- **Scalability Improvements**: Performance optimizations
+- **Integration Requests**: Third-party system integrations
+
+#### **6.3 Support Services**
+- **Technical Support**: 24/7 system monitoring
+- **User Support**: Help desk for administrators
+- **Training Updates**: Ongoing user training programs
+- **Documentation Updates**: Keeping documentation current
+
+### **Deliverables**
+- ✅ Maintenance schedule
+- ✅ Support procedures
+- ✅ Performance monitoring reports
+- ✅ Enhancement roadmap
+
+---
+
+## 🔄 Agile Integration
+
+### **Agile Ceremonies Integration with SDLC**
+
+| **SDLC Stage** | **Agile Ceremony** | **Frequency** | **Purpose** |
+|----------------|-------------------|---------------|-------------|
+| **Planning** | Product Backlog Creation | Once | Define all requirements as user stories |
+| **Design** | Sprint Planning | Bi-weekly | Plan implementation sprints |
+| **Implementation** | Daily Standups | Daily | Track development progress |
+| **Implementation** | Sprint Reviews | Bi-weekly | Demo completed features |
+| **Testing** | Sprint Retrospectives | Bi-weekly | Improve development process |
+| **Deployment** | Release Planning | Monthly | Plan production releases |
+
+### **Sprint Structure Within SDLC**
+
+```
+SDLC Stage 3 (Implementation) - 8 weeks
+├── Sprint 1 (2 weeks): Authentication & Foundation
+├── Sprint 2 (2 weeks): Core Features
+├── Sprint 3 (2 weeks): Advanced Features  
+└── Sprint 4 (2 weeks): Enhancement & Polish
+
+Each Sprint includes:
+- Sprint Planning (4 hours)
+- Daily Standups (15 min/day)
+- Sprint Review (2 hours)
+- Sprint Retrospective (1.5 hours)
+```
+
+---
+
+## 📊 Success Metrics
+
+### **Technical KPIs**
+- System uptime: 99.5%
+- Response time: <2 seconds
+- Code coverage: >80%
+- Security vulnerabilities: 0 critical
+- User satisfaction: >4.0/5.0
+
+### **Business KPIs**
+- Time savings: 80% reduction in manual work
+- Accuracy improvement: 95% accurate records
+- User adoption: 90% of target users
+- Training efficiency: <2 hours per user
+- Cost savings: $25,000 annually
+
+---
+
+<div align="center">
+
+**🏛️ Salale University | 🔄 SDLC Excellence | 🍽️ Meal Attendance System**
+
+*Following structured SDLC methodology for educational technology success*
+
+**Document Version**: 2.0  
+**Methodology**: Traditional SDLC + Agile Scrum  
+**Last Updated**: January 2025
+
+</div>
 
 ### **Scrum Framework Components**
 - **Sprint Duration**: 2 weeks (10 working days)
