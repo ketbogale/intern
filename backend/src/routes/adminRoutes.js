@@ -11,7 +11,9 @@ const {
   checkAdminCredentials,
   sendAdminOTP,
   verifyAdminOTP,
-  resendAdminOTP
+  resendAdminOTP,
+  sendPhoneVerification,
+  verifyPhoneVerification
 } = require('../controllers/adminController');
 
 // Middleware to check admin role
@@ -56,6 +58,10 @@ router.post('/verify-email-change-code', verifyEmailChangeCode);
 
 // Resend email change verification code (no auth required)
 router.post('/resend-email-change-code', resendEmailChangeCode);
+
+// Phone verification routes
+router.post('/send-phone-verification', requireAdmin, sendPhoneVerification);
+router.post('/verify-phone', requireAdmin, verifyPhoneVerification);
 
 // Update admin credentials
 router.patch('/credentials', requireAdmin, updateAdminCredentials);

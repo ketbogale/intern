@@ -22,6 +22,8 @@ const AttendancePage = ({ user, onLogout }) => {
   // API base URL - use relative URLs for security
   const API_BASE_URL = '';
 
+  
+
   // Fetch meal windows from database
   const fetchMealWindows = useCallback(async () => {
     try {
@@ -141,6 +143,7 @@ const AttendancePage = ({ user, onLogout }) => {
       window.removeEventListener('focus', focusInput);
     };
   }, [mealWindowBlocked]);
+
 
   // Re-check whenever meal windows change with more responsive timing
   useEffect(() => {
@@ -454,6 +457,8 @@ const AttendancePage = ({ user, onLogout }) => {
                   </Alert>
                 )}
 
+                {/* Webcam scanning removed */}
+
                 {/* Barcode Scanner Status */}
                 {barcodeScanningEnabled && !mealWindowBlocked && (
                   <Alert variant="info" className="d-flex align-items-center mb-2 py-2">
@@ -466,6 +471,8 @@ const AttendancePage = ({ user, onLogout }) => {
                     </div>
                   </Alert>
                 )}
+
+                {/* Webcam scanning removed */}
 
                 {/* Input Form */}
                 <Form onSubmit={handleSubmit}>

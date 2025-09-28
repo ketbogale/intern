@@ -18,6 +18,11 @@ const SearchStudent = () => {
   const [editStudentMessage, setEditStudentMessage] = useState('');
   const [editStudentLoading, setEditStudentLoading] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState('');
+  const [showConversionModal, setShowConversionModal] = useState(false);
+  const [convertingStudent, setConvertingStudent] = useState(null);
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [conversionLoading, setConversionLoading] = useState(false);
+  const [conversionMessage, setConversionMessage] = useState('');
   const searchInputRef = useRef(null);
 
   useEffect(() => {
@@ -169,6 +174,59 @@ const SearchStudent = () => {
     }
   };
 
+  const handleConvertToCostSharing = (student) => {
+    setConvertingStudent(student);
+    setBankAccountNumber('');
+    setConversionMessage('');
+    setShowConversionModal(true);
+  };
+
+  const handleConfirmConversion = async () => {
+    if (!bankAccountNumber || bankAccountNumber.length !== 13) {
+      setConversionMessage('❌ Please enter a valid 13-digit National Bank of Ethiopia account number');
+      setTimeout(() => setConversionMessage(''), 3000);
+      return;
+    }
+
+    try {
+      setConversionLoading(true);
+      setConversionMessage('');
+
+      const response = await fetch('/api/student-conversion/to-cost-sharing', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          studentId: convertingStudent.id || convertingStudent.studentId,
+          bankAccountNumber: bankAccountNumber
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setConversionMessage('✅ Student successfully converted to cost-sharing with bank account!');
+        setTimeout(() => {
+          setShowConversionModal(false);
+          setConversionMessage('');
+          setBankAccountNumber('');
+          setRefreshMessage('Student converted to cost-sharing successfully!');
+          handleStudentSearch(searchQuery); // Refresh search results
+        }, 2000);
+      } else {
+        setConversionMessage('❌ ' + (data.message || 'Failed to convert student'));
+        setTimeout(() => setConversionMessage(''), 3000);
+      }
+    } catch (error) {
+      console.error('Error converting student:', error);
+      setConversionMessage('❌ Network error occurred. Please try again.');
+      setTimeout(() => setConversionMessage(''), 3000);
+    } finally {
+      setConversionLoading(false);
+    }
+  };
+
   const handleBackToDashboard = () => {
     window.location.href = '/';
   };
@@ -283,6 +341,26 @@ const SearchStudent = () => {
                         justifyContent: 'flex-end',
                         alignItems: 'center'
                       }}>
+                        <button
+                          onClick={() => handleConvertToCostSharing(student)}
+                          style={{
+                            padding: '8px 12px',
+                            backgroundColor: '#8b5cf6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <i className="fas fa-money-bill" style={{ fontSize: '12px' }}></i>
+                          Convert to Cost-Sharing
+                        </button>
                         <button
                           onClick={() => handleEditStudent(student)}
                           style={{
@@ -471,6 +549,130 @@ const SearchStudent = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Convert to Cost-Sharing Modal */}
+      {showConversionModal && (
+        <div className="email-verification-container" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 1000
+        }}>
+          <div className="email-verification-card" style={{ maxWidth: '450px' }}>
+            <div className="email-verification-header">
+              <h1>💰 Convert to Cost-Sharing</h1>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: '8px 0 0 0' }}>
+                This will remove the student from regular database and add to cost-sharing.
+              </p>
+            </div>
+            
+            <div className="email-verification-content">
+              {conversionMessage && (
+                <div className={`result-section ${conversionMessage.includes('❌') ? 'error' : 'success'}`}>
+                  <div className="result-message">
+                    <p>{conversionMessage}</p>
+                  </div>
+                </div>
+              )}
+
+              {convertingStudent && (
+                <div style={{
+                  padding: '16px',
+                  backgroundColor: '#f3f4f6',
+                  borderRadius: '8px',
+                  marginBottom: '20px',
+                  border: '1px solid #e5e7eb'
+                }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' }}>
+                    Student Information
+                  </h3>
+                  <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0' }}>
+                    <strong>Name:</strong> {convertingStudent.name}
+                  </p>
+                  <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0' }}>
+                    <strong>ID:</strong> {convertingStudent.id || convertingStudent.studentId}
+                  </p>
+                  <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0' }}>
+                    <strong>Department:</strong> {convertingStudent.department}
+                  </p>
+                </div>
+              )}
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '14px', 
+                  fontWeight: '600', 
+                  color: '#374151', 
+                  marginBottom: '8px' 
+                }}>
+                  🏦 National Bank of Ethiopia Account Number *
+                </label>
+                <input
+                  type="text"
+                  value={bankAccountNumber}
+                  onChange={(e) => setBankAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 13))}
+                  placeholder="Enter 13-digit NBE account number"
+                  maxLength="13"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontFamily: 'monospace',
+                    letterSpacing: '1px',
+                    boxSizing: 'border-box'
+                  }}
+                  required
+                />
+                <p style={{ 
+                  fontSize: '12px', 
+                  color: '#6b7280', 
+                  margin: '4px 0 0 0' 
+                }}>
+                  Required for direct bank transfers. Must be 13 digits.
+                </p>
+              </div>
+
+              
+              <div className="form-actions">
+                <button 
+                  type="button" 
+                  className="btn-cancel"
+                  onClick={() => setShowConversionModal(false)}
+                  disabled={conversionLoading}
+                >
+                  Cancel
+                </button>
+                
+                <button 
+                  type="button"
+                  onClick={handleConfirmConversion}
+                  className="btn-primary"
+                  disabled={conversionLoading}
+                  style={{
+                    backgroundColor: '#8b5cf6',
+                    borderColor: '#8b5cf6'
+                  }}
+                >
+                  {conversionLoading ? (
+                    <>
+                      <div className="spinner"></div>
+                      Converting...
+                    </>
+                  ) : (
+                    'Convert to Cost-Sharing'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

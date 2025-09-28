@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import './AdminCredentialsUpdate.css';
 import './EmailChangeVerification.css';
+import VerificationCodeInput from './VerificationCodeInput';
 
 const AdminCredentialsUpdate = () => {
   const [adminEmail, setAdminEmail] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [adminCredentials, setAdminCredentials] = useState({
@@ -10,7 +13,8 @@ const AdminCredentialsUpdate = () => {
     newUsername: '',
     newPassword: '',
     confirmPassword: '',
-    email: ''
+    email: '',
+    phone: ''
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -19,21 +23,32 @@ const AdminCredentialsUpdate = () => {
   const [showApprovalCode, setShowApprovalCode] = useState(false);
   const [approvalCode, setApprovalCode] = useState('');
   const [showEmailVerification, setShowEmailVerification] = useState(false);
+  const [showPhoneVerification, setShowPhoneVerification] = useState(false);
+  const [phoneOtpCode, setPhoneOtpCode] = useState('');
+  const [phoneVerified, setPhoneVerified] = useState(false);
 
-  // Fetch admin email on component mount
+  // Fetch admin profile on component mount
   useEffect(() => {
-    const fetchAdminEmail = async () => {
+    const fetchAdminProfile = async () => {
       try {
-        const response = await fetch('/api/admin/email');
+        const response = await fetch('/api/admin/profile');
         const data = await response.json();
         if (data.success) {
           setAdminEmail(data.email);
+          // Pre-populate phone field if it exists
+          if (data.phone) {
+            setAdminCredentials(prev => ({
+              ...prev,
+              phone: data.phone
+            }));
+          }
         }
       } catch (error) {
-        // Error fetching admin email - fail silently
+        console.error('Error fetching admin profile:', error);
       }
     };
-    fetchAdminEmail();
+
+    fetchAdminProfile();
   }, []);
 
   const handleBackToDashboard = () => {
@@ -54,9 +69,10 @@ const AdminCredentialsUpdate = () => {
     const hasUsername = adminCredentials.newUsername && adminCredentials.newUsername.trim();
     const hasPassword = adminCredentials.newPassword && adminCredentials.newPassword.trim();
     const hasEmail = adminCredentials.email && adminCredentials.email.trim();
+    const hasPhone = adminCredentials.phone && adminCredentials.phone.trim();
 
-    if (!hasUsername && !hasPassword && !hasEmail) {
-      setMessage('Please enter at least one field to update (username, password, or email)');
+    if (!hasUsername && !hasPassword && !hasEmail && !hasPhone) {
+      setMessage('Please enter at least one field to update (username, password, email, or phone)');
       setSuccess(false);
       return;
     }
@@ -75,6 +91,12 @@ const AdminCredentialsUpdate = () => {
         return;
       }
     }
+
+    // Phone number change is optional — do not require phone verification
+    // if (hasPhone && !phoneVerified) {
+    //   handleSendPhoneVerification();
+    //   return;
+    // }
 
     // Check if email is being changed
     if (hasEmail && adminCredentials.email !== adminEmail) {
@@ -101,7 +123,8 @@ const AdminCredentialsUpdate = () => {
           currentPassword: adminCredentials.currentPassword,
           newEmail: adminCredentials.email?.trim(),
           newUsername: adminCredentials.newUsername?.trim() || undefined,
-          newPassword: adminCredentials.newPassword?.trim() || undefined
+          newPassword: adminCredentials.newPassword?.trim() || undefined,
+          newPhone: adminCredentials.phone?.trim() || undefined
         })
       });
       
@@ -125,7 +148,7 @@ const AdminCredentialsUpdate = () => {
       }
     } catch (error) {
       setSuccess(false);
-      setMessage('🌐 Network error occurred. Please check your connection and try again.');
+      setMessage('Network error occurred. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -144,7 +167,8 @@ const AdminCredentialsUpdate = () => {
         body: JSON.stringify({
           currentPassword: adminCredentials.currentPassword,
           newUsername: adminCredentials.newUsername?.trim() || undefined,
-          newPassword: adminCredentials.newPassword?.trim() || undefined
+          newPassword: adminCredentials.newPassword?.trim() || undefined,
+          newPhone: adminCredentials.phone?.trim() || undefined
         })
       });
       
@@ -152,7 +176,7 @@ const AdminCredentialsUpdate = () => {
       
       if (data.success) {
         setSuccess(true);
-        setMessage('📧 Admin approval code sent to your email! Enter the 6-digit code below.');
+        setMessage('Admin approval code sent to your email! Enter the 6-digit code below.');
         setPendingCredentials(adminCredentials);
         setShowApprovalCode(true);
       } else {
@@ -161,15 +185,17 @@ const AdminCredentialsUpdate = () => {
       }
     } catch (error) {
       setSuccess(false);
-      setMessage('🌐 Network error occurred. Please check your connection and try again.');
+      setMessage('Network error occurred. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleProceedAfterAdminApproval = async () => {
-    if (!approvalCode || approvalCode.length !== 6) {
-      setMessage('⚠️ Please enter the complete 6-digit admin approval code from your email.');
+  const handleProceedAfterAdminApprovalWithCode = async (code) => {
+    console.log('Processing approval with code:', code, 'Length:', code?.length);
+    
+    if (!code || code.length !== 6) {
+      setMessage('Please enter the complete 6-digit admin approval code from your email.');
       setSuccess(false);
       return;
     }
@@ -178,9 +204,14 @@ const AdminCredentialsUpdate = () => {
       setLoading(true);
       setMessage('');
       
+      // Build payload explicitly and map phone -> newPhone as required by backend
       const credentialsToUpdate = {
-        ...pendingCredentials,
-        adminApprovalOtp: approvalCode
+        currentPassword: pendingCredentials?.currentPassword,
+        newUsername: pendingCredentials?.newUsername?.trim() || undefined,
+        newPassword: pendingCredentials?.newPassword?.trim() || undefined,
+        email: pendingCredentials?.email?.trim() || undefined,
+        newPhone: pendingCredentials?.phone?.trim() || undefined,
+        adminApprovalOtp: code
       };
       
       const response = await fetch('/api/admin/credentials', {
@@ -208,7 +239,95 @@ const AdminCredentialsUpdate = () => {
     } catch (error) {
       console.error('Error updating credentials after admin approval:', error);
       setSuccess(false);
-      setMessage('🌐 Network error occurred. Please check your connection and try again.');
+      setMessage('Network error occurred. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProceedAfterAdminApproval = async () => {
+    handleProceedAfterAdminApprovalWithCode(approvalCode);
+  };
+
+  const handleSendPhoneVerification = async () => {
+    try {
+      setLoading(true);
+      setMessage('');
+      
+      console.log('=== FRONTEND SEND PHONE VERIFICATION DEBUG ===');
+      console.log('Phone number:', adminCredentials.phone?.trim());
+      
+      const response = await fetch('/api/admin/send-phone-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phoneNumber: adminCredentials.phone?.trim()
+        })
+      });
+      
+      const data = await response.json();
+      console.log('Send verification response:', data);
+      
+      if (data.success) {
+        setSuccess(true);
+        setMessage('Verification code sent to your phone! Enter the 6-digit code below.');
+        setShowPhoneVerification(true);
+      } else {
+        setSuccess(false);
+        setMessage(data.message || 'Failed to send phone verification code');
+      }
+    } catch (error) {
+      console.error('Frontend send verification error:', error);
+      setSuccess(false);
+      setMessage('Network error occurred. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyPhone = async (code) => {
+    try {
+      setLoading(true);
+      setMessage('');
+      
+      console.log('=== FRONTEND PHONE VERIFICATION DEBUG ===');
+      console.log('Phone number:', adminCredentials.phone?.trim());
+      console.log('Verification code:', code);
+      
+      const response = await fetch('/api/admin/verify-phone', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phoneNumber: adminCredentials.phone?.trim(),
+          verificationCode: code
+        })
+      });
+      
+      const data = await response.json();
+      console.log('Response from server:', data);
+      
+      if (data.success) {
+        setPhoneVerified(true);
+        setShowPhoneVerification(false);
+        setSuccess(true);
+        setMessage('Phone number verified successfully! You can now update your credentials.');
+        
+        // Continue with credential update
+        setTimeout(() => {
+          handleUpdateAdminCredentials({ preventDefault: () => {} });
+        }, 1000);
+      } else {
+        setSuccess(false);
+        setMessage(data.message || 'Invalid verification code');
+      }
+    } catch (error) {
+      console.error('Frontend verification error:', error);
+      setSuccess(false);
+      setMessage('Network error occurred. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -326,6 +445,70 @@ const AdminCredentialsUpdate = () => {
     );
   }
 
+  if (showPhoneVerification) {
+    return (
+      <div className="email-verification-container">
+        <div className="email-verification-card">
+          <div className="email-verification-header">
+            <h1>Phone Verification Required</h1>
+          </div>
+          
+          <div className="email-verification-content">
+            {message && (
+              <div className={`result-section ${success ? 'success' : 'error'}`}>
+                <div className="result-message">
+                  <p>{message}</p>
+                </div>
+              </div>
+            )}
+            
+            <div className="form-section">
+              <div className="form-group">
+                <label>Enter 6-digit verification code sent to your phone:</label>
+                <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '15px' }}>
+                  Code sent to: {adminCredentials.phone}
+                </p>
+                <VerificationCodeInput
+                  value={phoneOtpCode}
+                  onCodeChange={(code) => {
+                    setPhoneOtpCode(code);
+                  }}
+                  onComplete={(code) => {
+                    if (code && code.length === 6) {
+                      handleVerifyPhone(code);
+                    }
+                  }}
+                  disabled={loading}
+                  error={message && !success}
+                  length={6}
+                />
+              </div>
+              
+              <div className="form-actions" style={{ justifyContent: 'center', marginTop: '20px' }}>
+                <button 
+                  type="button" 
+                  className="btn-secondary"
+                  onClick={handleSendPhoneVerification}
+                  disabled={loading}
+                  style={{ 
+                    background: 'transparent',
+                    border: '1px solid #d1d5db',
+                    color: '#6b7280',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
+                >
+                  Resend Code
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (showApprovalCode) {
     return (
       <div className="email-verification-container">
@@ -346,48 +529,41 @@ const AdminCredentialsUpdate = () => {
             <div className="form-section">
               <div className="form-group">
                 <label>Enter 6-digit approval code from your email:</label>
-                <input
-                  type="text"
+                <VerificationCodeInput
                   value={approvalCode}
-                  onChange={(e) => setApprovalCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="000000"
-                  maxLength="6"
-                  className="verification-code-input"
+                  onCodeChange={(code) => {
+                    console.log('Code changed:', code, 'Length:', code?.length);
+                    setApprovalCode(code);
+                  }}
+                  onComplete={(code) => {
+                    console.log('onComplete called with:', code, 'Length:', code?.length);
+                    // Use the code directly from the callback instead of state
+                    if (code && code.length === 6) {
+                      handleProceedAfterAdminApprovalWithCode(code);
+                    }
+                  }}
+                  disabled={loading}
+                  error={message && !success}
+                  length={6}
                 />
               </div>
               
-              <div className="form-actions">
-                <button 
-                  type="button" 
-                  className="btn-primary"
-                  onClick={handleProceedAfterAdminApproval}
-                  disabled={loading || approvalCode.length !== 6}
-                >
-                  {loading ? (
-                    <>
-                      <div className="spinner"></div>
-                      Verifying...
-                    </>
-                  ) : (
-                    'Update Credentials'
-                  )}
-                </button>
-                
+              <div className="form-actions" style={{ justifyContent: 'center', marginTop: '20px' }}>
                 <button 
                   type="button" 
                   className="btn-secondary"
                   onClick={handleResendApprovalCode}
                   disabled={loading}
+                  style={{ 
+                    background: 'transparent',
+                    border: '1px solid #d1d5db',
+                    color: '#6b7280',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
                 >
                   Resend Code
-                </button>
-                
-                <button 
-                  type="button" 
-                  className="btn-cancel"
-                  onClick={handleBackToDashboard}
-                >
-                  Cancel
                 </button>
               </div>
             </div>
@@ -416,13 +592,33 @@ const AdminCredentialsUpdate = () => {
           <form onSubmit={handleUpdateAdminCredentials} className="form-section">
             <div className="form-group">
               <label>Current Password</label>
-              <input
-                type="password"
-                value={adminCredentials.currentPassword}
-                onChange={(e) => setAdminCredentials({...adminCredentials, currentPassword: e.target.value})}
-                placeholder="Enter current password"
-                required
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={adminCredentials.currentPassword}
+                  onChange={(e) => setAdminCredentials({...adminCredentials, currentPassword: e.target.value})}
+                  placeholder="Enter current password"
+                  required
+                  style={{ paddingRight: '45px' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    color: '#6b7280'
+                  }}
+                >
+                  {showCurrentPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
             </div>
             
             <div className="form-group">
@@ -506,6 +702,22 @@ const AdminCredentialsUpdate = () => {
                 }))}
                 placeholder="Enter admin email address"
               />
+            </div>
+            
+            <div className="form-group">
+              <label>Phone Number (optional)</label>
+              <input
+                type="tel"
+                value={adminCredentials.phone}
+                onChange={(e) => setAdminCredentials(prev => ({
+                  ...prev,
+                  phone: e.target.value
+                }))}
+                placeholder="Enter phone number (e.g., +251911123456)"
+              />
+              <small style={{ color: '#6b7280', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                Optional. You can add/update without phone code verification.
+              </small>
             </div>
             
             <div className="form-actions">

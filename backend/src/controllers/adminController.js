@@ -2,6 +2,7 @@ const Staff = require('../models/staff');
 const bcrypt = require('bcrypt');
 const OTP = require('../models/OTP');
 const { generateOTP, sendOTPEmail } = require('../services/emailService');
+const notificationService = require('../services/notificationService');
 
 // Get admin profile
 const getAdminProfile = async (req, res) => {
@@ -19,7 +20,8 @@ const getAdminProfile = async (req, res) => {
     res.json({
       success: true,
       email: adminUser.email,
-      username: adminUser.username
+      username: adminUser.username,
+      phone: adminUser.phone
     });
     
   } catch (error) {
@@ -278,7 +280,7 @@ const sendAdminApprovalOTP = async (req, res) => {
 // Update admin credentials after admin approval and email verification
 const updateAdminCredentials = async (req, res) => {
   try {
-    const { currentPassword, newUsername, newPassword, confirmPassword, email, otp, adminApprovalOtp } = req.body;
+    const { currentPassword, newUsername, newPassword, confirmPassword, email, newPhone, otp, adminApprovalOtp } = req.body;
     
     // Check if user is admin
     if (!req.session.user || req.session.user.role !== 'admin') {
@@ -298,7 +300,7 @@ const updateAdminCredentials = async (req, res) => {
     }
 
     // Check if this is an email-only change (already approved via verification link)
-    const isEmailOnlyChange = email && email !== adminUser.email && !newUsername && !newPassword;
+    const isEmailOnlyChange = email && email !== adminUser.email && !newUsername && !newPassword && !newPhone;
     
     // Only verify current password for non-email changes or if password is not marked as verified
     if (!isEmailOnlyChange || currentPassword !== 'verified') {
@@ -491,6 +493,9 @@ const updateAdminCredentials = async (req, res) => {
     if (email && email !== adminUser.email) {
       updates.email = email;
     }
+    if (newPhone && newPhone !== adminUser.phone) {
+      updates.phone = newPhone;
+    }
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({
@@ -503,12 +508,15 @@ const updateAdminCredentials = async (req, res) => {
     Object.assign(adminUser, updates);
     await adminUser.save();
 
-    // Update session with new username and email if changed
+    // Update session with new username, email, and phone if changed
     if (newUsername) {
       req.session.user.username = newUsername;
     }
     if (email) {
       req.session.user.email = email;
+    }
+    if (newPhone) {
+      req.session.user.phone = newPhone;
     }
 
     res.json({
@@ -967,6 +975,185 @@ const resendEmailChangeCode = async (req, res) => {
   }
 };
 
+// Send phone verification OTP
+const sendPhoneVerification = async (req, res) => {
+  try {
+    const { phoneNumber } = req.body;
+    
+    if (!phoneNumber || !phoneNumber.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required'
+      });
+    }
+
+    // Validate phone number format (basic validation, prefers E.164)
+    const phoneRegex = /^\+?[\d\s-()]{10,15}$/;
+    if (!phoneRegex.test(phoneNumber.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number format'
+      });
+    }
+
+    // Generate 6-digit OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store OTP in memory (similar to bulk payment OTP system)
+    if (!global.phoneVerificationCodes) {
+      global.phoneVerificationCodes = {};
+    }
+    
+    const verificationId = `phone_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    global.phoneVerificationCodes[verificationId] = {
+      phoneNumber: phoneNumber.trim(),
+      code: otpCode,
+      expires: Date.now() + (5 * 60 * 1000), // 5 minutes
+      adminId: req.session.user.id
+    };
+
+    // Send SMS using notification service and surface failures
+    try {
+      const provider = process.env.SMS_PROVIDER || 'mock';
+      console.log('SMS provider:', provider);
+      const smsResult = await notificationService.sendAuthorizationCode(
+        phoneNumber.trim(), 
+        otpCode, 
+        'phone verification'
+      );
+      if (!smsResult || smsResult.success !== true) {
+        console.error('SMS sending failed:', smsResult);
+        return res.status(502).json({
+          success: false,
+          message: 'Failed to send verification SMS. Please check SMS provider configuration.'
+        });
+      }
+    } catch (smsError) {
+      console.error('SMS sending error:', smsError);
+      return res.status(502).json({
+        success: false,
+        message: 'SMS provider error while sending verification code'
+      });
+    }
+
+    console.log('=== PHONE VERIFICATION SEND DEBUG ===');
+    console.log('Generated OTP code:', otpCode);
+    console.log('Phone number:', phoneNumber.trim());
+    console.log('Verification ID:', verificationId);
+    console.log('Admin ID:', req.session.user.id);
+    console.log('Stored verification object:', global.phoneVerificationCodes[verificationId]);
+
+    res.json({
+      success: true,
+      message: 'Verification code sent to your phone',
+      verificationId: verificationId
+    });
+
+  } catch (error) {
+    console.error('Error sending phone verification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while sending verification code'
+    });
+  }
+};
+
+// Verify phone verification OTP
+const verifyPhoneVerification = async (req, res) => {
+  try {
+    const { phoneNumber, verificationCode } = req.body;
+    
+    console.log('=== PHONE VERIFICATION DEBUG ===');
+    console.log('Request body:', { phoneNumber, verificationCode });
+    console.log('Session user ID:', req.session.user?.id);
+    console.log('All stored phone verification codes:', global.phoneVerificationCodes);
+    
+    if (!phoneNumber || !verificationCode) {
+      console.log('Missing required fields');
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number and verification code are required'
+      });
+    }
+
+    // Find matching verification code
+    let matchingVerificationId = null;
+    let storedVerification = null;
+
+    if (global.phoneVerificationCodes) {
+      console.log('Searching through verification codes...');
+      for (const [verificationId, verification] of Object.entries(global.phoneVerificationCodes)) {
+        console.log(`Checking verification ID: ${verificationId}`);
+        console.log(`  - Stored phone: "${verification.phoneNumber}"`);
+        console.log(`  - Request phone: "${phoneNumber.trim()}"`);
+        console.log(`  - Phone match: ${verification.phoneNumber === phoneNumber.trim()}`);
+        console.log(`  - Stored adminId: ${verification.adminId}`);
+        console.log(`  - Request adminId: ${req.session.user.id}`);
+        console.log(`  - Admin match: ${verification.adminId === req.session.user.id}`);
+        console.log(`  - Stored code: "${verification.code}"`);
+        console.log(`  - Request code: "${verificationCode.trim()}"`);
+        console.log(`  - Code match: ${verification.code === verificationCode.trim()}`);
+        console.log(`  - Expires: ${new Date(verification.expires)}`);
+        console.log(`  - Current time: ${new Date()}`);
+        console.log(`  - Expired: ${Date.now() > verification.expires}`);
+        
+        if (verification.phoneNumber === phoneNumber.trim() && 
+            verification.adminId.toString() === req.session.user.id.toString()) {
+          matchingVerificationId = verificationId;
+          storedVerification = verification;
+          console.log(`Found matching verification: ${verificationId}`);
+          break;
+        }
+      }
+    } else {
+      console.log('No phone verification codes stored in global object');
+    }
+
+    if (!storedVerification) {
+      console.log('No matching verification found');
+      return res.status(400).json({
+        success: false,
+        message: 'Verification code not found or expired'
+      });
+    }
+
+    // Check if code matches and hasn't expired
+    if (storedVerification.code !== verificationCode.trim()) {
+      console.log('Code mismatch - stored:', storedVerification.code, 'provided:', verificationCode.trim());
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid verification code'
+      });
+    }
+
+    if (Date.now() > storedVerification.expires) {
+      console.log('Code expired');
+      // Clean up expired code
+      delete global.phoneVerificationCodes[matchingVerificationId];
+      return res.status(400).json({
+        success: false,
+        message: 'Verification code has expired'
+      });
+    }
+
+    // Code is valid - clean up and return success
+    console.log('Verification successful, cleaning up code');
+    delete global.phoneVerificationCodes[matchingVerificationId];
+
+    res.json({
+      success: true,
+      message: 'Phone number verified successfully'
+    });
+
+  } catch (error) {
+    console.error('Error verifying phone:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while verifying phone'
+    });
+  }
+};
+
 module.exports = {
   getAdminProfile,
   updateAdminCredentials,
@@ -978,5 +1165,7 @@ module.exports = {
   checkAdminCredentials,
   sendAdminOTP,
   verifyAdminOTP,
-  resendAdminOTP
+  resendAdminOTP,
+  sendPhoneVerification,
+  verifyPhoneVerification
 };

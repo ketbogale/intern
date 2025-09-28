@@ -131,7 +131,6 @@ const ForgotPasswordPage = () => {
                     onClick={handleBackToLogin}
                     disabled={isLoading}
                   >
-                    <i className="fas fa-arrow-left me-2"></i>
                     Back to Login
                   </Button>
                 </Form>

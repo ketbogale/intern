@@ -6,6 +6,7 @@ const staffSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: { type: String, required: true, enum: ['admin', 'scanner'], default: 'scanner' },
   email: { type: String, required: function() { return this.role === 'admin'; } },
+  phone: { type: String, required: false }
 });
 
 // Hash password before saving

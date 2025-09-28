@@ -71,7 +71,10 @@ const AddStudent = () => {
     <div className="email-verification-container">
       <div className="email-verification-card" style={{ maxWidth: '450px' }}>
         <div className="email-verification-header">
-          <h1>Add New Student</h1>
+          <h1>Add Regular Student</h1>
+          <p style={{ fontSize: '14px', color: '#6b7280', margin: '8px 0 0 0' }}>
+            For cafeteria users only. To convert existing students to cost-sharing, use Search Student.
+          </p>
         </div>
         
         <div className="email-verification-content">
@@ -125,6 +128,7 @@ const AddStudent = () => {
                 placeholder="e.g., /public/images/student.jpg (optional)"
               />
             </div>
+
             
             <div className="form-actions" style={{ justifyContent: 'center', gap: '12px' }}>
               <button 

@@ -10,8 +10,7 @@ build/
 dist/
 
 # Environment variables
-.env
-backend/.env
+
 .env.production
 .env.local
 .env.development.local

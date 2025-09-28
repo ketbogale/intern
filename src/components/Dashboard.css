@@ -680,21 +680,19 @@
 }
 
 /* Action Buttons Styles */
+/* Students section action buttons as responsive grid */
 .action-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
   margin-top: 15px;
 }
 
 /* Desktop layout - horizontal */
-@media (min-width: 769px) {
+@media (max-width: 480px) {
   .action-buttons {
-    flex-direction: row;
-  }
-  
-  .action-btn {
-    flex: 1;
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
 }
 

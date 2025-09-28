@@ -1,3 +1,16 @@
+/* Forgot password link: tiny, blue, underline only on hover */
+.forgot-link {
+  text-decoration: none !important;
+  color: #0d6efd !important;
+  font-size: 7px !important;
+  line-height: 1 !important;
+  padding: 0 !important;
+}
+
+.forgot-link:hover,
+.forgot-link:focus {
+  text-decoration: underline !important;
+}
 /* Import Google Fonts */
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css');
@@ -84,22 +97,82 @@
     color: rgba(255, 255, 255, 0.6) !important;
   }
   
-  /* Modal input styling */
-  .modal .form-control {
-    background-color: white !important;
-    border: 2px solid #ced4da !important;
-    color: #495057 !important;
+  /* Modal styling - dark theme to match main form - highest specificity */
+  div.modal div.modal-dialog div.modal-content {
+    background-color: rgba(52, 73, 94, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(15px) !important;
   }
   
-  .modal .form-control:focus {
-    background-color: white !important;
-    border-color: #007bff !important;
+  div.modal div.modal-dialog div.modal-content div.modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background-color: transparent !important;
+  }
+  
+  div.modal div.modal-dialog div.modal-content div.modal-header h5.modal-title {
+    color: white !important;
+  }
+  
+  div.modal div.modal-dialog div.modal-content div.modal-body {
+    color: white !important;
+    background-color: transparent !important;
+  }
+  
+  div.modal div.modal-dialog div.modal-content div.modal-body h4 {
+    color: white !important;
+  }
+  
+  div.modal div.modal-dialog div.modal-content div.modal-body p {
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
+  
+  /* Bootstrap form control overrides with maximum specificity */
+  div.modal div.modal-dialog div.modal-content div.modal-body form div.form-group input.form-control,
+  div.modal div.modal-dialog div.modal-content div.modal-body input.form-control,
+  div.modal input.form-control {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    background-image: none !important;
+    border: 2px solid rgba(255, 255, 255, 0.3) !important;
+    color: white !important;
+    border-radius: 12px !important;
+  }
+  
+  div.modal div.modal-dialog div.modal-content div.modal-body form div.form-group input.form-control:focus,
+  div.modal div.modal-dialog div.modal-content div.modal-body input.form-control:focus,
+  div.modal input.form-control:focus {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    background-image: none !important;
+    border-color: rgba(0, 123, 255, 0.8) !important;
     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
-    color: #495057 !important;
+    color: white !important;
+    border-radius: 12px !important;
   }
   
-  .modal .form-control::placeholder {
-    color: #6c757d !important;
+  div.modal div.modal-dialog div.modal-content div.modal-body form div.form-group input.form-control::placeholder,
+  div.modal div.modal-dialog div.modal-content div.modal-body input.form-control::placeholder,
+  div.modal input.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.6) !important;
+  }
+  
+  div.modal div.modal-dialog div.modal-content div.modal-body form div.form-group label.form-label,
+  div.modal div.modal-dialog div.modal-content div.modal-body label.form-label,
+  div.modal label.form-label {
+    color: rgba(255, 255, 255, 0.9) !important;
+  }
+  
+  div.modal div.modal-dialog div.modal-content div.modal-header button.btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%) !important;
+  }
+  
+  /* Override Bootstrap's validation states */
+  div.modal .form-control:valid {
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    background-image: none !important;
+  }
+  
+  div.modal .form-control:invalid {
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    background-image: none !important;
   }
   
   /* Custom navbar styling */

@@ -1095,6 +1095,28 @@ const Dashboard = ({ user, onLogout }) => {
                         <i className="fas fa-users"></i>
                         <span>View All Students</span>
                       </button>
+                      <button 
+                        className="action-btn add-btn"
+                        onClick={() => window.location.href = '/bulk-import-students'}
+                        style={{
+                          backgroundColor: '#2563eb',
+                          borderColor: '#2563eb'
+                        }}
+                      >
+                        <i className="fas fa-file-upload"></i>
+                        <span>Bulk Import Students</span>
+                      </button>
+                      <button 
+                        className="action-btn cost-sharing-btn"
+                        onClick={() => window.location.href = '/cost-sharing'}
+                        style={{
+                          backgroundColor: '#8b5cf6',
+                          borderColor: '#8b5cf6'
+                        }}
+                      >
+                        <i className="fas fa-money-bill-wave"></i>
+                        <span>Cost-Sharing Management</span>
+                      </button>
                     </div>
 
                     {/* Search functionality moved to separate SearchStudent component */}

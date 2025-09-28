@@ -37,6 +37,7 @@ router.post("/add", requireAuth, async (req, res) => {
       name,
       department: department || "",
       photoUrl: photoUrl || "",
+      isActive: true
     };
 
     const newStudent = new Student(studentData);
@@ -49,7 +50,7 @@ router.post("/add", requireAuth, async (req, res) => {
         name: savedStudent.name,
         department: savedStudent.department,
         photoUrl: savedStudent.photoUrl,
-        mealUsed: savedStudent.mealUsed,
+        isActive: savedStudent.isActive
       },
     });
   } catch (error) {
@@ -106,6 +107,7 @@ router.post("/add-multiple", requireAuth, async (req, res) => {
           name,
           department: department || "",
           photoUrl: photoUrl || "",
+          isActive: true,
         });
 
         const savedStudent = await newStudent.save();

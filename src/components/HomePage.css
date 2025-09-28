@@ -1,0 +1,29 @@
+/* Subtle animation for the HomePage hero title */
+
+.hero-title-animated {
+  animation: fadeInUp 600ms ease-out 1 both;
+}
+
+/* Optional soft glow to make title stand out slightly */
+.hero-title-animated {
+  text-shadow: 0 1px 0 rgba(0,0,0,0.2), 0 6px 24px rgba(0,0,0,0.25);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+    filter: blur(1px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* Slight emphasis animation on hover (non-intrusive) */
+.hero-title-animated:hover {
+  transition: transform 180ms ease-out;
+  transform: translateY(-1px);
+}

@@ -23,6 +23,7 @@ const AdminOTPVerification = () => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           otp: otpValue
         })
@@ -31,8 +32,8 @@ const AdminOTPVerification = () => {
       const data = await response.json();
 
       if (data.success) {
-        // Force a page reload to ensure auth state is refreshed
-        window.location.href = '/';
+        // Go directly to dashboard after session is set
+        window.location.pathname = '/dashboard';
       } else {
         setOtpMessage('❌ ' + (data.message || 'Invalid verification code. Please check and try again.'));
         setOtp('');
@@ -77,163 +78,151 @@ const AdminOTPVerification = () => {
     <div style={{
       minHeight: '100vh',
       background: '#f5eddd',
-      position: 'relative',
-      overflow: 'hidden'
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px'
     }}>
-      {/* Background Pattern */}
       <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e2e8f0' fill-opacity='0.4'%3E%3Cpath d='m36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        opacity: 0.3
-      }} />
-      
-      {/* Main Content */}
-      <div style={{
-        position: 'relative',
-        zIndex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        padding: '20px'
+        background: 'white',
+        borderRadius: '16px',
+        padding: '48px 40px',
+        textAlign: 'center',
+        maxWidth: '480px',
+        width: '100%',
+        boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
       }}>
-        <div style={{
-          background: 'white',
-          borderRadius: '16px',
-          padding: '48px 40px',
-          textAlign: 'center',
-          maxWidth: '480px',
-          width: '100%',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+        <h1 style={{
+          color: '#374151',
+          fontWeight: '600',
+          fontSize: '24px',
+          marginBottom: '16px',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
         }}>
-          <h1 style={{
-            color: '#1f2937',
-            fontWeight: '600',
-            fontSize: '28px',
-            marginBottom: '12px',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+          Enter Verification Code
+        </h1>
+        
+        <p style={{
+          color: '#9ca3af',
+          fontSize: '14px',
+          marginBottom: '8px',
+          lineHeight: '1.5'
+        }}>
+          We've sent a 6-digit verification code to
+        </p>
+        <p style={{
+          color: '#374151',
+          fontSize: '14px',
+          fontWeight: '600',
+          marginBottom: '8px'
+        }}>
+          {adminEmail}
+        </p>
+        <p style={{
+          color: '#9ca3af',
+          fontSize: '14px',
+          marginBottom: '32px'
+        }}>
+          The code will expire in 10 minutes
+        </p>
+        
+        <div style={{ marginBottom: '32px' }}>
+          <VerificationCodeInput
+            value={otp}
+            onCodeChange={setOtp}
+            onComplete={handleOTPVerification}
+            disabled={otpLoading}
+          />
+        </div>
+        
+        {otpMessage && (
+          <div style={{
+            padding: '12px 16px',
+            borderRadius: '8px',
+            backgroundColor: otpMessage.includes('sent') || otpMessage.includes('successfully') ? '#dcfce7' : '#fef3c7',
+            color: otpMessage.includes('sent') || otpMessage.includes('successfully') ? '#166534' : '#92400e',
+            fontSize: '14px',
+            marginBottom: '24px',
+            border: `1px solid ${otpMessage.includes('sent') || otpMessage.includes('successfully') ? '#bbf7d0' : '#fde68a'}`
           }}>
-            Enter Verification Code
-          </h1>
-          
-          <p style={{
-            color: '#6b7280',
+            {otpMessage}
+          </div>
+        )}
+        
+        <button
+          onClick={() => handleOTPVerification(otp)}
+          disabled={otpLoading || otp.length !== 6}
+          style={{
+            width: '100%',
+            padding: '14px 24px',
+            backgroundColor: otpLoading || otp.length !== 6 ? '#d1d5db' : '#9ca3af',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
             fontSize: '16px',
-            marginBottom: '40px',
-            lineHeight: '1.6'
-          }}>
-            We've sent a 6-digit verification code to<br />
-            <span style={{ color: '#1f2937', fontWeight: '500' }}>{adminEmail}</span><br />
-            <span style={{ fontSize: '14px', color: '#9ca3af' }}>The code will expire in 10 minutes</span>
-          </p>
-          
-          <div style={{ marginBottom: '32px' }}>
-            <VerificationCodeInput
-              value={otp}
-              onChange={setOtp}
-              onComplete={handleOTPVerification}
-              disabled={otpLoading}
-            />
-          </div>
-          
-          {otpMessage && (
-            <div style={{
-              padding: '16px 20px',
-              borderRadius: '12px',
-              backgroundColor: otpMessage.includes('sent') || otpMessage.includes('successfully') ? '#dcfce7' : '#fef3c7',
-              color: otpMessage.includes('sent') || otpMessage.includes('successfully') ? '#166534' : '#92400e',
-              fontSize: '14px',
-              marginBottom: '32px',
-              border: `1px solid ${otpMessage.includes('sent') || otpMessage.includes('successfully') ? '#bbf7d0' : '#fde68a'}`
-            }}>
-              {otpMessage}
-            </div>
-          )}
-          
+            fontWeight: '500',
+            cursor: otpLoading || otp.length !== 6 ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s',
+            marginBottom: '20px'
+          }}
+          onMouseEnter={(e) => {
+            if (!otpLoading && otp.length === 6) {
+              e.target.style.backgroundColor = '#6b7280';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!otpLoading && otp.length === 6) {
+              e.target.style.backgroundColor = '#9ca3af';
+            }
+          }}
+        >
+          {otpLoading ? 'Verifying...' : 'Verify Code'}
+        </button>
+        
+        <div style={{
+          color: '#9ca3af',
+          fontSize: '14px',
+          marginBottom: '16px'
+        }}>
+          Didn't receive the code? Check your spam folder or{' '}
           <button
-            onClick={handleOTPVerification}
-            disabled={otpLoading || otp.length !== 6}
-            style={{
-              width: '100%',
-              padding: '16px 24px',
-              backgroundColor: otpLoading || otp.length !== 6 ? '#d1d5db' : '#10b981',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: otpLoading || otp.length !== 6 ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s',
-              marginBottom: '24px'
-            }}
-            onMouseEnter={(e) => {
-              if (!otpLoading && otp.length === 6) {
-                e.target.style.backgroundColor = '#059669';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!otpLoading && otp.length === 6) {
-                e.target.style.backgroundColor = '#10b981';
-              }
-            }}
-          >
-            {otpLoading ? (
-              <div style={{
-                width: '20px',
-                height: '20px',
-                border: '3px solid rgba(59, 130, 246, 0.3)',
-                borderTop: '3px solid #3b82f6',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite'
-              }} />
-            ) : 'Verify Code'}
-          </button>
-          
-          <div style={{ marginBottom: '24px' }}>
-            <span style={{ color: '#6b7280', fontSize: '14px' }}>
-              Didn't receive the code? Check your spam folder or 
-            </span>
-            <button
-              onClick={handleResendOTP}
-              disabled={resendLoading}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#3b82f6',
-                fontSize: '14px',
-                cursor: resendLoading ? 'not-allowed' : 'pointer',
-                textDecoration: 'underline',
-                marginLeft: '4px'
-              }}
-            >
-              {resendLoading ? 'Sending...' : 'Resend'}
-            </button>
-          </div>
-          
-          <button
-            onClick={() => navigate('/admin-email-verification')}
-            disabled={otpLoading || resendLoading}
+            onClick={handleResendOTP}
+            disabled={resendLoading}
             style={{
               background: 'none',
               border: 'none',
-              color: '#6b7280',
+              color: '#3b82f6',
               fontSize: '14px',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              margin: '0 auto'
+              cursor: resendLoading ? 'not-allowed' : 'pointer',
+              textDecoration: 'underline'
             }}
           >
-            ← Back to Email Verification
+            {resendLoading ? 'Sending...' : 'Resend'}
           </button>
         </div>
+        
+        <button
+          onClick={() => navigate('/admin-email-verification')}
+          disabled={otpLoading || resendLoading}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#9ca3af',
+            fontSize: '14px',
+            cursor: 'pointer',
+            textDecoration: 'none',
+            fontWeight: '400',
+            transition: 'font-weight 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.fontWeight = '600';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.fontWeight = '400';
+          }}
+        >
+          ← Back to Email Verification
+        </button>
       </div>
     </div>
   );

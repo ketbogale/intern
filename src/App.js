@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import './App.css';
+import HomePage from './components/HomePage';
 import LoginPage from './components/LoginPage';
 import AttendancePage from './components/AttendancePage';
 import Dashboard from './components/Dashboard';
@@ -15,6 +16,8 @@ import SearchStudent from './components/SearchStudent';
 import ViewAllStudents from './components/ViewAllStudents';
 import ForgotPasswordPage from './components/ForgotPasswordPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
+import CostSharingManagement from './components/CostSharingManagement';
+import BulkImportStudents from './components/BulkImportStudents';
 
 const AppContent = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -194,15 +197,15 @@ const AppContent = () => {
         <Route path="/scanner-credentials" element={<ScannerCredentialsUpdate />} />
         <Route path="/search-student" element={<SearchStudent />} />
         <Route path="/view-all-students" element={<ViewAllStudents />} />
+        <Route path="/cost-sharing" element={<CostSharingManagement />} />
+        <Route path="/bulk-import-students" element={<BulkImportStudents />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
         <Route path="/login_meal_attendance" element={<LoginPage onLogin={handleLogin} />} />
         
-        {/* Root route redirects to login_meal_attendance */}
-        <Route path="/" element={
-          <Navigate to="/login_meal_attendance" replace />
-        } />
+        {/* Home page */}
+        <Route path="/" element={<HomePage />} />
       </Routes>
     </div>
   );

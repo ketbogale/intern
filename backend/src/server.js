@@ -16,6 +16,12 @@ const staffRoutes = require('./routes/staff');
 const adminRoutes = require('./routes/adminRoutes');
 const mealWindowsRoutes = require('./routes/mealWindows');
 const passwordResetRoutes = require('./routes/passwordReset');
+const costSharingRoutes = require('./routes/costSharing');
+const studentConversionRoutes = require('./routes/studentConversion');
+const bulkPaymentRoutes = require('./routes/bulkPayment');
+const cbeBulkPaymentRoutes = require('./routes/cbeBulkPayment');
+const fileServingRoutes = require('./routes/fileServing');
+const excelExportRoutes = require('./routes/excelExport');
 const mongoose = require("mongoose");
 const SchedulerService = require("./services/scheduler");
 const { verifyEmailService } = require('./services/emailService');
@@ -161,6 +167,12 @@ app.use('/api/staff', staffRoutes); // Rate limiting temporarily disabled
 app.use('/api/admin', adminRoutes); // Rate limiting temporarily disabled
 app.use('/api/meal-windows', mealWindowsRoutes);
 app.use('/api/auth', passwordResetRoutes);
+app.use('/api/cost-sharing', costSharingRoutes);
+app.use('/api/student-conversion', studentConversionRoutes);
+app.use('/api/bulk-payment', bulkPaymentRoutes);
+app.use('/api/cbe-bulk-payment', cbeBulkPaymentRoutes);
+app.use('/api/files', fileServingRoutes);
+app.use('/api/excel-export', excelExportRoutes);
 
 // Logout route is now handled in login.js routes
 

@@ -7,7 +7,6 @@ import './LoginPage.css';
 const API_BASE_URL = '';
 const MESSAGES = {
   NETWORK_ERROR: 'Network error occurred. Please check your internet connection and try again.',
-  LOGIN_SUCCESS_WARNING: 'Login successful! Note: If you have other tabs open, they will be logged out automatically.',
   OTP_EXPIRED: 'Verification code expired. Please request a new one to continue.',
   INVALID_OTP_LENGTH: 'Please enter the complete 6-digit verification code from your email.',
   EMAIL_REQUIRED: 'Please enter your admin email address to continue.'
@@ -74,6 +73,10 @@ const LoginPage = ({ onLogin }) => {
   const [adminEmail, setAdminEmail] = useState('');
   const [emailMessage, setEmailMessage] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [helpLoading, setHelpLoading] = useState(false);
+  const [helpError, setHelpError] = useState('');
+  const [adminPhone, setAdminPhone] = useState('');
 
   // OTP countdown timer
   useEffect(() => {
@@ -122,7 +125,6 @@ const LoginPage = ({ onLogin }) => {
       });
 
       if (adminResponse.ok && adminData.success) {
-        setMessage('Admin credentials verified! Redirecting to email verification...');
         setTimeout(() => {
           window.location.pathname = '/admin-email-verification';
         }, 1000);
@@ -134,7 +136,6 @@ const LoginPage = ({ onLogin }) => {
         });
 
         if (response.ok && data.success && data.user) {
-          setMessage(MESSAGES.LOGIN_SUCCESS_WARNING);
           setTimeout(() => onLogin(data.user), 1000);
         } else {
           setMessage(data.error || 'Login failed');
@@ -146,6 +147,27 @@ const LoginPage = ({ onLogin }) => {
       setTimeout(() => setMessage(''), 2500);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Help: fetch admin phone and open modal
+  const openHelp = async () => {
+    try {
+      setHelpLoading(true);
+      setHelpError('');
+      setAdminPhone('');
+      const res = await fetch('/api/admin/profile');
+      const data = await res.json();
+      if (res.ok && data && data.success) {
+        setAdminPhone(data.phone || '');
+      } else {
+        setHelpError(data && data.message ? data.message : 'Unable to load admin contact.');
+      }
+    } catch (e) {
+      setHelpError('Network error while loading contact.');
+    } finally {
+      setHelpLoading(false);
+      setShowHelp(true);
     }
   };
 
@@ -167,6 +189,7 @@ const LoginPage = ({ onLogin }) => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           email: adminEmail,
           otp: otpCode
@@ -176,13 +199,15 @@ const LoginPage = ({ onLogin }) => {
       const data = await response.json();
       
       if (data.success) {
-        setMessage('Login successful! Redirecting...');
+        // Set logged-in state
+        onLogin(data.user);
+
+        // This endpoint is for admin login OTP — route directly to dashboard
         setTimeout(() => {
-          window.location.href = '/';
-        }, 1000);
+          window.location.pathname = '/dashboard';
+        }, 200);
         setOtpCode('');
         setOtpMessage('');
-        onLogin(data.user);
       } else {
         setOtpMessage('Invalid verification code: ' + (data.message || 'Please check the code and try again.'));
         setTimeout(() => setOtpMessage(''), 2500);
@@ -304,7 +329,18 @@ const LoginPage = ({ onLogin }) => {
                   </Form.Group>
 
                   <Form.Group className="mb-3">
-                    <Form.Label className="text-light">Password:</Form.Label>
+                    <div className="d-flex justify-content-between align-items-baseline" style={{ flexWrap: 'nowrap', columnGap: '8px' }}>
+                      <Form.Label className="text-light mb-0">Password:</Form.Label>
+                      <Button
+                        variant="link"
+                        className="p-0 forgot-link"
+                        onClick={() => window.location.href = '/forgot-password'}
+                        disabled={isLoading}
+                        style={{ textDecoration: 'none', fontSize: '4px', color: '#0d6efd', whiteSpace: 'nowrap', lineHeight: 1 }}
+                      >
+                        Forgot password?
+                      </Button>
+                    </div>
                     <InputGroup>
                       <Form.Control
                         type={showPassword ? 'text' : 'password'}
@@ -337,16 +373,17 @@ const LoginPage = ({ onLogin }) => {
                   </LoadingButton>
                 </Form>
 
-                <div className="text-center">
+                
+
+                <div className="text-center mt-2">
                   <Button
                     variant="link"
-                    className="text-light p-0"
-                    onClick={() => window.location.href = '/forgot-password'}
+                    className="p-0 forgot-link"
+                    onClick={openHelp}
                     disabled={isLoading}
-                    style={{textDecoration: 'none', fontSize: '14px'}}
                   >
-                    <i className="fas fa-key me-2"></i>
-                    Forgot your password?
+                    <i className="fas fa-question-circle me-2"></i>
+                    Need help? Contact admin
                   </Button>
                 </div>
 
@@ -367,149 +404,89 @@ const LoginPage = ({ onLogin }) => {
         onHide={() => setShowEmailModal(false)}
         backdrop="static"
         centered
-        size="sm"
       >
-        <Modal.Body className="p-0">
-          <div style={{
-            background: 'white',
-            borderRadius: '12px',
-            padding: '40px 32px',
-            textAlign: 'center',
-            position: 'relative'
-          }}>
-            <button
-              onClick={() => setShowEmailModal(false)}
-              style={{
-                position: 'absolute',
-                top: '16px',
-                right: '16px',
-                background: 'none',
-                border: 'none',
-                fontSize: '20px',
-                color: '#9ca3af',
-                cursor: 'pointer'
-              }}
-            >
-              ×
-            </button>
+        <div style={{background: 'rgba(52, 73, 94, 0.95)', backdropFilter: 'blur(15px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px'}}>
+          <Modal.Header closeButton style={{borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'transparent'}}>
+            <Modal.Title style={{color: 'white'}}>Admin Email Verification</Modal.Title>
+          </Modal.Header>
+          <Modal.Body style={{background: 'transparent'}}>
+            <div className="text-center">
+              <h4 className="mb-2" style={{color: 'white'}}>Enter Admin Email</h4>
+              <p className="mb-4" style={{fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)'}}>
+                Please enter the email address associated with your admin account to receive a verification code
+              </p>
+              
+              <Form onSubmit={handleEmailVerification}>
+                <Form.Group className="mb-3">
+                  <Form.Label className="text-start d-block" style={{color: 'rgba(255, 255, 255, 0.9)'}}>
+                    Email Address
+                  </Form.Label>
+                  <Form.Control
+                    type="email"
+                    value={adminEmail}
+                    onChange={(e) => setAdminEmail(e.target.value)}
+                    placeholder="Enter your admin email"
+                    required
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '2px solid rgba(255, 255, 255, 0.3)',
+                      color: 'white',
+                      borderRadius: '12px'
+                    }}
+                  />
+                </Form.Group>
+              
+              {emailMessage && (
+                <Alert variant={emailMessage.includes('sent') ? 'info' : 'warning'} className="mb-3">
+                  {emailMessage}
+                </Alert>
+              )}
+              
+              <LoadingButton
+                type="submit"
+                className="w-100 mb-3"
+                variant="success"
+                disabled={!adminEmail}
+                loading={emailLoading}
+                loadingText="Sending..."
+              >
+                Send Verification Code
+              </LoadingButton>
+            </Form>
             
-            <h4 style={{
-              color: '#2d3748',
-              fontWeight: '600',
-              fontSize: '20px',
-              marginBottom: '8px'
-            }}>
-              Admin Email Verification
-            </h4>
-            
-            <p style={{
-              color: '#6b7280',
-              fontSize: '14px',
-              marginBottom: '32px',
-              lineHeight: '1.5'
-            }}>
-              Please enter the email address associated with your admin account to receive a verification code
-            </p>
-            
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                color: '#374151',
-                fontSize: '14px',
-                fontWeight: '500',
-                marginBottom: '8px',
-                textAlign: 'left'
-              }}>
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={adminEmail}
-                onChange={(e) => setAdminEmail(e.target.value)}
-                placeholder="Enter your admin email"
-                required
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '2px solid #e5e7eb',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  outline: 'none',
-                  transition: 'border-color 0.2s',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-              />
+            <div className="d-flex justify-content-center">
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => setShowEmailModal(false)}
+                disabled={emailLoading}
+                style={{color: 'rgba(255, 255, 255, 0.7)'}}
+              >
+                Back to Sign in
+              </Button>
             </div>
-            
-            {emailMessage && (
-              <div style={{
-                padding: '12px 16px',
-                borderRadius: '8px',
-                backgroundColor: emailMessage.includes('sent') ? '#dbeafe' : '#fef3c7',
-                color: emailMessage.includes('sent') ? '#1e40af' : '#92400e',
-                fontSize: '14px',
-                marginBottom: '24px'
-              }}>
-                {emailMessage}
-              </div>
-            )}
-            
-            <button
-              onClick={handleEmailVerification}
-              disabled={emailLoading || !adminEmail}
-              style={{
-                width: '100%',
-                padding: '12px 24px',
-                backgroundColor: emailLoading || !adminEmail ? '#d1d5db' : '#10b981',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: emailLoading || !adminEmail ? 'not-allowed' : 'pointer',
-                transition: 'background-color 0.2s',
-                marginBottom: '16px'
-              }}
-            >
-              {emailLoading ? 'Sending...' : 'Send Verification Code'}
-            </button>
-            
-            <button
-              onClick={() => setShowEmailModal(false)}
-              disabled={emailLoading}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#6b7280',
-                fontSize: '14px',
-                cursor: 'pointer',
-                textDecoration: 'none'
-              }}
-            >
-              ← Back to Sign in
-            </button>
           </div>
         </Modal.Body>
-      </Modal>
+      </div>
+    </Modal>
 
-      {/* OTP Verification Modal */}
-      <Modal 
-        show={showOTPModal} 
-        onHide={() => setShowOTPModal(false)}
-        backdrop="static"
-        centered
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Admin Verification</Modal.Title>
+    {/* OTP Verification Modal */}
+    <Modal 
+      show={showOTPModal} 
+      onHide={() => setShowOTPModal(false)}
+      backdrop="static"
+      centered
+    >
+      <div style={{background: 'rgba(52, 73, 94, 0.95)', backdropFilter: 'blur(15px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px'}}>
+        <Modal.Header closeButton style={{borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'transparent'}}>
+          <Modal.Title style={{color: 'white'}}>Admin Verification</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body style={{background: 'transparent'}}>
           <div className="text-center">
-            <h4 className="mb-2" style={{color: '#2d3748', fontWeight: '600'}}>Check your inbox</h4>
-            <p className="text-muted mb-4" style={{fontSize: '14px'}}>
+            <h4 className="mb-2" style={{color: 'white'}}>Check your inbox</h4>
+            <p className="mb-4" style={{fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)'}}>
               Enter the verification code sent to<br/>
-              <strong>{maskedEmail}</strong>
+              <strong style={{color: 'white'}}>{maskedEmail}</strong>
             </p>
             
             <VerificationCodeInput
@@ -527,11 +504,11 @@ const LoginPage = ({ onLogin }) => {
             />
             
             <div className="d-flex justify-content-between align-items-center mt-4 mb-3">
-              <small className="text-muted">
+              <small style={{color: 'rgba(255, 255, 255, 0.7)'}}>
                 {otpCountdown > 0 ? (
-                  <>Expires in: <strong>{formatTime(otpCountdown)}</strong></>
+                  <>Expires in: <strong style={{color: 'white'}}>{formatTime(otpCountdown)}</strong></>
                 ) : (
-                  <span className="text-danger">Code expired</span>
+                  <span style={{color: '#e53e3e'}}>Code expired</span>
                 )}
               </small>
               
@@ -541,6 +518,7 @@ const LoginPage = ({ onLogin }) => {
                 onClick={handleResendOTP}
                 disabled={!canResendOTP || otpLoading}
                 className="p-0"
+                style={{color: 'rgba(255, 255, 255, 0.7)'}}
               >
                 {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : 'Resend Code'}
               </Button>
@@ -558,14 +536,46 @@ const LoginPage = ({ onLogin }) => {
                 size="sm"
                 onClick={() => setShowOTPModal(false)}
                 disabled={otpLoading}
-                style={{color: '#718096'}}
+                style={{color: 'rgba(255, 255, 255, 0.7)'}}
               >
                 ← Back to Sign in
               </Button>
             </div>
           </div>
         </Modal.Body>
-      </Modal>
+      </div>
+    </Modal>
+
+    {/* Help Modal */}
+    <Modal 
+      show={showHelp}
+      onHide={() => setShowHelp(false)}
+      centered
+    >
+      <div style={{background: 'rgba(52, 73, 94, 0.95)', backdropFilter: 'blur(15px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px'}}>
+        <Modal.Header closeButton style={{borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'transparent'}}>
+          <Modal.Title style={{color: 'white'}}>Contact Administrator</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{background: 'transparent'}}>
+          {helpLoading ? (
+            <div className="text-center" style={{color: 'white'}}>
+              <i className="fas fa-spinner fa-spin me-2"></i> Loading contact...
+            </div>
+          ) : helpError ? (
+            <Alert variant="warning" className="mb-0">{helpError}</Alert>
+          ) : adminPhone ? (
+            <div className="text-center">
+              <div className="mb-2" style={{color: 'rgba(255,255,255,0.9)'}}>Administrator Phone</div>
+              <a href={`tel:${adminPhone}`} className="btn btn-success">
+                <i className="fas fa-phone-alt me-2"></i> Call {adminPhone}
+              </a>
+            </div>
+          ) : (
+            <div className="text-center" style={{color: 'rgba(255,255,255,0.9)'}}>No phone number available. Please contact your system administrator.</div>
+          )}
+        </Modal.Body>
+      </div>
+    </Modal>
     </div>
   );
 };

@@ -5,6 +5,12 @@ const studentSchema = new mongoose.Schema({
   name: String,
   department: String,
   photoUrl: String,
+  isActive: { 
+    type: Boolean, 
+    default: true 
+  }
+}, {
+  timestamps: true
 });
 
 // Create indexes for efficient searching

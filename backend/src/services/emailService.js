@@ -1,19 +1,52 @@
 const nodemailer = require('nodemailer');
 
-// Gmail SMTP configuration
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER || 'your-email@gmail.com', // Replace with your Gmail
-    pass: process.env.GMAIL_APP_PASSWORD || 'your-app-password' // Use App Password, not regular password
-  },
-  tls: {
-    rejectUnauthorized: false, // Allow self-signed certificates
-    ciphers: 'SSLv3'
-  },
-  secure: false,
-  requireTLS: true
-});
+// Build transporter from environment configuration
+function buildTransporter() {
+  // Prefer custom SMTP if EMAIL_HOST is provided
+  if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+    const port = Number(process.env.EMAIL_PORT || 587);
+    const secure = String(process.env.EMAIL_SECURE || '').toLowerCase() === 'true' || port === 465;
+    console.log(`EmailService: Using custom SMTP transporter host=${process.env.EMAIL_HOST} port=${port} secure=${secure}`);
+    return nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port,
+      secure, // true for 465, false for 587/STARTTLS
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
+  }
+
+  // Fallback to Gmail App Password transport
+  if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+    console.log('EmailService: Using Gmail transporter');
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+      secure: false,
+      requireTLS: true,
+    });
+  }
+
+  console.warn('EmailService: No email credentials found. Set EMAIL_HOST/EMAIL_USER/EMAIL_PASSWORD or GMAIL_USER/GMAIL_APP_PASSWORD');
+  // Create a stub transporter that always fails clearly
+  return {
+    verify: async () => { throw new Error('Email not configured'); },
+    sendMail: async () => { throw new Error('Email not configured'); },
+  };
+}
+
+const transporter = buildTransporter();
 
 // Generate 6-digit OTP
 const generateOTP = () => {
@@ -75,9 +108,13 @@ const sendOTPEmail = async (email, otp, purpose = 'Admin Login Verification Code
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    console.log('Attempting to send OTP email to:', email);
+    const result = await transporter.sendMail(mailOptions);
+    console.log('OTP email sent successfully:', result.messageId);
     return true;
   } catch (error) {
+    console.error('OTP email sending failed:', error.message);
+    console.error('Error details:', error);
     return false;
   }
 };
@@ -85,9 +122,13 @@ const sendOTPEmail = async (email, otp, purpose = 'Admin Login Verification Code
 // Verify transporter configuration
 const verifyEmailService = async () => {
   try {
+    console.log('Verifying email service configuration...');
     await transporter.verify();
+    console.log('Email service verification successful');
     return true;
   } catch (error) {
+    console.error('Email service verification failed:', error.message);
+    console.error('Error details:', error);
     return false;
   }
 };
@@ -160,9 +201,13 @@ const sendEmailChangeApprovalEmail = async (currentEmail, verificationToken, new
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    console.log('Attempting to send email change approval to:', currentEmail);
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Email change approval sent successfully:', result.messageId);
     return true;
   } catch (error) {
+    console.error('Email change approval sending failed:', error.message);
+    console.error('Error details:', error);
     return false;
   }
 };
