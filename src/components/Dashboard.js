@@ -12,6 +12,20 @@ const Dashboard = ({ user, onLogout }) => {
     todayAttendance: 0,
     attendancePercentage: 0
   });
+
+  // Helpers to minimize re-renders during auto-refresh
+  const statsEqual = (a, b) =>
+    a.totalStudents === b.totalStudents &&
+    a.todayAttendance === b.todayAttendance &&
+    a.attendancePercentage === b.attendancePercentage;
+
+  const arraysEqual = (a, b) => {
+    if (a === b) return true;
+    if (!Array.isArray(a) || !Array.isArray(b)) return false;
+    if (a.length !== b.length) return false;
+    // Stringify small arrays for a fast deep compare
+    try { return JSON.stringify(a) === JSON.stringify(b); } catch { return false; }
+  };
   const [lowAttendanceAlert, setLowAttendanceAlert] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeSection, setActiveSection] = useState('overview');
@@ -19,6 +33,9 @@ const Dashboard = ({ user, onLogout }) => {
   const [lastUpdated, setLastUpdated] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [analyticsData, setAnalyticsData] = useState(null);
+  const [studentReports, setStudentReports] = useState([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportsMessage, setReportsMessage] = useState('');
   // Student search functionality moved to dedicated SearchStudent component
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState(null);
@@ -52,6 +69,7 @@ const Dashboard = ({ user, onLogout }) => {
   const [mealWindowsMessage, setMealWindowsMessage] = useState('');
   const [isLightTheme, setIsLightTheme] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const isRefreshingRef = useRef(false); // prevent overlapping auto-refreshes
 
   // Notification states
   const [notifications, setNotifications] = useState([]);
@@ -126,23 +144,19 @@ const Dashboard = ({ user, onLogout }) => {
       const startTime = startHour * 60 + startMinute;
       const endTime = endHour * 60 + endMinute;
       
-      // Expand window with before/after buffers
-      const windowStart = startTime - config.beforeWindow;
-      const windowEnd = endTime + config.afterWindow;
-      
       // Check if currently in this meal window
-      if (currentTime >= windowStart && currentTime <= windowEnd) {
+      if (currentTime >= startTime && currentTime <= endTime) {
         isInMealWindow = true;
         currentMeal = mealType;
       }
       
       // Find next meal window if not currently in one
       if (!isInMealWindow) {
-        if (currentTime < windowStart) {
-          if (!nextMealTime || windowStart < nextMealTime) {
+        if (currentTime < startTime) {
+          if (!nextMealTime || startTime < nextMealTime) {
             nextMealType = mealType;
-            timeUntilOpen = windowStart - currentTime;
-            nextMealTime = windowStart;
+            timeUntilOpen = startTime - currentTime;
+            nextMealTime = startTime;
           }
         }
       }
@@ -154,11 +168,9 @@ const Dashboard = ({ user, onLogout }) => {
       if (breakfastConfig && breakfastConfig.enabled) {
         const [startHour, startMinute] = breakfastConfig.startTime.split(':').map(Number);
         const startTime = startHour * 60 + startMinute;
-        const windowStart = startTime - breakfastConfig.beforeWindow;
-        
         nextMealType = 'breakfast';
-        timeUntilOpen = windowStart + (24 * 60) - currentTime;
-        nextMealTime = windowStart + (24 * 60);
+        timeUntilOpen = startTime + (24 * 60) - currentTime;
+        nextMealTime = startTime + (24 * 60);
       }
     }
     
@@ -189,7 +201,17 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    // Respect deep links to specific sections, e.g., /dashboard?section=settings
+    const paramsForSection = new URLSearchParams(window.location.search);
+    const requestedSection = paramsForSection.get('section');
+    if (requestedSection) {
+      const allowed = ['overview','attendance','students','reports','meal-windows','database-reset','settings'];
+      if (allowed.includes(requestedSection)) {
+        setActiveSection(requestedSection);
+      }
+    }
+
+    fetchDashboardData({ useSpinner: true, showToast: false });
     fetchAdminEmail();
     fetchMealWindows();
     fetchSystemStatus();
@@ -212,6 +234,58 @@ const Dashboard = ({ user, onLogout }) => {
       // Clean up URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+  }, []);
+
+  const fetchStudentReports = useCallback(async (opts = { status: 'open' }) => {
+    try {
+      setReportsLoading(true);
+      const resp = await fetch(`/api/reports${opts.status ? `?status=${encodeURIComponent(opts.status)}` : ''}`);
+      const data = await resp.json();
+      if (resp.ok && data.success) {
+        setStudentReports(data.reports || []);
+      } else {
+        setReportsMessage('❌ Failed to load reports');
+        setTimeout(() => setReportsMessage(''), 3000);
+      }
+    } catch (e) {
+      setReportsMessage('🌐 Network error while loading reports');
+      setTimeout(() => setReportsMessage(''), 3000);
+    } finally {
+      setReportsLoading(false);
+    }
+  }, []);
+
+  const resolveReport = useCallback(async (id) => {
+    try {
+      const resp = await fetch(`/api/reports/${id}/resolve`, { method: 'PATCH' });
+      const data = await resp.json();
+      if (resp.ok && data.success) {
+        setStudentReports(prev => prev.map(r => r._id === id ? data.report : r));
+        setReportsMessage('✅ Report resolved');
+        setTimeout(() => setReportsMessage(''), 2000);
+      } else {
+        setReportsMessage('❌ Failed to resolve report');
+        setTimeout(() => setReportsMessage(''), 3000);
+      }
+    } catch (e) {
+      setReportsMessage('🌐 Network error while resolving report');
+      setTimeout(() => setReportsMessage(''), 3000);
+    }
+  }, []);
+
+  // Auto-refresh dashboard data periodically (real-time behavior)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (isRefreshingRef.current) return;
+      isRefreshingRef.current = true;
+      try {
+        await fetchDashboardData({ showToast: false, useSpinner: false });
+      } finally {
+        isRefreshingRef.current = false;
+      }
+    }, 5000); // refresh every 5 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   // Separate useEffect for meal window checking to avoid dependency loops
@@ -316,38 +390,47 @@ const Dashboard = ({ user, onLogout }) => {
     return () => clearInterval(interval);
   }, [resendVerificationCountdown]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (options = { showToast: false, useSpinner: false }) => {
     try {
-      setIsLoading(true);
-      setRefreshMessage('');
+      if (options.useSpinner) setIsLoading(true);
+      if (options.showToast) setRefreshMessage('');
       const response = await fetch('/api/dashboard/stats');
       const data = await response.json();
       
       if (response.ok && data.success) {
-        setStats({
+        const nextStats = {
           totalStudents: data.stats.totalStudents || 0,
           todayAttendance: data.stats.todayAttendance || 0,
           attendancePercentage: data.stats.attendancePercentage || 0
-        });
-        setLowAttendanceAlert(data.lowAttendanceAlert);
-        setAttendanceData(data.recentAttendance || []);
-        setIsLoading(false);
+        };
+        if (!statsEqual(stats, nextStats)) {
+          setStats(nextStats);
+        }
+        if (JSON.stringify(lowAttendanceAlert) !== JSON.stringify(data.lowAttendanceAlert)) {
+          setLowAttendanceAlert(data.lowAttendanceAlert);
+        }
+        const nextAttendance = data.recentAttendance || [];
+        if (!arraysEqual(attendanceData, nextAttendance)) {
+          setAttendanceData(nextAttendance);
+        }
+        if (options.useSpinner) setIsLoading(false);
         
-        // Update last refreshed time
-        const now = new Date();
-        const timeString = now.toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: true
-        });
-        setLastUpdated(timeString);
-        setRefreshMessage('✅ Dashboard data refreshed successfully!');
-        
-        // Clear success message after 3 seconds
-        setTimeout(() => {
-          setRefreshMessage('');
-        }, 3000);
+        if (options.showToast) {
+          // Update last refreshed time (optional informational)
+          const now = new Date();
+          const timeString = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+          });
+          setLastUpdated(timeString);
+          setRefreshMessage('✅ Dashboard data refreshed successfully!');
+          // Clear success message after 3 seconds
+          setTimeout(() => {
+            setRefreshMessage('');
+          }, 3000);
+        }
       } else {
         setStats({
           totalStudents: 0,
@@ -355,15 +438,18 @@ const Dashboard = ({ user, onLogout }) => {
         });
         setAttendanceData([]);
         setIsLoading(false);
-        setRefreshMessage('❌ Failed to refresh data. Please try again.');
-        
-        setTimeout(() => {
-          setRefreshMessage('');
-        }, 3000);
+        if (options.showToast) {
+          setRefreshMessage('❌ Failed to refresh data. Please try again.');
+          setTimeout(() => {
+            setRefreshMessage('');
+          }, 3000);
+        }
       }
     } catch (error) {
       setIsLoading(false);
-      setRefreshMessage('❌ Failed to refresh data. Please check your connection and try again.');
+      if (options.showToast) {
+        setRefreshMessage('❌ Failed to refresh data. Please check your connection and try again.');
+      }
     }
   };
 
@@ -388,14 +474,14 @@ const Dashboard = ({ user, onLogout }) => {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
         
-        setRefreshMessage('📄 CSV export completed successfully!');
+        setRefreshMessage('CSV export completed successfully!');
         setTimeout(() => setRefreshMessage(''), 3000);
       } else {
-        setRefreshMessage('❌ Failed to export CSV file. Please try again.');
+        setRefreshMessage('Failed to export CSV file. Please try again.');
         setTimeout(() => setRefreshMessage(''), 3000);
       }
     } catch (error) {
-      setRefreshMessage('❌ Error exporting CSV file. Please try again.');
+      setRefreshMessage('Error exporting CSV file. Please try again.');
       setTimeout(() => setRefreshMessage(''), 3000);
     }
   };
@@ -418,10 +504,11 @@ const Dashboard = ({ user, onLogout }) => {
 
   // Load analytics data when reports section is opened
   React.useEffect(() => {
-    if (activeSection === 'reports' && !analyticsData) {
-      fetchAnalyticsData();
+    if (activeSection === 'reports') {
+      if (!analyticsData) fetchAnalyticsData();
+      fetchStudentReports({ status: 'open' });
     }
-  }, [activeSection, analyticsData, fetchAnalyticsData]);
+  }, [activeSection, analyticsData, fetchAnalyticsData, fetchStudentReports]);
 
   // Auto-refresh analytics data every 30 seconds when on reports page
   React.useEffect(() => {
@@ -429,12 +516,13 @@ const Dashboard = ({ user, onLogout }) => {
     if (activeSection === 'reports') {
       interval = setInterval(() => {
         fetchAnalyticsData();
+        fetchStudentReports({ status: 'open' });
       }, 30000); // 30 seconds
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [activeSection, fetchAnalyticsData]);
+  }, [activeSection, fetchAnalyticsData, fetchStudentReports]);
 
   // Confirm delete student
   const confirmDeleteStudent = async () => {
@@ -653,29 +741,21 @@ const Dashboard = ({ user, onLogout }) => {
       breakfast: {
         startTime: '06:00',
         endTime: '09:00',
-        beforeWindow: 30,
-        afterWindow: 30,
         enabled: true
       },
       lunch: {
         startTime: '11:00',
         endTime: '14:00',
-        beforeWindow: 30,
-        afterWindow: 30,
         enabled: true
       },
       dinner: {
         startTime: '16:00',
         endTime: '20:00',
-        beforeWindow: 30,
-        afterWindow: 30,
         enabled: true
       },
       lateNight: {
         startTime: '01:00',
         endTime: '05:30',
-        beforeWindow: 15,
-        afterWindow: 15,
         enabled: true
       }
     });
@@ -742,7 +822,7 @@ const Dashboard = ({ user, onLogout }) => {
   return (
     <div className={`dashboard-container ${isLightTheme ? 'light-theme' : ''}`}>
       {/* Top Navigation Header */}
-      <div className="dashboard-header">
+      <div className="dashboard-header mint-header">
         <div className="header-left">
           <div className="logo-section">
             <i className="fas fa-cube"></i>
@@ -881,20 +961,7 @@ const Dashboard = ({ user, onLogout }) => {
                 {activeSection === 'settings' && 'Settings'}
               </h1>
             </div>
-            <div className="header-actions">
-              {refreshMessage && (
-                <div className={`refresh-message ${refreshMessage.includes('successfully') ? 'success' : 'error'}`}>
-                  {refreshMessage}
-                </div>
-              )}
-              <span className="last-updated">
-                Last Updated: {lastUpdated || '07:51:11 PM'}
-              </span>
-              <button onClick={fetchDashboardData} className="refresh-btn" disabled={isLoading}>
-                <i className={`fas fa-sync-alt ${isLoading ? 'spinning' : ''}`}></i> 
-                {isLoading ? 'Refreshing...' : 'Refresh'}
-              </button>
-            </div>
+            <div className="header-actions"></div>
           </div>
 
           {/* Content Area */}
@@ -1076,28 +1143,28 @@ const Dashboard = ({ user, onLogout }) => {
                   <div className="action-buttons">
                     <button 
                       className="action-btn search-btn"
-                      onClick={() => window.location.href = '/search-student'}
+                      onClick={() => { window.location.href = '/search-student'; }}
                     >
                       <i className="fas fa-search"></i>
                       <span>Search Student</span>
                     </button>
                     <button 
                       className="action-btn add-btn"
-                      onClick={() => window.location.href = '/add-student'}
+                      onClick={() => { window.location.href = '/add-student'; }}
                     >
                       <i className="fas fa-user-plus"></i>
                       <span>Add New Student</span>
                     </button>
                     <button 
                       className="action-btn view-btn"
-                      onClick={() => window.location.href = '/view-all-students'}
+                      onClick={() => { window.location.href = '/view-all-students'; }}
                     >
                         <i className="fas fa-users"></i>
                         <span>View All Students</span>
                       </button>
                       <button 
                         className="action-btn add-btn"
-                        onClick={() => window.location.href = '/bulk-import-students'}
+                        onClick={() => { window.location.href = '/bulk-import-students'; }}
                         style={{
                           backgroundColor: '#2563eb',
                           borderColor: '#2563eb'
@@ -1108,7 +1175,7 @@ const Dashboard = ({ user, onLogout }) => {
                       </button>
                       <button 
                         className="action-btn cost-sharing-btn"
-                        onClick={() => window.location.href = '/cost-sharing'}
+                        onClick={() => { window.location.href = '/cost-sharing'; }}
                         style={{
                           backgroundColor: '#8b5cf6',
                           borderColor: '#8b5cf6'
@@ -1144,9 +1211,88 @@ const Dashboard = ({ user, onLogout }) => {
                     </div>
                   </div>
 
+                  {/* Student Reports Panel */}
+                  <div className="report-section" style={{ marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3 style={{ margin: 0 }}><i className="fas fa-flag"></i> Student Reports</h3>
+                      <div>
+                        <button 
+                          className="export-btn"
+                          onClick={() => fetchStudentReports({ status: 'open' })}
+                          disabled={reportsLoading}
+                          title="Show Open"
+                        >Open</button>
+                        <button 
+                          className="export-btn"
+                          onClick={() => fetchStudentReports({ status: 'resolved' })}
+                          disabled={reportsLoading}
+                          style={{ marginLeft: 8 }}
+                          title="Show Resolved"
+                        >Resolved</button>
+                        <button 
+                          className="export-btn csv-btn"
+                          onClick={() => fetchStudentReports({ status: 'open' })}
+                          disabled={reportsLoading}
+                          style={{ marginLeft: 8 }}
+                          title="Refresh"
+                        >
+                          <i className="fas fa-sync-alt"></i>
+                        </button>
+                      </div>
+                    </div>
+                    {reportsMessage && (
+                      <div className={`modal-message ${reportsMessage.startsWith('✅') ? 'success' : 'error'}`} style={{ marginTop: 10 }}>
+                        {reportsMessage}
+                      </div>
+                    )}
+                    <div style={{ marginTop: 10, overflowX: 'auto' }}>
+                      <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr>
+                            <th style={{ textAlign: 'left' }}>Date</th>
+                            <th style={{ textAlign: 'left' }}>Student ID</th>
+                            <th style={{ textAlign: 'left' }}>Name</th>
+                            <th style={{ textAlign: 'left' }}>Department</th>
+                            <th style={{ textAlign: 'left' }}>Reason</th>
+                            <th style={{ textAlign: 'left' }}>Status</th>
+                            <th style={{ textAlign: 'left' }}>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {studentReports.length === 0 && (
+                            <tr>
+                              <td colSpan={7} style={{ padding: '10px 0', color: '#666' }}>
+                                {reportsLoading ? 'Loading reports...' : 'No reports found.'}
+                              </td>
+                            </tr>
+                          )}
+                          {studentReports.map(r => (
+                            <tr key={r._id}>
+                              <td>{new Date(r.createdAt).toLocaleString()}</td>
+                              <td>{r.studentId}</td>
+                              <td>{r.studentName || '-'}</td>
+                              <td>{r.department || '-'}</td>
+                              <td style={{ maxWidth: 400, whiteSpace: 'pre-wrap' }}>{r.reason}</td>
+                              <td>{r.status}</td>
+                              <td>
+                                {r.status === 'open' ? (
+                                  <button 
+                                    className="export-btn"
+                                    onClick={() => resolveReport(r._id)}
+                                  >Resolve</button>
+                                ) : (
+                                  <span style={{ color: '#16a34a' }}>Resolved</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
                   {analyticsData && (
                     <>
-
                       {/* Attendance Overview Pie Chart */}
                       <div className="report-section">
                         <div className="chart-container">
@@ -1176,7 +1322,6 @@ const Dashboard = ({ user, onLogout }) => {
                           </div>
                         </div>
                       </div>
-
 
                       {/* Report Footer */}
                       <div className="report-footer">
@@ -1265,63 +1410,7 @@ const Dashboard = ({ user, onLogout }) => {
                             </div>
                           </div>
 
-                          <div className="attendance-window-section">
-                            <h4>Attendance Window</h4>
-                            <div className="window-inputs">
-                              <div className="window-input-group">
-                                <label>Before Start (minutes)</label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="120"
-                                  value={config.beforeWindow}
-                                  disabled={!config.enabled}
-                                  onChange={(e) => setMealWindows(prev => ({
-                                    ...prev,
-                                    [mealType]: { ...prev[mealType], beforeWindow: parseInt(e.target.value) }
-                                  }))}
-                                />
-                              </div>
-                              <div className="window-input-group">
-                                <label>After End (minutes)</label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="120"
-                                  value={config.afterWindow}
-                                  disabled={!config.enabled}
-                                  onChange={(e) => setMealWindows(prev => ({
-                                    ...prev,
-                                    [mealType]: { ...prev[mealType], afterWindow: parseInt(e.target.value) }
-                                  }))}
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="window-preview">
-                            <h5>Attendance Window Preview</h5>
-                            <div className="preview-timeline">
-                              <div className="timeline-item before">
-                                <span className="time">{
-                                  new Date(`2000-01-01T${config.startTime}`).getTime() - (config.beforeWindow * 60000) > 0 ?
-                                  new Date(new Date(`2000-01-01T${config.startTime}`).getTime() - (config.beforeWindow * 60000)).toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit'}) :
-                                  '00:00'
-                                }</span>
-                                <span className="label">Window Opens</span>
-                              </div>
-                              <div className="timeline-item meal">
-                                <span className="time">{config.startTime} - {config.endTime}</span>
-                                <span className="label">Meal Service</span>
-                              </div>
-                              <div className="timeline-item after">
-                                <span className="time">{
-                                  new Date(new Date(`2000-01-01T${config.endTime}`).getTime() + (config.afterWindow * 60000)).toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit'})
-                                }</span>
-                                <span className="label">Window Closes</span>
-                              </div>
-                            </div>
-                          </div>
+                          {/* Attendance window buffers and preview removed to simplify configuration */}
                         </div>
                       </div>
                     ))}
@@ -1367,14 +1456,14 @@ const Dashboard = ({ user, onLogout }) => {
                 <div className="settings-section">
                   <div className="feature-list">
                     
-                    <div className="feature-item clickable" onClick={() => window.location.href = '/admin-credentials'}>
+                    <div className="feature-item clickable" onClick={() => { window.location.href = '/admin-credentials'; }}>
                       <i className="fas fa-user-shield"></i>
                       <span>Admin Credential</span>
                     </div>
                     
                     <div 
                       className="feature-item clickable"
-                      onClick={() => window.location.href = '/scanner-credentials'}
+                      onClick={() => { window.location.href = '/scanner-credentials'; }}
                     >
                       <i className="fas fa-users-cog"></i>
                       <span>Scanner Credential</span>
@@ -1438,15 +1527,13 @@ const Dashboard = ({ user, onLogout }) => {
                 </button>
               </div>
             </div>
+
+          {/* Close Delete Confirmation Modal wrappers */}
           </div>
         </div>
       )}
 
-
-
-
-
-      {/* Email Verification Modal for Credential Update */}
+          {/* AI Assistant disabled */}
       {showEmailVerification && (
         <div className="modal-overlay" onClick={() => setShowEmailVerification(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>

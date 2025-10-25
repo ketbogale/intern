@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert, Navbar, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Form, Button, Navbar, Modal } from 'react-bootstrap';
 import BarcodeScanner from './BarcodeScanner';
 import './AttendancePage.css';
 
@@ -14,6 +14,11 @@ const AttendancePage = ({ user, onLogout }) => {
   const [countdownSeconds, setCountdownSeconds] = useState(0);
   const [mealWindows, setMealWindows] = useState({});
   const [barcodeScanningEnabled, setBarcodeScanningEnabled] = useState(true);
+  const [showReportForm, setShowReportForm] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportMessage, setReportMessage] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  
   const [targetTime, setTargetTime] = useState(null);
   const inputRef = useRef(null);
   const successAudioRef = useRef(null);
@@ -32,6 +37,10 @@ const AttendancePage = ({ user, onLogout }) => {
         const data = await response.json();
         if (data.success && data.mealWindows) {
           setMealWindows(data.mealWindows);
+          // Immediately re-evaluate the window using freshly fetched DB config
+          setTimeout(() => {
+            try { checkMealWindow(); } catch {}
+          }, 0);
         }
       }
     } catch (error) {
@@ -292,94 +301,16 @@ const AttendancePage = ({ user, onLogout }) => {
   // Handle barcode scan - automatically process scanned student ID
   const handleBarcodeScan = useCallback(async (scannedId) => {
     if (!scannedId.trim() || isLoading) return;
-
-    // Disable barcode scanning temporarily to prevent duplicate scans
     setBarcodeScanningEnabled(false);
-
-    // Set the scanned ID in the input field
+    // Mirror manual submit: reuse shared attendance logic
     setStudentId(scannedId.trim());
-
-    // Auto-submit the form with scanned ID
-    if (mealWindowBlocked) {
-      setMessage(`❌ Attendance blocked: ${nextMealInfo || 'Meal window closed'}`);
-      playSound(false);
-      setBarcodeScanningEnabled(true);
-      return;
-    }
-
-    setIsLoading(true);
-    setMessage('');
-    setStudent(null);
-
     try {
-      const response = await fetch(`${API_BASE_URL}/api/attendance`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId: scannedId.trim() }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setStudent(data.student);
-        setStatus(data.status);
-
-        switch (data.status) {
-          case 'allowed':
-            setMessage('✅ Attendance recorded successfully!');
-            playSound(true);
-            setStudentId('');
-            setTimeout(() => setMessage(''), 2500);
-            break;
-          case 'already_used':
-            setMessage('❌ Meal already used for this period');
-            playSound(false);
-            setStudentId('');
-            setTimeout(() => setMessage(''), 2500);
-            break;
-          case 'invalid':
-            setMessage('❌ Student ID not found');
-            playSound(false);
-            setStudentId('');
-            setTimeout(() => setMessage(''), 2500);
-            break;
-          case 'blocked':
-            setMessage(`❌ ${data.message || 'Meal window is closed'}`);
-            playSound(false);
-            setStudentId('');
-            setTimeout(() => setMessage(''), 2500);
-            break;
-          case 'error':
-            setMessage(`❌ ${data.message || 'System error occurred'}`);
-            playSound(false);
-            setStudentId('');
-            setTimeout(() => setMessage(''), 2500);
-            break;
-          default:
-            setMessage('❌ Unknown status');
-            playSound(false);
-            setStudentId('');
-            setTimeout(() => setMessage(''), 2500);
-        }
-      } else {
-        setMessage('❌ System error. Please try again.');
-        playSound(false);
-        setStudentId('');
-        setTimeout(() => setMessage(''), 2500);
-      }
-    } catch (error) {
-      setMessage('❌ Network error. Please check connection.');
-      playSound(false);
-      setStudentId('');
-      setTimeout(() => setMessage(''), 2500);
+      await processAttendance(scannedId.trim());
     } finally {
-      setIsLoading(false);
-      // Re-enable barcode scanning after processing
-      setTimeout(() => {
-        setBarcodeScanningEnabled(true);
-      }, 1000);
+      // Re-enable barcode scanning after a short delay to avoid double reads
+      setTimeout(() => setBarcodeScanningEnabled(true), 1000);
     }
-  }, [isLoading, mealWindowBlocked, nextMealInfo, API_BASE_URL, playSound]);
+  }, [isLoading, processAttendance]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -389,20 +320,77 @@ const AttendancePage = ({ user, onLogout }) => {
     await processAttendance(studentId.trim());
   };
 
+  const handleSubmitReport = async (e) => {
+    e.preventDefault();
+    const idToReport = (student && student.id) || studentId.trim();
+    if (!idToReport) {
+      setReportMessage('⚠️ Please scan or enter a student ID before reporting.');
+      return;
+    }
+    if (!reportReason.trim()) {
+      setReportMessage('⚠️ Please provide a brief reason.');
+      return;
+    }
+    try {
+      setReportSubmitting(true);
+      setReportMessage('');
+      const payload = {
+        studentId: idToReport,
+        studentName: student?.name || '',
+        department: student?.department || '',
+        reason: reportReason.trim(),
+        reporter: 'attendance_operator'
+      };
+      console.log('[Report] Submitting payload', payload);
+      const resp = await fetch(`${API_BASE_URL}/api/reports`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+      let data;
+      const text = await resp.text();
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (parseErr) {
+        console.warn('[Report] Failed to parse JSON response, raw:', text);
+        data = { success: false, message: text || 'Unexpected response' };
+      }
+      console.log('[Report] Response status', resp.status, 'data', data);
+      if (resp.ok && data && data.success) {
+        setReportMessage('✅ Report submitted to admin');
+        setReportReason('');
+        // Keep success message visible briefly, then close modal gracefully
+        setTimeout(() => {
+          setShowReportForm(false);
+          setReportMessage('');
+        }, 2000);
+      } else {
+        setReportMessage(`❌ ${data.message || 'Failed to submit report'}`);
+        // Do not auto-clear error; let user read and close
+      }
+    } catch (err) {
+      console.error('[Report] Network error', err);
+      setReportMessage('🌐 Network error. Please try again.');
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
-      await fetch(`${API_BASE_URL}/api/logout`, { method: 'POST' });
-      onLogout();
-    } catch (error) {
-      console.error('Logout error:', error);
-      onLogout();
+      await fetch(`${API_BASE_URL}/api/logout`, { method: 'POST', credentials: 'include' });
+    } catch (e) {
+      // ignore network errors on logout
+    } finally {
+      window.location.href = '/login';
     }
   };
 
   return (
-    <div className="min-vh-100" style={{background: 'linear-gradient(135deg, #0f1419 0%, #1e2a3a 100%)'}}>
+    <div className="min-vh-100 app-light-bg attendance-page">
       {/* Header */}
-      <Navbar bg="dark" variant="dark" className="px-4 shadow-sm" style={{background: 'rgba(30, 42, 58, 0.95) !important', backdropFilter: 'blur(10px)'}}>
+      <Navbar className="px-4 shadow-sm mint-header">
         <Navbar.Brand className="d-flex align-items-center">
           <img 
             src="/images/salale_university_logo.png" 
@@ -411,201 +399,158 @@ const AttendancePage = ({ user, onLogout }) => {
             className="me-3" 
             alt="Salale University"
           />
-          <h1 className="h4 mb-0 text-light">Salale University</h1>
+          <h1 className="h4 mb-0 text-dark">Salale University</h1>
         </Navbar.Brand>
-        <Button 
-          onClick={handleLogout}
-          variant="outline-light"
-          size="sm"
-          className="ms-auto py-1 px-2"
-          style={{
-            '--bs-btn-hover-bg': 'rgba(220, 53, 69, 0.2)',
-            '--bs-btn-hover-border-color': 'rgba(220, 53, 69, 0.5)',
-            transition: 'all 0.3s ease'
-          }}
-        >
-          <i className="fas fa-sign-out-alt me-1"></i>
-          Logout
-        </Button>
+        <Navbar.Text className="ms-auto">
+          <span
+            onClick={handleLogout}
+            className="text-dark fw-semibold d-inline-flex align-items-center"
+            style={{ cursor: 'pointer', fontSize: '0.95rem' }}
+          >
+            <i className="fas fa-sign-out-alt me-1"></i>
+            Log out
+          </span>
+        </Navbar.Text>
       </Navbar>
 
       {/* Main Content */}
-      <Container fluid className="py-2">
-        <Row className="">
-          <Col lg={5} className="mb-2 card-spacing-left">
-            <Card className="shadow-lg border-0 bg-gradient" style={{background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)', borderRadius: '1rem', height: 'fit-content'}}>
-              <Card.Body>
-                {/* Meal Window Warning */}
-                {mealWindowBlocked && nextMealInfo && (
-                  <Alert variant="warning" className="meal-window-alert d-flex align-items-center mb-2">
-                    <i className="fas fa-clock me-3"></i>
-                    <div className="flex-grow-1">
-                      <div className="meal-window-text">{nextMealInfo}</div>
-                      {countdownSeconds > 0 && (
-                        <div className="d-flex align-items-center mt-2">
-                          <Badge className="countdown-badge me-2" style={{fontSize: '14px', padding: '8px 12px'}}>
-                            {countdownSeconds >= 3600
-                              ? `${Math.floor(countdownSeconds / 3600)}h ${Math.floor((countdownSeconds % 3600) / 60)}m`
-                              : countdownSeconds >= 60
-                              ? `${Math.floor(countdownSeconds / 60)}m`
-                              : `< 1m`}
-                          </Badge>
-                          <span className="text-muted fw-semibold">remaining</span>
-                        </div>
-                      )}
-                    </div>
-                  </Alert>
-                )}
+      <Container fluid className="py-3">
+        {/* Status Banner */}
+        <div className={`status-banner ${mealWindowBlocked ? 'denied' : (status === 'allowed' ? 'allowed' : (status ? 'denied' : ''))}`}>
+          {mealWindowBlocked && nextMealInfo ? (
+            <>
+              {nextMealInfo}
+              {countdownSeconds > 0 && (
+                <span className="ms-2">
+                  ({`${Math.floor(countdownSeconds / 3600)}h ${Math.floor((countdownSeconds % 3600) / 60)}minutes`})
+                </span>
+              )}
+            </>
+          ) : (
+            <>
+              {status === 'allowed' && 'Allowed'}
+              {status === 'already_used' && 'Already Used'}
+              {status === 'blocked' && 'Denied'}
+              {status === 'invalid' && 'Not Found'}
+            </>
+          )}
+        </div>
 
-                {/* Webcam scanning removed */}
+        {/* Two Column Layout */}
+        <Row className="g-4 align-items-start mt-2">
+          {/* Left: Input + Labels */}
+          <Col lg={5} md={5} className="left-pane">
+            <Form onSubmit={handleSubmit}>
+              <Form.Group className="mb-4">
+                <Form.Label className="fw-semibold mb-2">Enter ID</Form.Label>
+                <Form.Control
+                  ref={inputRef}
+                  type="text"
+                  value={studentId}
+                  onChange={(e) => setStudentId(e.target.value)}
+                  placeholder={mealWindowBlocked ? "Meal window closed" : "Enter ID"}
+                  autoComplete="off"
+                  disabled={mealWindowBlocked}
+                  required
+                  className="simple-input"
+                />
+              </Form.Group>
+            </Form>
 
-                {/* Barcode Scanner Status */}
-                {barcodeScanningEnabled && !mealWindowBlocked && (
-                  <Alert variant="info" className="d-flex align-items-center mb-2 py-2">
-                    <i className="fas fa-barcode me-2"></i>
-                    <small>Barcode scanner ready - scan student ID card</small>
-                    <div className="ms-auto">
-                      <span className="badge bg-success">
-                        <i className="fas fa-circle" style={{fontSize: '8px'}}></i> Active
-                      </span>
-                    </div>
-                  </Alert>
-                )}
-
-                {/* Webcam scanning removed */}
-
-                {/* Input Form */}
-                <Form onSubmit={handleSubmit}>
-                  <Form.Group className="mb-1">
-                    <Form.Label className="text-light fw-semibold mb-2">Student ID (Manual or Scan Barcode):</Form.Label>
-                    <Form.Control
-                      ref={inputRef}
-                      type="text"
-                      value={studentId}
-                      onChange={(e) => setStudentId(e.target.value)}
-                      placeholder={mealWindowBlocked ? "Meal window closed" : "Enter ID"}
-                      autoComplete="off"
-                      disabled={mealWindowBlocked}
-                      required
-                    />
-                  </Form.Group>
-                  <Button 
-                    type="submit" 
-                    variant="primary" 
-                    className="w-100"
-                    disabled={isLoading || mealWindowBlocked}
-                    style={{
-                      background: mealWindowBlocked ? '#bdc3c7' : 'linear-gradient(135deg, #74b9ff 0%, #0984e3 100%)',
-                      border: 'none',
-                      padding: '0.5rem',
-                      fontSize: '0.9rem'
-                    }}
-                  >
-                    {mealWindowBlocked ? 'Meal Window Closed' : isLoading ? 'Checking...' : 'Check Attendance'}
-                  </Button>
-                </Form>
-
-                {/* Message */}
-                {message && (
-                  <Alert 
-                    variant={status === 'allowed' ? 'success' : 'danger'} 
-                    className="mt-3 text-center fw-semibold py-3 message-fade-in mb-0"
-                    style={{fontSize: '0.8rem'}}
-                  >
-                    {message}
-                  </Alert>
-                )}
-              </Card.Body>
-            </Card>
+            <div className="simple-info">
+              <div className="simple-row"><span className="simple-label">ID:</span> <span className="simple-value">{student?.id || ''}</span></div>
+              <div className="simple-row"><span className="simple-label">Name:</span> <span className="simple-value">{student?.name || ''}</span></div>
+              <div className="simple-row"><span className="simple-label">Department:</span> <span className="simple-value">{student?.department || ''}</span></div>
+            </div>
           </Col>
 
-          {/* Student Information */}
-          <Col lg={5} className="card-spacing-right">
-            {student && (
-              <Card className="shadow-lg border-0 bg-gradient" style={{background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)', borderRadius: '1rem', minHeight: '400px'}}>
-                <Card.Body className="p-2">
-                  <div 
-                    className={`status-message-enhanced message-fade-in ${
-                      status === 'allowed' ? 'status-allowed' :
-                      status === 'already_used' ? 'status-already-used' :
-                      'status-denied'
-                    }`}
+          {/* Right: Large Photo with top-right Report overlay (works for photo and placeholder) */}
+          <Col lg={7} md={12} className="right-pane">
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <div style={{ position: 'relative', width: '360px', height: '360px' }}>
+                {student?.id && (
+                  <Button
+                    variant="outline-danger"
+                    size="sm"
+                    className="py-0 px-1"
+                    onClick={() => setShowReportForm(true)}
+                    disabled={isLoading}
+                    title="Report this student to admin"
+                    style={{ position: 'absolute', top: 3, right: 4, zIndex: 2, fontSize: '11px', lineHeight: 1.1, borderRadius: '8px', transform: 'scale(0.85)', transformOrigin: 'top right' }}
                   >
-                    {status === 'allowed' ? '✅ ALLOWED' :
-                     status === 'already_used' ? '⚠️ ALREADY USED' :
-                     '❌ DENIED'}
+                    <i className="fas fa-flag me-1" style={{ fontSize: '0.75rem' }}></i>Report
+                  </Button>
+                )}
+                {student?.photoUrl ? (
+                  <img
+                    src={student.photoUrl}
+                    alt={student?.name || 'Student photo'}
+                    style={{ width: '360px', height: '360px', borderRadius: 0, objectFit: 'cover' }}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div 
+                    className="student-photo-placeholder border border-light d-flex align-items-center justify-content-center"
+                    style={{ width: '360px', height: '360px', backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 0 }}
+                  >
+                    <i className="fas fa-user text-muted" style={{fontSize: '3rem', opacity: 0.5}}></i>
                   </div>
-                  
-                  <Row>
-                    <Col md={4} className="text-center mb-3">
-                      {student.photoUrl ? (
-                        <>
-                          <img 
-                            src={student.photoUrl} 
-                            alt={student.name}
-                            className="student-photo"
-                            style={{
-                              width: '200px',
-                              height: '220px',
-                              objectFit: 'cover',
-                              borderRadius: '0',
-                              boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
-                            }}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.nextElementSibling.style.display = 'flex';
-                            }}
-                          />
-                          <div 
-                            className="student-photo-placeholder rounded-circle border border-light align-items-center justify-content-center"
-                            style={{
-                              width: '120px',
-                              height: '120px',
-                              backgroundColor: 'rgba(255,255,255,0.1)',
-                              display: 'none',
-                              boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
-                            }}
-                          >
-                            <i className="fas fa-user text-light" style={{fontSize: '3rem', opacity: 0.7}}></i>
-                          </div>
-                        </>
-                      ) : (
-                        <div 
-                          className="student-photo-placeholder rounded-circle border border-light d-flex align-items-center justify-content-center"
-                          style={{
-                            width: '120px',
-                            height: '120px',
-                            backgroundColor: 'rgba(255,255,255,0.1)',
-                            boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
-                          }}
-                        >
-                          <i className="fas fa-user text-light" style={{fontSize: '3rem', opacity: 0.7}}></i>
-                        </div>
-                      )}
-                    </Col>
-                    <Col md={8}>
-                      <div className="text-light">
-                        <div className="student-info-text mb-3">
-                          <span className="student-info-label">Name:</span>
-                          <span className="student-info-value">{student.name}</span>
-                        </div>
-                        <div className="student-info-text mb-3">
-                          <span className="student-info-label">ID:</span>
-                          <span className="student-info-value">{student.id}</span>
-                        </div>
-                        <div className="student-info-text mb-3">
-                          <span className="student-info-label">Program:</span>
-                          <span className="student-info-value">{student.department}</span>
-                        </div>
-                      </div>
-                    </Col>
-                  </Row>
-                </Card.Body>
-              </Card>
-            )}
+                )}
+              </div>
+            </div>
           </Col>
         </Row>
       </Container>
+
+      {/* Report Modal */}
+      <Modal 
+        show={showReportForm}
+        onHide={() => { setShowReportForm(false); setReportMessage(''); }}
+        centered
+      >
+        <div style={{background: 'rgba(52, 73, 94, 0.95)', backdropFilter: 'blur(15px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px'}}>
+          <Modal.Header closeButton style={{borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'transparent'}}>
+            <Modal.Title style={{color: 'white'}}>
+              <i className="fas fa-flag me-2"></i>
+              Report Student to Admin
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body style={{background: 'transparent'}}>
+            <Form onSubmit={handleSubmitReport}>
+              <Form.Group className="mb-3">
+                <Form.Label style={{color: 'rgba(255,255,255,0.9)'}}>
+                  Reason (max 1000 characters)
+                </Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  maxLength={1000}
+                  placeholder="Describe the issue briefly so the admin can follow up."
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                />
+              </Form.Group>
+              {reportMessage && (
+                <div className={`modal-message ${reportMessage.startsWith('✅') ? 'success' : 'error'}`} style={{ marginBottom: 10 }}>
+                  {reportMessage}
+                </div>
+              )}
+              <div className="d-flex justify-content-end gap-2">
+                <Button
+                  type="button"
+                  variant="light"
+                  onClick={() => { setShowReportForm(false); setReportMessage(''); }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={reportSubmitting}>
+                  {reportSubmitting ? 'Submitting...' : 'Submit Report'}
+                </Button>
+              </div>
+            </Form>
+          </Modal.Body>
+        </div>
+      </Modal>
 
       {/* Barcode Scanner Component */}
       <BarcodeScanner

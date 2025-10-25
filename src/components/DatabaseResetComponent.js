@@ -1,88 +1,80 @@
 import React, { useState, useEffect } from 'react';
+import { Modal } from 'react-bootstrap';
 
 const DatabaseResetComponent = ({ fetchDashboardData }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedResetType, setSelectedResetType] = useState('manual');
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [resetStatus, setResetStatus] = useState({ message: '', type: '' });
+  const [autoResetTimes, setAutoResetTimes] = useState([]);
+  const [mealSummaries, setMealSummaries] = useState([]);
+  const [nextAutoReset, setNextAutoReset] = useState(null);
 
-  const [dynamicResetSchedule, setDynamicResetSchedule] = useState([]);
-  const [automaticResetEnabled, setAutomaticResetEnabled] = useState(true);
-
-  // Fetch meal windows and calculate reset schedule
+  // Load meal windows once and compute concise auto-reset times
   useEffect(() => {
     const fetchMealWindows = async () => {
       try {
-        const response = await fetch('/api/meal-windows', {
-          credentials: 'include'
-        });
-        const data = await response.json();
-        
-        if (data.success && data.mealWindows) {
-          calculateResetSchedule(data.mealWindows);
+        const res = await fetch('/api/meal-windows', { credentials: 'include' });
+        const data = await res.json();
+        if (data?.success && data?.mealWindows) {
+          // Build enhanced per-meal summary
+          const entries = Object.entries(data.mealWindows)
+            .map(([mealType, w]) => ({
+              mealType,
+              enabled: !!w?.enabled,
+              startTime: w?.startTime || '--:--',
+              endTime: w?.endTime || '--:--',
+              autoResetTime: (() => {
+                if (!w?.startTime) return '--:--';
+                const [h, m] = w.startTime.split(':').map(Number);
+                const d = new Date();
+                d.setHours(h, m, 0, 0);
+                d.setTime(d.getTime() - 30 * 60000);
+                const hh = d.getHours().toString().padStart(2, '0');
+                const mm = d.getMinutes().toString().padStart(2, '0');
+                return `${hh}:${mm}`;
+              })()
+            }))
+            .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+          setMealSummaries(entries);
+
+          // Concise list of auto-reset times
+          const times = entries
+            .filter(e => e.enabled && e.autoResetTime !== '--:--')
+            .map(e => e.autoResetTime)
+            .sort((a, b) => a.localeCompare(b));
+          setAutoResetTimes(times);
+
+          // Compute next upcoming auto reset (today or tomorrow)
+          const now = new Date();
+          const nowMinutes = now.getHours() * 60 + now.getMinutes();
+          const minutesFromHHMM = (t) => {
+            const [hh, mm] = t.split(':').map(Number);
+            return hh * 60 + mm;
+          };
+          const upcoming = times
+            .map(t => ({ t, m: minutesFromHHMM(t) }))
+            .filter(x => x.m > nowMinutes)
+            .sort((a, b) => a.m - b.m)[0] || null;
+          let target = null;
+          if (upcoming) {
+            target = new Date();
+            target.setHours(Math.floor(upcoming.m / 60), upcoming.m % 60, 0, 0);
+          } else if (times.length) {
+            // First time tomorrow
+            const first = minutesFromHHMM(times[0]);
+            target = new Date();
+            target.setDate(target.getDate() + 1);
+            target.setHours(Math.floor(first / 60), first % 60, 0, 0);
+          }
+          setNextAutoReset(target);
         }
-      } catch (error) {
-        // Fallback to calculated schedule based on default meal times if API fails
-        const fallbackWindows = {
-          breakfast: { startTime: '06:00', enabled: true },
-          lunch: { startTime: '12:00', enabled: true },
-          dinner: { startTime: '17:00', enabled: true },
-          lateNight: { startTime: '22:00', enabled: false }
-        };
-        calculateResetSchedule(fallbackWindows);
+      } catch (_) {
+        // Silent fail; leave times empty
       }
     };
-    
     fetchMealWindows();
   }, []);
-
-  // Calculate reset times (30 minutes before each meal start)
-  const calculateResetSchedule = (mealWindowsObj) => {
-    const schedule = Object.entries(mealWindowsObj)
-      .filter(([mealType, window]) => window.enabled)
-      .map(([mealType, window]) => {
-        // Validate startTime format
-        if (!window.startTime || !window.startTime.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
-          return null;
-        }
-
-        const [hours, minutes] = window.startTime.split(':').map(Number);
-        const startDate = new Date();
-        startDate.setHours(hours, minutes, 0, 0);
-        
-        // Subtract 30 minutes for reset time
-        const resetDate = new Date(startDate.getTime() - (30 * 60000));
-        
-        // Handle day rollover (if reset time goes to previous day)
-        let resetTime;
-        if (resetDate.getDate() !== startDate.getDate()) {
-          // Reset time is on previous day, show as 23:XX
-          resetTime = `${resetDate.getHours().toString().padStart(2, '0')}:${resetDate.getMinutes().toString().padStart(2, '0')}`;
-        } else {
-          resetTime = `${resetDate.getHours().toString().padStart(2, '0')}:${resetDate.getMinutes().toString().padStart(2, '0')}`;
-        }
-        
-        // Format meal type display name
-        let displayName = mealType;
-        if (mealType === 'lateNight') {
-          displayName = 'Late Night';
-        } else {
-          displayName = mealType.charAt(0).toUpperCase() + mealType.slice(1);
-        }
-        
-        return {
-          time: resetTime,
-          meal: displayName,
-          resetType: 'Before',
-          startTime: window.startTime,
-          mealType: mealType
-        };
-      })
-      .filter(item => item !== null) // Remove invalid entries
-      .sort((a, b) => a.time.localeCompare(b.time));
-    
-    setDynamicResetSchedule(schedule);
-  };
 
   // Show reset status message
   const showResetStatus = (message, type) => {
@@ -103,7 +95,7 @@ const DatabaseResetComponent = ({ fetchDashboardData }) => {
     try {
       setIsLoading(true);
       setShowConfirmation(false);
-      showResetStatus('Resetting meal database...', 'info');
+      showResetStatus('Resetting current meal attendance...', 'info');
       
       const response = await fetch('/api/dashboard/reset-meals', {
         method: 'POST',
@@ -116,202 +108,122 @@ const DatabaseResetComponent = ({ fetchDashboardData }) => {
       const data = await response.json();
 
       if (data.success) {
-        showResetStatus(
-          `✅ ${data.message} Reset completed at ${data.resetTime}`, 
-          'success'
-        );
+        showResetStatus('✅ Database reset completed.', 'success');
         
         // Refresh dashboard stats if available
         if (fetchDashboardData) {
           setTimeout(() => {
-            fetchDashboardData();
+            fetchDashboardData({ showToast: true, useSpinner: false });
           }, 1000);
         }
       } else {
-        showResetStatus(`❌ Reset failed: ${data.error}`, 'error');
+        showResetStatus('❌ Reset failed. Please try again.', 'error');
       }
     } catch (error) {
-      showResetStatus('❌ Network error. Please check if the backend server is running.', 'error');
+      showResetStatus('❌ Network error. Please try again.', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
-
-  // Toggle automatic reset schedule
-  const toggleAutomaticReset = async () => {
-    try {
-      setIsLoading(true);
-      const newStatus = !automaticResetEnabled;
-      
-      // Here you would call an API to enable/disable the scheduler
-      // For now, we'll just update the local state
-      setAutomaticResetEnabled(newStatus);
-      
-      showResetStatus(
-        `✅ Automatic reset schedule ${newStatus ? 'enabled' : 'disabled'}`,
-        'success'
-      );
-      
-    } catch (error) {
-      showResetStatus('❌ Failed to toggle automatic reset schedule', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="database-reset-section">
       <h2>
         <i className="fas fa-database"></i>
-        Database Reset Management
+        Database Reset
       </h2>
 
-      <div className="reset-description">
-        <i className="fas fa-clock warning-icon"></i>
-        <strong>MealCurrent Database Reset Schedule:</strong> Student meal records are automatically cleared at the times shown below, 
-        allowing students to scan meals again for the next meal period.
-      </div>
+      <p className="reset-brief">
+        Automatic reset runs <strong>30 minutes before</strong> each meal's start time (Timezone: <strong>EAT</strong>).{autoResetTimes.length ? ` Next times today: ${autoResetTimes.join(', ')}` : ''}
+      </p>
 
-      <div className="reset-options-grid">
-        <div 
-          className={`reset-option-card ${selectedResetType === 'automatic' ? 'selected' : ''}`}
-          onClick={() => setSelectedResetType('automatic')}
-          data-reset-type="automatic"
-        >
-          <div className="reset-option-header">
-            <i className="fas fa-clock"></i>
-            <h3>Automatic Reset Schedule</h3>
-          </div>
-          <div className="reset-option-description">
-            MealCurrent database automatically clears student records 30 minutes before each meal starts, based on meal window times from database.
-          </div>
-          <div className="reset-timing">
-            Active - Next reset varies by meal schedule
-          </div>
+      {nextAutoReset && (
+        <div className="next-reset-callout">
+          <i className="fas fa-clock"></i>
+          <span>
+            Next automatic reset at <strong>{nextAutoReset.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
+            {(() => {
+              const diff = nextAutoReset.getTime() - Date.now();
+              if (diff <= 0) return null;
+              const h = Math.floor(diff / 3600000);
+              const m = Math.floor((diff % 3600000) / 60000);
+              return <em className="in-text"> (in {h}h {m}m)</em>;
+            })()}
+          </span>
         </div>
+      )}
 
-        <div 
-          className={`reset-option-card ${selectedResetType === 'manual' ? 'selected' : ''}`}
-          onClick={() => setSelectedResetType('manual')}
-          data-reset-type="manual"
-        >
-          <div className="reset-option-header">
-            <i className="fas fa-hand-paper"></i>
-            <h3>Manual Reset Control</h3>
-          </div>
-          <div className="reset-option-description">
-            Perform immediate database reset when needed for maintenance or emergency situations.
-          </div>
-          <div className="reset-timing">
-            Available anytime - Admin controlled
-          </div>
-        </div>
-      </div>
-
-      <div className="schedule-display">
-        <div className="schedule-header">
-          <h4>
-            <i className="fas fa-calendar-alt"></i>
-            Automatic Reset Schedule (EAT)
-          </h4>
-          <div className="schedule-toggle">
-            <label className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={automaticResetEnabled}
-                onChange={toggleAutomaticReset}
-                disabled={isLoading}
-              />
-              <span className="toggle-slider"></span>
-            </label>
-            <span className="toggle-label">
-              {automaticResetEnabled ? 'Enabled' : 'Disabled'}
-            </span>
-          </div>
-        </div>
-        <div className="schedule-grid">
-          {dynamicResetSchedule.map((item, index) => (
-            <div key={index} className={`schedule-card ${!automaticResetEnabled ? 'disabled' : ''}`}>
-              <div className="schedule-time">{item.time}</div>
-              <div className="schedule-meal">{item.meal}</div>
-              <div className="schedule-info">
-                <div className="meal-start">Meal: {item.startTime}</div>
-                <div className="schedule-badge">Database Reset</div>
+      {/* Per-meal summary */}
+      {!!mealSummaries.length && (
+        <div className="meal-reset-summary">
+          {mealSummaries.map(ms => (
+            <div className="meal-row" key={ms.mealType}>
+              <div className="meal-name">
+                <span className={`status-dot ${ms.enabled ? 'on' : 'off'}`}></span>
+                {ms.mealType.charAt(0).toUpperCase() + ms.mealType.slice(1)}
+                {!ms.enabled && <span className="badge muted">Disabled</span>}
+              </div>
+              <div className="meal-times">
+                <span className="label">Window:</span>
+                <span className="value">{ms.startTime} - {ms.endTime}</span>
+                <span className="label sep">Auto reset:</span>
+                <span className="value strong">{ms.autoResetTime}</span>
               </div>
             </div>
           ))}
         </div>
-        {!automaticResetEnabled && (
-          <div className="schedule-disabled-notice">
-            <i className="fas fa-info-circle"></i>
-            Automatic reset schedule is currently disabled. Enable it to automatically clear meal records.
-          </div>
-        )}
+      )}
+
+      <div className="reset-controls">
+        <button 
+          className="reset-btn danger manual-reset-btn"
+          onClick={() => setShowConfirmation(true)}
+          disabled={isLoading}
+        >
+          <i className="fas fa-trash-alt"></i>
+          {isLoading ? 'Resetting...' : 'Reset Now'}
+        </button>
       </div>
 
-      <div className="manual-reset-section">
-        <div className="manual-reset-header">
-          <i className="fas fa-exclamation-circle"></i>
-          <h3>Manual Database Reset</h3>
+      {resetStatus.message && (
+        <div className={`reset-status ${resetStatus.type}`}>
+          {resetStatus.message}
         </div>
+      )}
 
-        <div className="manual-reset-warning">
-          <strong>Warning:</strong> Manual reset will immediately clear all current meal attendance records. 
-          Students will be able to use their meals again after the reset.
-        </div>
-
-        <div className="reset-controls">
-          <button 
-            className="reset-btn danger manual-reset-btn"
-            onClick={() => setShowConfirmation(true)}
-            disabled={isLoading}
-          >
-            <i className="fas fa-trash-alt"></i>
-            Reset Database Now
-          </button>
-
-        </div>
-
-        {resetStatus.message && (
-          <div className={`reset-status ${resetStatus.type}`}>
-            {resetStatus.message}
-          </div>
-        )}
-      </div>
-
-      {/* Confirmation Modal */}
-      {showConfirmation && (
-        <div className="reset-confirmation-modal" onClick={() => setShowConfirmation(false)}>
-          <div className="reset-confirmation-content" onClick={(e) => e.stopPropagation()}>
-            <div className="reset-confirmation-header">
-              <i className="fas fa-exclamation-triangle"></i>
-              <h3>Confirm Database Reset</h3>
+      {/* Confirmation Modal (Bootstrap style to match Contact Admin) */}
+      <Modal 
+        show={showConfirmation}
+        onHide={() => setShowConfirmation(false)}
+        centered
+      >
+        <div style={{background: 'rgba(52, 73, 94, 0.95)', backdropFilter: 'blur(15px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px'}}>
+          <Modal.Header closeButton style={{borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'transparent'}}>
+            <Modal.Title style={{color: 'white'}}>Confirm Reset</Modal.Title>
+          </Modal.Header>
+          <Modal.Body style={{background: 'transparent'}}>
+            <div className="text-center" style={{color: 'rgba(255,255,255,0.9)'}}>
+              Clear current meal attendance records now?
             </div>
-            <div className="reset-confirmation-message">
-              <p><strong>Warning:</strong> This action will permanently delete all current meal attendance records.</p>
-              <p>Students will be able to use their meals again after the reset.</p>
-              <p>This action cannot be undone. Are you sure you want to proceed?</p>
-            </div>
-            <div className="reset-confirmation-actions">
+            <div className="reset-confirmation-actions" style={{display:'flex', gap: '8px', justifyContent:'center', marginTop: '12px'}}>
               <button 
                 className="reset-btn secondary cancel-reset-btn"
                 onClick={() => setShowConfirmation(false)}
               >
-                <i className="fas fa-times"></i>
                 Cancel
               </button>
               <button 
                 className="reset-btn danger confirm-reset-btn"
                 onClick={performManualReset}
+                disabled={isLoading}
               >
-                <i className="fas fa-trash-alt"></i>
-                Reset Database
+                {isLoading ? 'Resetting...' : 'Confirm Reset'}
               </button>
             </div>
-          </div>
+          </Modal.Body>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };

@@ -2,7 +2,7 @@
 .forgot-link {
   text-decoration: none !important;
   color: #0d6efd !important;
-  font-size: 7px !important;
+  font-size: 10px !important;
   line-height: 1 !important;
   padding: 0 !important;
 }
@@ -234,3 +234,61 @@
     border-color: rgba(255, 255, 255, 0.3) !important;
   }
   
+  /* Shared light-gray page background to match reference UI */
+  .app-light-bg {
+    background-color: #f8fafc !important; /* match Dashboard background */
+  }
+  
+  /* Mint header styles are now global in App.css */
+  
+  /* Light theme authentication card */
+  .light-card {
+    background: #ffffff !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    border-radius: 12px !important;
+    color: #111827 !important; /* slate-900 */
+  }
+  
+  /* Make headings and labels dark within light card */
+  .light-card h2, 
+  .light-card .form-label,
+  .light-card label {
+    color: #111827 !important;
+  }
+  
+  /* Override global dark input styles inside the light card */
+  .light-card .form-control {
+    background-color: #ffffff !important;
+    border: 1px solid #d1d5db !important; /* gray-300 */
+    color: #111827 !important;
+    border-radius: 8px !important;
+  }
+  .light-card .form-control::placeholder {
+    color: #6b7280 !important; /* gray-500 */
+  }
+  .light-card .form-control:focus {
+    background-color: #ffffff !important;
+    border-color: #3b82f6 !important; /* blue-500 */
+    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25) !important;
+    color: #111827 !important;
+  }
+  
+  /* Password toggle button appearance in light card */
+  .light-card .input-group .btn {
+    border-color: #d1d5db !important;
+    color: #4b5563 !important; /* gray-600 */
+    background: #ffffff !important;
+  }
+  .light-card .input-group .btn:hover,
+  .light-card .input-group .btn:focus {
+    background: #f3f4f6 !important; /* gray-100 */
+    color: #111827 !important;
+  }
+
+  /* High-specificity override so Forgot password link remains small */
+  .light-card .forgot-link.btn {
+    font-size: 14px !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    line-height: 1 !important;
+  }

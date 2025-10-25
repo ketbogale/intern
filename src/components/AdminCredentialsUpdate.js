@@ -52,7 +52,7 @@ const AdminCredentialsUpdate = () => {
   }, []);
 
   const handleBackToDashboard = () => {
-    window.location.href = '/';
+    window.location.href = '/dashboard?section=settings';
   };
 
   const handleUpdateAdminCredentials = async (e) => {
@@ -228,9 +228,9 @@ const AdminCredentialsUpdate = () => {
         setSuccess(true);
         setMessage('Your admin credentials have been updated successfully!');
         
-        // Redirect to dashboard after 2 seconds
+        // Redirect to dashboard settings after 2 seconds
         setTimeout(() => {
-          window.location.href = '/';
+          window.location.href = '/dashboard?section=settings';
         }, 2000);
       } else {
         setSuccess(false);

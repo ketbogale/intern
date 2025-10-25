@@ -22,8 +22,77 @@
   }
 }
 
+/* Full-page background image for HomePage */
+.home-background {
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
 /* Slight emphasis animation on hover (non-intrusive) */
 .hero-title-animated:hover {
   transition: transform 180ms ease-out;
   transform: translateY(-1px);
+}
+
+/* Shared light-gray page background to match reference UI */
+.app-light-bg {
+  background-color: #f8fafc !important; /* match Dashboard background */
+}
+
+/* Light theme card for HomePage */
+.light-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  border-radius: 12px !important;
+  color: #111827 !important; /* dark text */
+}
+
+/* Mint header styles are now global in App.css */
+
+.hero-logo {
+  width: 96px;
+  height: 96px;
+}
+
+.hero-title {
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.2px;
+  color: #111827; /* slate-900 */
+}
+
+.hero-subtitle {
+  font-size: 18px;
+  color: #6b7280; /* gray-600 */
+  margin-top: 8px;
+}
+
+.hero-content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+@media (max-width: 992px) {
+  .hero-title {
+    font-size: 30px;
+  }
+  .hero-subtitle {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 576px) {
+  .hero-logo {
+    width: 64px;
+    height: 64px;
+  }
+  .hero-title {
+    font-size: 24px;
+  }
+  .hero-subtitle {
+    font-size: 15px;
+  }
 }

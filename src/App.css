@@ -116,3 +116,22 @@ code {
     transform: rotate(360deg);
   }
 }
+
+/* Global Mint Header - shared across all pages */
+.mint-header {
+  background: linear-gradient(90deg, #7EFBE5 0%, #A7FFEB 100%) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border-radius: 0 !important;
+}
+.mint-header .navbar-brand,
+.mint-header .navbar-brand h1,
+.mint-header .nav-link,
+.mint-header .btn-link {
+  color: #0f3e37 !important;
+}
+.mint-header .nav-link:hover,
+.mint-header .btn-link:hover {
+  color: #0b2f2a !important;
+}

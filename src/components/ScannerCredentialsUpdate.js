@@ -21,7 +21,7 @@ const ScannerCredentialsUpdate = () => {
   }, [passwordValidation]);
 
   const handleBackToDashboard = () => {
-    window.location.href = '/';
+    window.location.href = '/dashboard?section=settings';
   };
 
   const validatePassword = (password) => {

@@ -228,7 +228,7 @@ const SearchStudent = () => {
   };
 
   const handleBackToDashboard = () => {
-    window.location.href = '/';
+    window.location.href = '/dashboard?section=students';
   };
 
   return (

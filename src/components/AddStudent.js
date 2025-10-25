@@ -13,7 +13,7 @@ const AddStudent = () => {
   const [success, setSuccess] = useState(false);
 
   const handleBackToDashboard = () => {
-    window.location.href = '/';
+    window.location.href = '/dashboard?section=students';
   };
 
   const handleAddStudent = async (e) => {

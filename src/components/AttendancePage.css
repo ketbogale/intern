@@ -3,6 +3,38 @@
 
 /* Only keep essential custom styles that Bootstrap doesn't handle */
 
+/* Shared light-gray page background to match reference UI */
+.app-light-bg {
+  background-color: #f8fafc !important; /* match Dashboard background */
+}
+
+/* Default light card (white) for all pages */
+.light-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+  border-radius: 12px !important;
+  color: #111827 !important; /* dark text */
+}
+
+/* Attendance page only: remove white part using wrapper scope */
+.attendance-page .light-card {
+  background: transparent !important;
+  border: 1px solid rgba(0,0,0,0.06) !important; /* subtle outline for contrast */
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08) !important; /* soft layered shadow */
+  border-radius: 12px !important; /* box feel while keeping transparent */
+}
+
+/* Mint header styles are now global in App.css */
+
+/* Ensure student info text is dark when shown in light-card */
+.light-card .student-info-label {
+  color: #374151 !important; /* gray-700 */
+}
+.light-card .student-info-value {
+  color: #111827 !important; /* slate-900 */
+}
+
 /* ===== Logout Button Hover ===== */
 .btn-outline-light:hover {
   background-color: rgba(220, 53, 69, 0.2) !important;
@@ -120,15 +152,15 @@
 .card-spacing-left {
   margin-top: 2rem;
   margin-bottom: 2rem;
-  margin-left: 3rem;
-  margin-right: 1rem;
+  margin-left: 0.1rem; /* tighter spacing */
+  margin-right: 0.25rem;
   padding: 0;
 }
 
 .card-spacing-right {
   margin-top: 2rem;
   margin-bottom: 2rem;
-  margin-left: 2rem;
+  margin-left: 2rem; /* no extra gap between columns */
   padding: 0;
 }
 
@@ -157,6 +189,7 @@
   word-wrap: break-word;
   line-height: 1.3;
   display: block;
+  
 }
 
 .student-info-card {
@@ -183,28 +216,59 @@
 }
 
 .student-photo-large {
-  width: 200px !important;
-  height: 200px !important;
+  width: 100% !important;            /* fill column width */
+  max-width: 400px !important;       /* cap width */
+  height: auto !important;           /* maintain aspect ratio */
   object-fit: cover;
-  border: 3px solid #74b9ff;
-  border-radius: 0.75rem;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  border: 1px solid #74b9ff;         /* slimmer blue edge */
+  border-radius: 0 !important;       /* square corners */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); /* softer neutral shadow */
 }
 
 /* ===== Professional Container Spacing ===== */
 .container-fluid {
-  padding: 2rem 1rem;
+  padding: 1rem 0.5rem; /* reduce side padding to create more horizontal room */
   max-width: 1400px;
   margin: 0 auto;
 }
 
-/* ===== Enhanced Photo Styling ===== */
+/* ===== Enhanced Photo Styling (minimal) ===== */
 .student-photo-large {
-  margin-bottom: 2rem;
-  border: 4px solid #74b9ff;
-  border-radius: 1rem;
-  box-shadow: 0 12px 24px rgba(116, 185, 255, 0.3);
-  transition: all 0.3s ease;
+  margin-bottom: 1rem;
+  transition: all 0.2s ease;
+}
+
+/* ===== Simplified Info (Left Panel) ===== */
+.simple-info {
+  margin-top: 2rem;
+}
+
+.simple-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.simple-label {
+  width: 120px;
+  color: #111827;
+  font-weight: 600;
+}
+
+.simple-value {
+  color: #111827;
+}
+
+/* Ensure the input looks prominent like the mockup */
+.light-card input.form-control {
+  height: 44px;
+  border-radius: 10px;
+}
+
+/* Shorter input form width */
+.simple-input {
+  max-width: 260px;
 }
 
 .student-photo-large:hover {
@@ -225,12 +289,60 @@
   letter-spacing: 1px;
 }
 
+/* ===== New Design: Status Banner ===== */
+.status-banner {
+  max-width: 640px;
+  margin: 0.5rem auto 1rem auto;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+  padding: 0.6rem 1rem;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+}
+.status-banner.allowed {
+  border-color: #16a34a; /* green */
+  color: #0f5132;
+}
+.status-banner.denied {
+  border-color: #dc2626; /* red */
+  color: #7f1d1d;
+}
+
+/* ===== New Design: Pane spacing (responsive, no overflow) ===== */
+.left-pane {
+  padding-left: clamp(0rem, 7vw, 7rem);
+}
+.right-pane {
+  padding-right: clamp(0rem, 4vw, 2rem);
+}
+
+@media (max-width: 992px) {
+  .left-pane { padding-left: clamp(0rem, 3vw, 2rem); }
+  .right-pane { padding-right: clamp(0rem, 3vw, 1.25rem); }
+}
+
+@media (max-width: 768px) {
+  .left-pane { padding-left: 0; padding-right: 0; }
+  .right-pane { padding-right: 0; }
+}
+
+/* Input prominence like mockup */
+.simple-input {
+  max-width: 280px;
+}
+
 /* ===== Responsive Design ===== */
 @media (max-width: 992px) {
   .container-fluid {
     padding: 1.5rem 0.5rem;
   }
-  
+  /* Reduce left offset on smaller screens */
+  .card-spacing-left {
+    margin-left: 1rem;
+    margin-right: 1rem;
+  }
   .attendance-input-card .card-body,
   .student-info-card .card-body {
     padding: 2rem;
@@ -256,8 +368,9 @@
   }
   
   .student-photo-large {
-    width: 160px !important;
-    height: 160px !important;
+    width: 100% !important;
+    max-width: 280px !important;
+    aspect-ratio: 1 / 1;
     margin-bottom: 1.5rem;
   }
   
@@ -266,3 +379,24 @@
     padding: 1.5rem;
   }
 }
+
+/* Responsive fixed photo box to keep image centered without overflow */
+.fixed-photo-box {
+  width: clamp(220px, 80vw, 360px);
+  height: clamp(220px, 80vw, 360px);
+}
+.fixed-photo-box img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  border-radius: 0 !important;
+}
+.fixed-photo-box .student-photo-placeholder {
+  width: 100% !important;
+  height: 100% !important;
+  background-color: rgba(0,0,0,0.03);
+  border-radius: 0;
+}
+
+/* Safety: avoid accidental horizontal overflow on the page */
+.attendance-page { overflow-x: hidden; }

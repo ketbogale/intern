@@ -1,10 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert, Modal, Navbar, InputGroup } from 'react-bootstrap';
-import VerificationCodeInput from './VerificationCodeInput';
+import React, { useState } from 'react';
+import { Container, Row, Col, Card, Form, Button, Alert, Modal, Navbar } from 'react-bootstrap';
 import './LoginPage.css';
-
-// Constants - use relative URLs for security
-const API_BASE_URL = '';
+import { API_BASE_URL } from '../config/api';
 const MESSAGES = {
   NETWORK_ERROR: 'Network error occurred. Please check your internet connection and try again.',
   OTP_EXPIRED: 'Verification code expired. Please request a new one to continue.',
@@ -13,15 +10,6 @@ const MESSAGES = {
 };
 
 // Utility functions
-
-const formatTime = (seconds) => {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-};
-
-const validateOTP = (otp) => /^\d{6}$/.test(otp);
-const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 // API utility
 const apiCall = async (endpoint, options = {}) => {
@@ -51,66 +39,18 @@ const LoadingButton = ({ loading, loadingText, children, disabled, variant = "pr
 );
 
 const LoginPage = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showOtpModal, setShowOtpModal] = useState(false);
-  const [showOTPModal, setShowOTPModal] = useState(false);
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
-  const [otpMessage, setOtpMessage] = useState('');
-  const [isOtpLoading, setIsOtpLoading] = useState(false);
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
-  const [showCredentialsForm, setShowCredentialsForm] = useState(true);
-  const [otpCountdown, setOtpCountdown] = useState(300);
-  const [canResendOTP, setCanResendOTP] = useState(false);
-  const [resendCountdown, setResendCountdown] = useState(0);
-  const [maskedEmail, setMaskedEmail] = useState('');
-  const [adminEmail, setAdminEmail] = useState('');
-  const [emailMessage, setEmailMessage] = useState('');
-  const [emailLoading, setEmailLoading] = useState(false);
+  
   const [showHelp, setShowHelp] = useState(false);
   const [helpLoading, setHelpLoading] = useState(false);
   const [helpError, setHelpError] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
 
-  // OTP countdown timer
-  useEffect(() => {
-    let interval;
-    if (showOTPModal && otpCountdown > 0) {
-      interval = setInterval(() => {
-        setOtpCountdown(prev => {
-          if (prev <= 1) {
-            setOtpMessage(MESSAGES.OTP_EXPIRED);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [showOTPModal, otpCountdown]);
-
-  // Resend OTP countdown
-  useEffect(() => {
-    let interval;
-    if (resendCountdown > 0) {
-      interval = setInterval(() => {
-        setResendCountdown(prev => {
-          if (prev <= 1) {
-            setCanResendOTP(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [resendCountdown]);
+  // No OTP/email modal logic needed here; admin email verification uses a dedicated route/component
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -125,9 +65,8 @@ const LoginPage = ({ onLogin }) => {
       });
 
       if (adminResponse.ok && adminData.success) {
-        setTimeout(() => {
-          window.location.pathname = '/admin-email-verification';
-        }, 1000);
+        // Direct navigation to admin email verification
+        setTimeout(() => { window.location.href = '/admin-email-verification'; }, 800);
       } else {
         // Try regular staff login
         const { response, data } = await apiCall('/api/login', {
@@ -136,7 +75,16 @@ const LoginPage = ({ onLogin }) => {
         });
 
         if (response.ok && data.success && data.user) {
-          setTimeout(() => onLogin(data.user), 1000);
+          // Navigate based on role directly
+          setTimeout(() => {
+            if (data.user.role === 'admin') {
+              window.location.href = '/dashboard';
+            } else if (data.user.role === 'scanner') {
+              window.location.href = '/attendance';
+            } else {
+              window.location.href = '/';
+            }
+          }, 800);
         } else {
           setMessage(data.error || 'Login failed');
           setTimeout(() => setMessage(''), 2500);
@@ -171,127 +119,14 @@ const LoginPage = ({ onLogin }) => {
     }
   };
 
-  // Handle OTP verification
-  const handleVerifyOTP = async (e) => {
-    e.preventDefault();
-    
-    if (!validateOTP(otpCode)) {
-      setOtpMessage(MESSAGES.INVALID_OTP_LENGTH);
-      return;
-    }
-    
-    try {
-      setOtpLoading(true);
-      setOtpMessage('');
-      
-      const response = await fetch('/api/admin/verify-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          email: adminEmail,
-          otp: otpCode
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        // Set logged-in state
-        onLogin(data.user);
-
-        // This endpoint is for admin login OTP — route directly to dashboard
-        setTimeout(() => {
-          window.location.pathname = '/dashboard';
-        }, 200);
-        setOtpCode('');
-        setOtpMessage('');
-      } else {
-        setOtpMessage('Invalid verification code: ' + (data.message || 'Please check the code and try again.'));
-        setTimeout(() => setOtpMessage(''), 2500);
-      }
-    } catch (error) {
-      setOtpMessage(error.message || MESSAGES.NETWORK_ERROR);
-      setTimeout(() => setOtpMessage(''), 2500);
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  // Handle email verification for admin
-  const handleEmailVerification = async (e) => {
-    e.preventDefault();
-    
-    if (!adminEmail || !validateEmail(adminEmail)) {
-      setEmailMessage(MESSAGES.EMAIL_REQUIRED);
-      return;
-    }
-    
-    try {
-      setEmailLoading(true);
-      setEmailMessage('');
-      
-      const response = await fetch('/api/admin/send-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: adminEmail })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setEmailMessage('Verification code sent to your email. Please check your inbox.');
-        setMaskedEmail(data.email);
-        setShowEmailModal(false);
-        setShowOTPModal(true);
-        setOtpCountdown(300);
-        setCanResendOTP(false);
-        setResendCountdown(60);
-      } else {
-        setEmailMessage('Invalid email address: ' + (data.message || 'Please check and try again.'));
-      }
-    } catch (error) {
-      setEmailMessage(error.message || MESSAGES.NETWORK_ERROR);
-    } finally {
-      setEmailLoading(false);
-    }
-  };
-
-  // Handle resend OTP
-  const handleResendOTP = async () => {
-    try {
-      setOtpLoading(true);
-      setOtpMessage('');
-      
-      const { data } = await apiCall('/api/admin/resend-otp', {
-        method: 'POST'
-      });
-      
-      if (data.success) {
-        setOtpMessage('New verification code sent to your email. Please check your inbox.');
-        setOtpCountdown(300);
-        setCanResendOTP(false);
-        setResendCountdown(60);
-      } else {
-        setOtpMessage('Failed to resend verification code: ' + (data.message || 'Please try again in a moment.'));
-      }
-    } catch (error) {
-      setOtpMessage(error.message || MESSAGES.NETWORK_ERROR);
-    } finally {
-      setOtpLoading(false);
-    }
-  };
+  // No OTP/email handlers here; dedicated verification pages handle that flow
 
 
   // Main render
   return (
-    <div className="min-vh-100" style={{background: 'linear-gradient(135deg, #0f1419 0%, #1e2a3a 100%)'}}>
+    <div className="min-vh-100 app-light-bg">
       {/* Header */}
-      <Navbar bg="dark" variant="dark" className="px-4 shadow-sm" style={{background: 'rgba(30, 42, 58, 0.95) !important', backdropFilter: 'blur(10px)'}}>
+      <Navbar className="px-4 shadow-sm mint-header">
         <Navbar.Brand className="d-flex align-items-center">
           <img 
             src="/images/salale_university_logo.png" 
@@ -300,10 +135,10 @@ const LoginPage = ({ onLogin }) => {
             className="me-3" 
             alt="Salale University"
           />
-          <h1 className="h4 mb-0 text-light">Salale University</h1>
+          <h1 className="h4 mb-0 text-dark">Salale University</h1>
         </Navbar.Brand>
         <div className="ms-auto">
-          <i className="fas fa-utensils text-light fs-3"></i>
+          <i className="fas fa-utensils text-dark fs-3"></i>
         </div>
       </Navbar>
 
@@ -311,54 +146,63 @@ const LoginPage = ({ onLogin }) => {
       <Container fluid className="d-flex justify-content-center align-items-center" style={{minHeight: 'calc(100vh - 76px)'}}>
         <Row className="w-100 justify-content-center">
           <Col xs={12} sm={8} md={6} lg={5} xl={4}>
-            <Card className="shadow-lg border-0" style={{background: 'rgba(52, 73, 94, 0.9)', backdropFilter: 'blur(15px)'}}>
+            <Card className="shadow-lg light-card">
               <Card.Body className="p-4">
-                <h2 className="text-center text-light mb-4">Sign In</h2>
+                <h2 className="text-center mb-4">Sign In</h2>
                 
                 <Form onSubmit={handleSubmit}>
                   <Form.Group className="mb-3">
-                    <Form.Label className="text-light">Username:</Form.Label>
+                    <Form.Label>Username:</Form.Label>
                     <Form.Control
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="Enter username"
                       required
-                      style={{background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white'}}
                     />
                   </Form.Group>
 
                   <Form.Group className="mb-3">
                     <div className="d-flex justify-content-between align-items-baseline" style={{ flexWrap: 'nowrap', columnGap: '8px' }}>
-                      <Form.Label className="text-light mb-0">Password:</Form.Label>
+                      <Form.Label className="mb-0">Password:</Form.Label>
                       <Button
                         variant="link"
                         className="p-0 forgot-link"
-                        onClick={() => window.location.href = '/forgot-password'}
+                        onClick={() => { window.location.href = '/forgot-password'; }}
                         disabled={isLoading}
-                        style={{ textDecoration: 'none', fontSize: '4px', color: '#0d6efd', whiteSpace: 'nowrap', lineHeight: 1 }}
+                        style={{ textDecoration: 'none', color: '#0d6efd', whiteSpace: 'nowrap', lineHeight: 1, fontSize: '10px', padding: 0, minHeight: 0 }}
                       >
                         Forgot password?
                       </Button>
                     </div>
-                    <InputGroup>
+                    <div style={{ position: 'relative' }}>
                       <Form.Control
                         type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Enter password"
                         required
-                        style={{background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white'}}
+                        style={{ paddingRight: '45px' }}
                       />
-                      <Button
-                        variant="outline-light"
+                      <button
+                        type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         aria-label={showPassword ? 'Hide password' : 'Show password'}
-                        style={{border: '1px solid rgba(255,255,255,0.2)'}}
+                        style={{
+                          position: 'absolute',
+                          right: '12px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '18px',
+                          color: '#6b7280'
+                        }}
                       >
                         {showPassword ? '🙈' : '👁️'}
-                      </Button>
-                    </InputGroup>
+                      </button>
+                    </div>
                   </Form.Group>
 
                   <LoadingButton 
@@ -378,7 +222,7 @@ const LoginPage = ({ onLogin }) => {
                 <div className="text-center mt-2">
                   <Button
                     variant="link"
-                    className="p-0 forgot-link"
+                    className="p-0"
                     onClick={openHelp}
                     disabled={isLoading}
                   >
@@ -398,153 +242,7 @@ const LoginPage = ({ onLogin }) => {
         </Row>
       </Container>
 
-      {/* Email Verification Modal */}
-      <Modal 
-        show={showEmailModal} 
-        onHide={() => setShowEmailModal(false)}
-        backdrop="static"
-        centered
-      >
-        <div style={{background: 'rgba(52, 73, 94, 0.95)', backdropFilter: 'blur(15px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px'}}>
-          <Modal.Header closeButton style={{borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'transparent'}}>
-            <Modal.Title style={{color: 'white'}}>Admin Email Verification</Modal.Title>
-          </Modal.Header>
-          <Modal.Body style={{background: 'transparent'}}>
-            <div className="text-center">
-              <h4 className="mb-2" style={{color: 'white'}}>Enter Admin Email</h4>
-              <p className="mb-4" style={{fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)'}}>
-                Please enter the email address associated with your admin account to receive a verification code
-              </p>
-              
-              <Form onSubmit={handleEmailVerification}>
-                <Form.Group className="mb-3">
-                  <Form.Label className="text-start d-block" style={{color: 'rgba(255, 255, 255, 0.9)'}}>
-                    Email Address
-                  </Form.Label>
-                  <Form.Control
-                    type="email"
-                    value={adminEmail}
-                    onChange={(e) => setAdminEmail(e.target.value)}
-                    placeholder="Enter your admin email"
-                    required
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      border: '2px solid rgba(255, 255, 255, 0.3)',
-                      color: 'white',
-                      borderRadius: '12px'
-                    }}
-                  />
-                </Form.Group>
-              
-              {emailMessage && (
-                <Alert variant={emailMessage.includes('sent') ? 'info' : 'warning'} className="mb-3">
-                  {emailMessage}
-                </Alert>
-              )}
-              
-              <LoadingButton
-                type="submit"
-                className="w-100 mb-3"
-                variant="success"
-                disabled={!adminEmail}
-                loading={emailLoading}
-                loadingText="Sending..."
-              >
-                Send Verification Code
-              </LoadingButton>
-            </Form>
-            
-            <div className="d-flex justify-content-center">
-              <Button
-                variant="link"
-                size="sm"
-                onClick={() => setShowEmailModal(false)}
-                disabled={emailLoading}
-                style={{color: 'rgba(255, 255, 255, 0.7)'}}
-              >
-                Back to Sign in
-              </Button>
-            </div>
-          </div>
-        </Modal.Body>
-      </div>
-    </Modal>
-
-    {/* OTP Verification Modal */}
-    <Modal 
-      show={showOTPModal} 
-      onHide={() => setShowOTPModal(false)}
-      backdrop="static"
-      centered
-    >
-      <div style={{background: 'rgba(52, 73, 94, 0.95)', backdropFilter: 'blur(15px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px'}}>
-        <Modal.Header closeButton style={{borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'transparent'}}>
-          <Modal.Title style={{color: 'white'}}>Admin Verification</Modal.Title>
-        </Modal.Header>
-        <Modal.Body style={{background: 'transparent'}}>
-          <div className="text-center">
-            <h4 className="mb-2" style={{color: 'white'}}>Check your inbox</h4>
-            <p className="mb-4" style={{fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)'}}>
-              Enter the verification code sent to<br/>
-              <strong style={{color: 'white'}}>{maskedEmail}</strong>
-            </p>
-            
-            <VerificationCodeInput
-              value={otpCode}
-              onCodeChange={setOtpCode}
-              onComplete={(code) => {
-                setOtpCode(code);
-                // Auto-submit when complete
-                if (validateOTP(code)) {
-                  handleVerifyOTP({ preventDefault: () => {} });
-                }
-              }}
-              error={!validateOTP(otpCode) && otpCode.length > 0}
-              disabled={otpLoading}
-            />
-            
-            <div className="d-flex justify-content-between align-items-center mt-4 mb-3">
-              <small style={{color: 'rgba(255, 255, 255, 0.7)'}}>
-                {otpCountdown > 0 ? (
-                  <>Expires in: <strong style={{color: 'white'}}>{formatTime(otpCountdown)}</strong></>
-                ) : (
-                  <span style={{color: '#e53e3e'}}>Code expired</span>
-                )}
-              </small>
-              
-              <Button
-                variant="link"
-                size="sm"
-                onClick={handleResendOTP}
-                disabled={!canResendOTP || otpLoading}
-                className="p-0"
-                style={{color: 'rgba(255, 255, 255, 0.7)'}}
-              >
-                {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : 'Resend Code'}
-              </Button>
-            </div>
-            
-            {otpMessage && (
-              <Alert variant={otpMessage.includes('successful') || otpMessage.includes('sent') ? 'info' : 'warning'} className="mb-3">
-                {otpMessage}
-              </Alert>
-            )}
-            
-            <div className="d-flex justify-content-center mt-3">
-              <Button
-                variant="link"
-                size="sm"
-                onClick={() => setShowOTPModal(false)}
-                disabled={otpLoading}
-                style={{color: 'rgba(255, 255, 255, 0.7)'}}
-              >
-                ← Back to Sign in
-              </Button>
-            </div>
-          </div>
-        </Modal.Body>
-      </div>
-    </Modal>
+    {/* Admin email/OTP verification handled on dedicated routes; no modals here */}
 
     {/* Help Modal */}
     <Modal 

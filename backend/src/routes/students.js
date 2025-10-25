@@ -1,6 +1,6 @@
 const express = require("express");
 const Student = require("../models/student");
-const { handleError, handleValidationError, handleNotFound, handleUnauthorized } = require('../utils/errorHandler');
+const { handleValidationError, handleUnauthorized } = require('../utils/errorHandler');
 const router = express.Router();
 
 // Authentication middleware

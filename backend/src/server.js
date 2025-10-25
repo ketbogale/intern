@@ -1,12 +1,8 @@
+
 const express = require("express");
 const path = require("path");
-// Suppress dotenv console output
-const originalConsoleLog = console.log;
-console.log = () => {};
 require('dotenv').config();
-console.log = originalConsoleLog;
 const session = require("express-session");
-const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
 const loginRoutes = require("./routes/login");
 const attendanceRoutes = require("./routes/attendance");
@@ -22,6 +18,7 @@ const bulkPaymentRoutes = require('./routes/bulkPayment');
 const cbeBulkPaymentRoutes = require('./routes/cbeBulkPayment');
 const fileServingRoutes = require('./routes/fileServing');
 const excelExportRoutes = require('./routes/excelExport');
+const reportsRoutes = require('./routes/reports');
 const mongoose = require("mongoose");
 const SchedulerService = require("./services/scheduler");
 const { verifyEmailService } = require('./services/emailService');
@@ -29,6 +26,15 @@ const MealWindow = require('./models/MealWindows');
 // Replace with your MongoDB URI
 const MONGO_URI =
   process.env.MONGO_URI || "mongodb://localhost:27017/meal_attendance";
+
+ if (process.env.ENABLE_CONSOLE !== 'true') {
+   const noop = () => {};
+   console.log = noop;
+   console.info = noop;
+   console.debug = noop;
+   console.warn = noop;
+   console.error = noop;
+ }
 
 mongoose
   .connect(MONGO_URI)
@@ -42,13 +48,6 @@ mongoose
       // Default meal windows initialized
     }
     // Meal windows already exist in database
-    
-    // Start the scheduler service
-    try {
-      await SchedulerService.startScheduler();
-    } catch (error) {
-      // Scheduler startup error - continuing without scheduler
-    }
   })
   .catch((err) => {
     // MongoDB connection error - server will not function properly
@@ -93,40 +92,13 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use(express.json());
 
-// Global rate limiting configuration
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: {
-    error: "Too many requests from this IP, please try again later.",
-    retryAfter: "15 minutes"
-  },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  skip: (req) => {
-    // Skip rate limiting if X-Forwarded-For header is causing issues
-    return req.headers['x-forwarded-for'] && !req.app.get('trust proxy');
+// Debug: log incoming API requests (method and URL)
+app.use((req, res, next) => {
+  if (req.url && req.url.startsWith('/api')) {
+    console.log(`[API] ${req.method} ${req.originalUrl}`);
   }
+  next();
 });
-
-// Strict rate limiting for sensitive operations
-const strictLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // Limit each IP to 20 requests per windowMs for sensitive operations
-  message: {
-    error: "Too many requests for this operation, please try again later.",
-    retryAfter: "15 minutes"
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => {
-    // Skip rate limiting if X-Forwarded-For header is causing issues
-    return req.headers['x-forwarded-for'] && !req.app.get('trust proxy');
-  }
-});
-
-// Apply global rate limiting to all requests (temporarily disabled for debugging)
-// app.use(globalLimiter);
 
 // Session configuration
 app.use(
@@ -143,14 +115,7 @@ app.use(
   }),
 );
 
-// Authentication middleware
-const requireAuth = (req, res, next) => {
-  if (req.session && req.session.user) {
-    return next();
-  } else {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-};
+// (Removed unused requireAuth; each route applies its own auth where needed)
 
 app.use("/public", express.static(path.join(__dirname, "../public")));
 
@@ -173,8 +138,13 @@ app.use('/api/bulk-payment', bulkPaymentRoutes);
 app.use('/api/cbe-bulk-payment', cbeBulkPaymentRoutes);
 app.use('/api/files', fileServingRoutes);
 app.use('/api/excel-export', excelExportRoutes);
+app.use('/api', reportsRoutes);
 
 // Logout route is now handled in login.js routes
+
+app.all('/api/*', (req, res) => {
+  res.status(404).json({ success: false, message: `Unknown API route: ${req.method} ${req.originalUrl}` });
+});
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, async () => {

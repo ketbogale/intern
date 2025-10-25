@@ -17,19 +17,20 @@ const mealWindowSchema = new mongoose.Schema({
     required: true,
     match: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/
   },
+  // Deprecated: buffers are no longer used; keep placeholders for backward compatibility if present in DB
   beforeWindow: {
     type: Number,
-    required: true,
+    required: false,
     min: 0,
     max: 120,
-    default: 30
+    default: undefined
   },
   afterWindow: {
     type: Number,
-    required: true,
+    required: false,
     min: 0,
     max: 120,
-    default: 30
+    default: undefined
   },
   enabled: {
     type: Boolean,
@@ -49,8 +50,6 @@ mealWindowSchema.statics.getAllAsObject = async function() {
     result[window.mealType] = {
       startTime: window.startTime,
       endTime: window.endTime,
-      beforeWindow: window.beforeWindow,
-      afterWindow: window.afterWindow,
       enabled: window.enabled
     };
   });
@@ -68,32 +67,24 @@ mealWindowSchema.statics.initializeDefaults = async function() {
         mealType: 'breakfast',
         startTime: '06:00',
         endTime: '09:00',
-        beforeWindow: 30,
-        afterWindow: 30,
         enabled: true
       },
       {
         mealType: 'lunch',
         startTime: '12:00',
         endTime: '14:00',
-        beforeWindow: 30,
-        afterWindow: 30,
         enabled: true
       },
       {
         mealType: 'dinner',
         startTime: '17:00',
         endTime: '20:00',
-        beforeWindow: 30,
-        afterWindow: 30,
         enabled: true
       },
       {
         mealType: 'lateNight',
         startTime: '22:00',
         endTime: '23:30',
-        beforeWindow: 15,
-        afterWindow: 15,
         enabled: false
       }
     ];

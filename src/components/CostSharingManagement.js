@@ -4,7 +4,6 @@ import './CostSharingManagement.css';
 
 const CostSharingManagement = () => {
   const [costSharingStudents, setCostSharingStudents] = useState([]);
-  const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [paymentData, setPaymentData] = useState({
     month: new Date().getMonth() + 1,
@@ -65,7 +64,6 @@ const CostSharingManagement = () => {
       const data = await response.json();
       if (data.success) {
         setCostSharingStudents(data.students || []);
-        setStudents(data.students || []);
         setFilteredStudents(data.students || []);
       }
     } catch (error) {

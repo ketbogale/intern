@@ -28,14 +28,6 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: `Invalid time format for ${mealType}` });
       }
 
-      // Validate window values
-      if (typeof meal.beforeWindow !== 'number' || meal.beforeWindow < 0 || meal.beforeWindow > 120) {
-        return res.status(400).json({ error: `Invalid beforeWindow value for ${mealType}` });
-      }
-      if (typeof meal.afterWindow !== 'number' || meal.afterWindow < 0 || meal.afterWindow > 120) {
-        return res.status(400).json({ error: `Invalid afterWindow value for ${mealType}` });
-      }
-
       // Validate enabled flag
       if (typeof meal.enabled !== 'boolean') {
         return res.status(400).json({ error: `Invalid enabled value for ${mealType}` });
@@ -52,8 +44,6 @@ router.post('/', async (req, res) => {
         {
           startTime: mealData.startTime,
           endTime: mealData.endTime,
-          beforeWindow: mealData.beforeWindow,
-          afterWindow: mealData.afterWindow,
           enabled: mealData.enabled
         },
         { 
@@ -66,8 +56,6 @@ router.post('/', async (req, res) => {
       savedWindows[mealType] = {
         startTime: updatedWindow.startTime,
         endTime: updatedWindow.endTime,
-        beforeWindow: updatedWindow.beforeWindow,
-        afterWindow: updatedWindow.afterWindow,
         enabled: updatedWindow.enabled
       };
     }

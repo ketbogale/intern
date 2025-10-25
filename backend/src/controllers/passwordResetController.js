@@ -2,7 +2,6 @@ const Staff = require("../models/staff");
 const PasswordReset = require("../models/PasswordReset");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
-const bcrypt = require("bcrypt");
 
 // Email configuration - using exact same config as working test
 const createTransporter = () => {

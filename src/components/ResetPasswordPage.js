@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert, Navbar, InputGroup } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Alert, Navbar } from 'react-bootstrap';
 import './LoginPage.css';
-
-const API_BASE_URL = '';
+import { API_BASE_URL } from '../config/api';
 
 const ResetPasswordPage = () => {
   const [token, setToken] = useState('');
@@ -111,7 +110,7 @@ const ResetPasswordPage = () => {
         
         // Redirect to login after 3 seconds
         setTimeout(() => {
-          window.location.href = '/';
+          window.location.href = '/login';
         }, 3000);
       } else {
         setMessage(data.message || 'An error occurred. Please try again.');
@@ -126,7 +125,7 @@ const ResetPasswordPage = () => {
   };
 
   const handleBackToLogin = () => {
-    window.location.href = '/';
+    window.location.href = '/login';
   };
 
   const getPasswordStrength = (password) => {
@@ -145,8 +144,8 @@ const ResetPasswordPage = () => {
 
   if (isVerifying) {
     return (
-      <div className="min-vh-100 d-flex justify-content-center align-items-center" style={{background: 'linear-gradient(135deg, #0f1419 0%, #1e2a3a 100%)'}}>
-        <div className="text-center text-light">
+      <div className="min-vh-100 d-flex justify-content-center align-items-center app-light-bg">
+        <div className="text-center">
           <i className="fas fa-spinner fa-spin fs-1 mb-3"></i>
           <h4>Verifying reset token...</h4>
         </div>
@@ -155,9 +154,9 @@ const ResetPasswordPage = () => {
   }
 
   return (
-    <div className="min-vh-100" style={{background: 'linear-gradient(135deg, #0f1419 0%, #1e2a3a 100%)'}}>
+    <div className="min-vh-100 app-light-bg">
       {/* Header */}
-      <Navbar bg="dark" variant="dark" className="px-4 shadow-sm" style={{background: 'rgba(30, 42, 58, 0.95) !important', backdropFilter: 'blur(10px)'}}>
+      <Navbar className="px-4 shadow-sm mint-header">
         <Navbar.Brand className="d-flex align-items-center">
           <img 
             src="/images/salale_university_logo.png" 
@@ -166,10 +165,10 @@ const ResetPasswordPage = () => {
             className="me-3" 
             alt="Salale University"
           />
-          <h1 className="h4 mb-0 text-light">Salale University</h1>
+          <h1 className="h4 mb-0 text-dark">Salale University</h1>
         </Navbar.Brand>
         <div className="ms-auto">
-          <i className="fas fa-key text-light fs-3"></i>
+          <i className="fas fa-key text-dark fs-3"></i>
         </div>
       </Navbar>
 
@@ -177,45 +176,52 @@ const ResetPasswordPage = () => {
       <Container fluid className="d-flex justify-content-center align-items-center" style={{minHeight: 'calc(100vh - 76px)'}}>
         <Row className="w-100 justify-content-center">
           <Col xs={12} sm={8} md={6} lg={5} xl={4}>
-            <Card className="shadow-lg border-0" style={{background: 'rgba(52, 73, 94, 0.9)', backdropFilter: 'blur(15px)'}}>
+            <Card className="shadow-lg light-card">
               <Card.Body className="p-4">
                 {tokenValid ? (
                   <>
                     <div className="text-center mb-4">
                       <i className="fas fa-shield-alt fs-1 text-success mb-3"></i>
-                      <h2 className="text-light mb-2">Reset Password</h2>
-                      <p className="text-light opacity-75">
+                      <h2 className="mb-2">Reset Password</h2>
+                      <p className="opacity-75">
                         Enter your new password for: <strong>{email}</strong>
                       </p>
                     </div>
                     
                     <Form onSubmit={handleSubmit}>
                       <Form.Group className="mb-3">
-                        <Form.Label className="text-light">New Password:</Form.Label>
-                        <InputGroup>
+                        <Form.Label>New Password:</Form.Label>
+                        <div style={{ position: 'relative' }}>
                           <Form.Control
                             type={showPassword ? 'text' : 'password'}
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
                             placeholder="Enter new password"
                             required
-                            style={{
-                              background: 'rgba(255,255,255,0.1)', 
-                              border: '1px solid rgba(255,255,255,0.2)', 
-                              color: 'white'
-                            }}
+                            style={{ paddingRight: '45px' }}
                           />
-                          <Button
-                            variant="outline-light"
+                          <button
+                            type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            style={{border: '1px solid rgba(255,255,255,0.2)'}}
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            style={{
+                              position: 'absolute',
+                              right: '12px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '18px',
+                              color: '#6b7280'
+                            }}
                           >
                             {showPassword ? '🙈' : '👁️'}
-                          </Button>
-                        </InputGroup>
+                          </button>
+                        </div>
                         {newPassword && (
                           <div className="mt-2">
-                            <small className="text-light">
+                            <small>
                               Password strength: 
                               <span style={{color: passwordStrength.color, fontWeight: 'bold', marginLeft: '5px'}}>
                                 {passwordStrength.text}
@@ -235,28 +241,35 @@ const ResetPasswordPage = () => {
                       </Form.Group>
 
                       <Form.Group className="mb-3">
-                        <Form.Label className="text-light">Confirm Password:</Form.Label>
-                        <InputGroup>
+                        <Form.Label>Confirm Password:</Form.Label>
+                        <div style={{ position: 'relative' }}>
                           <Form.Control
                             type={showConfirmPassword ? 'text' : 'password'}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             placeholder="Confirm new password"
                             required
-                            style={{
-                              background: 'rgba(255,255,255,0.1)', 
-                              border: '1px solid rgba(255,255,255,0.2)', 
-                              color: 'white'
-                            }}
+                            style={{ paddingRight: '45px' }}
                           />
-                          <Button
-                            variant="outline-light"
+                          <button
+                            type="button"
                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            style={{border: '1px solid rgba(255,255,255,0.2)'}}
+                            aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                            style={{
+                              position: 'absolute',
+                              right: '12px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '18px',
+                              color: '#6b7280'
+                            }}
                           >
                             {showConfirmPassword ? '🙈' : '👁️'}
-                          </Button>
-                        </InputGroup>
+                          </button>
+                        </div>
                         {confirmPassword && newPassword !== confirmPassword && (
                           <small className="text-danger mt-1 d-block">
                             <i className="fas fa-exclamation-triangle me-1"></i>
@@ -290,22 +303,18 @@ const ResetPasswordPage = () => {
                 ) : (
                   <div className="text-center">
                     <i className="fas fa-exclamation-triangle fs-1 text-warning mb-3"></i>
-                    <h2 className="text-light mb-3">Invalid Reset Link</h2>
-                    <p className="text-light opacity-75 mb-4">
+                    <h2 className="mb-3">Invalid Reset Link</h2>
+                    <p className="opacity-75 mb-4">
                       This password reset link is invalid or has expired. Please request a new one.
                     </p>
                   </div>
                 )}
 
-                <Button 
-                  variant="outline-light" 
-                  className="w-100"
-                  onClick={handleBackToLogin}
-                  disabled={isLoading}
-                >
-                  <i className="fas fa-arrow-left me-2"></i>
-                  Back to Login
-                </Button>
+                <div className="text-center mt-2">
+                  <a href="/login" onClick={(e) => { e.preventDefault(); handleBackToLogin(); }} className="text-muted text-decoration-none">
+                    Back to Login
+                  </a>
+                </div>
 
                 {message && (
                   <Alert variant={messageType} className="mt-3">

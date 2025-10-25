@@ -20,9 +20,9 @@ const EmailVerificationCode = () => {
     const email = emailFromUrl || emailFromState;
     if (email) {
       setNewEmail(email);
-      setOtpMessage(`📧 Enter the 6-digit verification code sent to ${email}`);
+      setOtpMessage(`Enter the 6-digit verification code sent to ${email}`);
     } else {
-      setOtpMessage('❌ No email address provided. Please try the verification process again.');
+      setOtpMessage('No email address provided. Please try the verification process again.');
     }
   }, [location]);
 
@@ -47,7 +47,6 @@ const EmailVerificationCode = () => {
       const data = await response.json();
 
       if (data.success) {
-        setOtpMessage('✅ Email verification successful! Redirecting to dashboard...');
         setTimeout(() => {
           window.location.href = '/';
         }, 2000);
@@ -65,7 +64,7 @@ const EmailVerificationCode = () => {
 
   const handleResendOTP = async () => {
     if (!newEmail) {
-      setOtpMessage('❌ No email address available for resend.');
+      setOtpMessage('No email address available for resend.');
       return;
     }
 

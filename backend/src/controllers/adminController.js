@@ -1,5 +1,4 @@
 const Staff = require('../models/staff');
-const bcrypt = require('bcrypt');
 const OTP = require('../models/OTP');
 const { generateOTP, sendOTPEmail } = require('../services/emailService');
 const notificationService = require('../services/notificationService');

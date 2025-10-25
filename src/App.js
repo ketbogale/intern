@@ -114,23 +114,27 @@ const AppContent = () => {
       setIsLoggedIn(false);
       setUser(null);
       setIsLoggingOut(false);
-      navigate('/login_meal_attendance', { replace: true });
+      navigate('/login', { replace: true });
     }
   };
 
   // Handle role-based navigation
   useEffect(() => {
-    if (isLoggedIn && user && (location.pathname === '/' || location.pathname === '/login_meal_attendance')) {
+    if (isLoggedIn && user && (location.pathname === '/' || location.pathname === '/login')) {
       // Role-based navigation triggered
       
       switch (user.role) {
+        case 'admin_pending':
+          // Admin credentials verified, pending 2FA email verification
+          navigate('/admin-email-verification', { replace: true });
+          break;
         case 'admin':
           // Admin detected - navigating to dashboard
           navigate('/dashboard', { replace: true });
           break;
         case 'scanner':
-          // Scanner detected - navigating to meal_attendance
-          navigate('/meal_attendance', { replace: true });
+          // Scanner detected - navigating to attendance
+          navigate('/attendance', { replace: true });
           break;
         default:
           // Invalid or unknown role
@@ -180,7 +184,7 @@ const AppContent = () => {
             <Dashboard user={user} onLogout={handleLogout} />
           )
         } />
-        <Route path="/meal_attendance" element={
+        <Route path="/attendance" element={
           !isLoggedIn ? (
             <LoginPage onLogin={handleLogin} />
           ) : (
@@ -202,7 +206,6 @@ const AppContent = () => {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
-        <Route path="/login_meal_attendance" element={<LoginPage onLogin={handleLogin} />} />
         
         {/* Home page */}
         <Route path="/" element={<HomePage />} />
